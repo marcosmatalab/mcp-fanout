@@ -32,6 +32,16 @@ class ToolCall:
     tool_name: str          # kept for the local operator; scrubbed from aggregate output
     args_present: bool      # whether the call carried arguments that could travel downstream
     traceparent: str        # the W3C traceparent we set in _meta, to test propagation (number 3)
+    # Whether the call returned, and if not, why. Defaulted so a run written before these fields
+    # existed still reads back. They are here because "2 calls errored" with the reason thrown
+    # away is not a measurement: a call that errored after egressing and a call that never
+    # reached the network are opposite findings, and only the error text separates them.
+    ok: bool = True
+    error: str = ""
+    # Lines the server wrote to stdout that were not JSON-RPC. MCP stdio reserves stdout for the
+    # protocol, so anything else is the server corrupting its own channel -- a property of that
+    # server worth recording, not a detail to absorb silently.
+    stdout_noise_lines: int = 0
 
 
 @dataclass

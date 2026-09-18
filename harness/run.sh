@@ -10,13 +10,28 @@ set -euo pipefail
 
 REGISTRY="registry/servers.yaml"
 OUT_ROOT="runs"
+ONLY=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --registry) REGISTRY="$2"; shift 2 ;;
     --out) OUT_ROOT="$2"; shift 2 ;;
+    --only) ONLY+=(--only "$2"); shift 2 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
+
+# Refuse to run outside a container. The header above says this script assumes it is inside one,
+# but saying so is not enforcing it: below, this script copies a CA into
+# /usr/local/share/ca-certificates and runs update-ca-certificates, which on a host would modify
+# the operator's own trust store. Gate rule 5 ("nothing runs outside the container") has to be a
+# check, not a comment. MCPFANOUT_ALLOW_HOST=1 overrides, for someone who has read this and means
+# it; there is no path where we modify a host trust store because a wrapper called us by mistake.
+if [[ "${MCPFANOUT_ALLOW_HOST:-0}" != "1" && ! -f /.dockerenv && ! -f /run/.containerenv ]]; then
+  echo "[run] refusing to run outside a container: this script installs a CA into the system" >&2
+  echo "[run] trust store (gate rule 5). Use 'python -m mcpfanout.cli run', which builds and" >&2
+  echo "[run] runs the harness image, or set MCPFANOUT_ALLOW_HOST=1 if you really mean it." >&2
+  exit 3
+fi
 
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 RUN_DIR="${OUT_ROOT%/}/${RUN_ID}"
@@ -34,6 +49,15 @@ export MCPFANOUT_W="8"
 
 # 1. Pre-digest the session context (content-free) for the addon.
 python -m mcpfanout.cli prep-context --context-dir corpus/context --out "${MCPFANOUT_CONTEXT}"
+
+# 1b. Populate the npx/uv package caches BEFORE the proxy exists. Without this, the installer's
+#     own downloads pass through mitmdump and are recorded as the server's fan-out: the first
+#     working smoke run of `fetch` captured 129 flows, all of them uvx talking to pypi.org and
+#     files.pythonhosted.org, and none from the tool call. See drive_all.warm() for the
+#     trade-off (this launch is unobserved) and docs/THREATS.md threat 10.
+echo "[run] warming package caches (unproxied, before capture starts)"
+python harness/drive_all.py --registry "${REGISTRY}" --run-dir "${RUN_DIR}" --warm \
+       "${ONLY[@]+"${ONLY[@]}"}"
 
 # 2. Start mitmdump with our addon. First start also generates the CA under ~/.mitmproxy.
 echo "[run] starting mitmdump on :8080"
@@ -66,7 +90,7 @@ fi
 
 # 5. Drive every server through the proxy, sequentially.
 python harness/drive_all.py --registry "${REGISTRY}" --run-dir "${RUN_DIR}" \
-       --proxy "http://127.0.0.1:8080" --salt "${MCPFANOUT_SALT}"
+       --proxy "http://127.0.0.1:8080" --salt "${MCPFANOUT_SALT}" "${ONLY[@]+"${ONLY[@]}"}"
 
 # 6. Stop capture cleanly so the addon flushes flows.jsonl in its done() hook.
 kill -TERM "${MITM_PID}" 2>/dev/null || true

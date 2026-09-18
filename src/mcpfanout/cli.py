@@ -99,10 +99,20 @@ def _cmd_run(args: argparse.Namespace) -> int:
     script = Path(__file__).resolve().parents[2] / "harness" / "run.sh"
     if not script.exists():
         sys.exit("error: harness/run.sh not found.")
-    # Delegate to the shell harness. We pass through the registry and output root. Any failure
-    # (no Docker, missing capture extra) surfaces as the shell's own exit code and message,
-    # which is more honest than a Python wrapper pretending to know why the container failed.
-    cmd = ["bash", str(script), "--registry", args.registry, "--out", args.out]
+    # Delegate to the shell harness INSIDE the container, via compose. This used to call
+    # `bash harness/run.sh` directly, which ran the container-only script on the host: run.sh
+    # installs a CA into the system trust store, so `make run` on a host would have modified the
+    # operator's own machine, against gate rule 5. Compose is the boundary that makes the rule
+    # true instead of merely documented. Any failure (no Docker, build error, missing extra)
+    # surfaces as compose's own exit code and message, which is more honest than a Python
+    # wrapper pretending to know why the container failed.
+    compose = Path(__file__).resolve().parents[2] / "harness" / "docker-compose.yml"
+    if not compose.exists():
+        sys.exit("error: harness/docker-compose.yml not found.")
+    cmd = ["docker", "compose", "-f", str(compose), "run", "--rm", "--build", "harness",
+           "--registry", args.registry, "--out", args.out]
+    for sid in args.only:
+        cmd += ["--only", sid]
     return subprocess.call(cmd)
 
 
@@ -127,6 +137,8 @@ def build_parser() -> argparse.ArgumentParser:
     r = sub.add_parser("run", help="drive the pinned servers under capture (needs Docker)")
     r.add_argument("--registry", default="registry/servers.yaml")
     r.add_argument("--out", default="runs/")
+    r.add_argument("--only", action="append", default=[], metavar="ID",
+                   help="drive only these server ids (repeatable), for a smoke test")
     r.set_defaults(func=_cmd_run)
     return p
 
