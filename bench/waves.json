@@ -1,0 +1,93 @@
+{
+  "_what_this_is": "The phase A bench plan. A WAVE is a set of tool calls driven CONCURRENTLY, which is the only configuration in which CONTENT_UNIQUE can exist and therefore the only one in which the project's thesis is measurable. Read docs/PHASES.md first.",
+  "_why_the_weighting": "The four discrimination cells below are the experiment. The sensor cases after them check that the instrument does not lose or miscount traffic, which is necessary but is not the thesis. Built with equal weight, the thing that matters would get one eleventh of the effort.",
+  "_fragments": "Each fragment is 40 bytes of unique, greppable synthetic material, well over k=16 so a literal run is detectable and not coincidental. Nothing here is a real secret (docs/DOCTRINE.md).",
+  "_slots": "slot is an INTEGER, never a hostname. The bench server maps it to sinkNN.bench.invalid itself, so the destination name cannot enter the matchable argument material and manufacture a content match out of the destination.",
+
+  "discrimination_cells": [
+    {
+      "cell": "all_distinct",
+      "expect": "CONTENT_UNIQUE",
+      "why": "N concurrent calls, every fragment different, so the fragment in an outbound request appears in exactly one call's arguments. Candidates existed and content told them apart: this is the only cell that can produce strong attribution, and it is the project's thesis.",
+      "n": [2, 5, 10],
+      "template": {"tool": "bench_emit", "channel": "body", "fragment_mode": "distinct"}
+    },
+    {
+      "cell": "all_shared",
+      "expect": "CONTENT_AMBIGUOUS",
+      "why": "N concurrent calls all carrying the SAME fragment. Content matches and discriminates nothing. A real outcome, and the one that bounds precision: a sensor that reported CONTENT_UNIQUE here would be claiming a discrimination it did not make.",
+      "n": [2, 5, 10],
+      "template": {"tool": "bench_emit", "channel": "body", "fragment_mode": "shared"}
+    },
+    {
+      "cell": "two_shared_rest_distinct",
+      "expect": "mixture",
+      "why": "The hardest cell and the one that cannot be passed by accident. Two calls share a fragment, the rest are unique, so the correct answer is CONTENT_AMBIGUOUS for the pair and CONTENT_UNIQUE for the others. Getting the counts right while getting WHICH IS WHICH wrong is a failure, so the comparator checks per flow rather than in aggregate.",
+      "n": [5, 10],
+      "template": {"tool": "bench_emit", "channel": "body", "fragment_mode": "pair_shared"}
+    },
+    {
+      "cell": "no_arguments",
+      "expect": "UNATTRIBUTED",
+      "why": "N concurrent calls, none carrying any argument material. A time window covers all N, so temporal correlation identifies a set and not a call. The grade must be UNATTRIBUTED with the count named, NOT TEMPORAL_ONLY: this cell is what exposed that the temporal grade was overstating itself under concurrency.",
+      "n": [2, 5, 10],
+      "template": {"tool": "bench_emit", "channel": "none", "fragment_mode": "none"}
+    }
+  ],
+
+  "channel_cells": [
+    {
+      "cell": "target_channel",
+      "expect": "CONTENT_UNIQUE",
+      "why": "The same discrimination, with the fragment in the query string instead of the body. The matcher was blind to this channel until recently, so it is measured concurrently rather than assumed.",
+      "n": [5],
+      "template": {"tool": "bench_emit", "channel": "target", "fragment_mode": "distinct"}
+    },
+    {
+      "cell": "header_channel",
+      "expect": "UNATTRIBUTED",
+      "why": "KNOWN NEGATIVE, measured to size it. The sensor matches the request target and the body, not headers, so a fragment carried in a header is invisible and N concurrent calls collapse to UNATTRIBUTED. Recorded as a permanent limit, never as debt.",
+      "n": [5],
+      "template": {"tool": "bench_emit", "channel": "header", "fragment_mode": "distinct"}
+    }
+  ],
+
+  "sensor_cells": [
+    {
+      "cell": "one_connection_per_call",
+      "why": "The baseline. If this is wrong nothing else matters.",
+      "n": [1],
+      "template": {"tool": "bench_emit", "channel": "body", "fragment_mode": "distinct"}
+    },
+    {
+      "cell": "fan_out_from_one_call",
+      "why": "One call opening several connections, so fan-out is counted rather than collapsed to one per call.",
+      "n": [1],
+      "template": {"tool": "bench_emit_many", "channel": "body", "fragment_mode": "distinct", "count": 4}
+    },
+    {
+      "cell": "late_egress",
+      "why": "The server answers, then egresses after a delay, outside any time window around the call. Attribution by content should still work; attribution by time cannot. This is the case that shows why a time window is not a substitute.",
+      "n": [1],
+      "template": {"tool": "bench_emit_late", "channel": "body", "fragment_mode": "distinct", "delay_ms": 1200}
+    },
+    {
+      "cell": "reencoded_base64",
+      "why": "KNOWN NEGATIVE. The fragment is base64 encoded, so no literal run survives and the sensor must miss it. Measured to produce the figure for how much literal matching loses, per negative 3.",
+      "n": [1],
+      "template": {"tool": "bench_emit_encoded", "encoding": "base64", "fragment_mode": "distinct"}
+    },
+    {
+      "cell": "reencoded_gzip",
+      "why": "KNOWN NEGATIVE, as above, compressed.",
+      "n": [1],
+      "template": {"tool": "bench_emit_encoded", "encoding": "gzip", "fragment_mode": "distinct"}
+    },
+    {
+      "cell": "reencoded_json_escaped",
+      "why": "KNOWN NEGATIVE, as above, every character escaped as a JSON \\uXXXX sequence. Same value, no literal run.",
+      "n": [1],
+      "template": {"tool": "bench_emit_encoded", "encoding": "json_escaped", "fragment_mode": "distinct"}
+    }
+  ]
+}

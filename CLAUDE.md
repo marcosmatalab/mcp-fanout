@@ -47,7 +47,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 163
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 181
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
@@ -88,6 +88,8 @@ src/mcpfanout/   measurement core (stdlib only) + driver and capture addon
 harness/         Docker image, run.sh orchestration, drive_all.py, probe.py
 corpus/context/  synthetic bait files with unique CANARY_ tokens (never real secrets)
 corpus/calls/    the fixed per-server tool-call corpus
+bench/           phase A: our own MCP server, our own HTTP sink, the wave plan.
+                 server.py and sink.py import NOTHING from mcpfanout, by test
 registry/        servers.yaml (what to measure), selfhostable.json (number 6 classification),
                  package-infrastructure.json (number 1 exclusion list), probes/ (real tool schemas)
 docs/            doctrine, method, the six numbers, the gate, phases, threats, stop criteria
@@ -99,7 +101,7 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 163 tests, no Docker, no network
+make verify      # 181 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
