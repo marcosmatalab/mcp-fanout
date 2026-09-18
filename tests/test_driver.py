@@ -1,9 +1,27 @@
 """Test the MCP stdio driver against the mock server."""
 
 import sys
+import time
 from pathlib import Path
 
-from mcpfanout.driver import CallSpec, drive, new_traceparent
+import pytest
+
+from mcpfanout.driver import (PROTOCOL_VERSION, CallSpec, ServerTimeout, StdioMCPClient, drive,
+                              new_traceparent)
+
+# harness/ is a directory of scripts, not a package, so it is not on the path by install.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "harness"))
+from probe import CANDIDATE_PROTOCOLS, probe  # noqa: E402
+
+# Revisions that removed the initialize handshake, so neither driver.initialize() nor a
+# handshake probe can speak them. Listed explicitly rather than "anything after 2025-11-25":
+# a date comparison would silently start failing on a future revision that reinstates a
+# handshake, and would pass a revision that removes something else we do depend on.
+POST_HANDSHAKE_EXCLUDED = {"2026-07-28"}
+
+
+def _mock_cmd() -> list[str]:
+    return [sys.executable, str(Path(__file__).parent / "mock_server.py")]
 
 
 def test_traceparent_shape():
@@ -13,15 +31,80 @@ def test_traceparent_shape():
 
 
 def test_drive_mock_server():
-    mock = str(Path(__file__).parent / "mock_server.py")
     corpus = [
         CallSpec("search", {"query": "hello"}),
         CallSpec("search", {}),  # argument-less call: args_present must be False
     ]
-    results = drive([sys.executable, mock], corpus, run_id="t", server_id="mock")
+    results = drive(_mock_cmd(), corpus, run_id="t", server_id="mock")
     assert len(results) == 2
     assert all(r.ok for r in results), [r.error for r in results]
     assert results[0].args_present is True
     assert results[1].args_present is False
     # Each call carries a distinct traceparent (the attribution key).
     assert results[0].traceparent != results[1].traceparent
+
+
+# --- Protocol negotiation. These have teeth only because mock_server.py rejects what it does
+# --- not support; against the old mirroring mock every assertion below passed vacuously.
+
+def test_protocol_version_is_a_handshake_revision():
+    """The constant must name a revision that actually has an initialize method.
+
+    Anchors the fix for the shipped defect: PROTOCOL_VERSION said "2026-07-28", which removed
+    the initialize handshake (SEP-2575), so the driver announced a protocol it does not speak.
+    If someone later bumps the constant to a post-handshake revision, the driver has to be
+    rewritten to server/discover in the same change, and this test is where they find out.
+    """
+    assert PROTOCOL_VERSION not in POST_HANDSHAKE_EXCLUDED, (
+        f"{PROTOCOL_VERSION} has no initialize method; driver.initialize() cannot speak it"
+    )
+    assert PROTOCOL_VERSION == "2025-11-25"
+
+
+def test_driver_handshake_accepted_by_a_server_that_only_supports_our_revision():
+    """The constant is not just well-formed, it is the one a 2025-11-25 server accepts."""
+    results = drive(_mock_cmd(), [CallSpec("search", {"q": "x"})], run_id="t", server_id="mock",
+                    env={"MOCK_SUPPORTED_PROTOCOLS": "2025-11-25"})
+    assert results[0].ok, results[0].error
+
+
+def test_driver_handshake_rejected_when_server_speaks_only_another_revision():
+    """A mismatch must surface as an error, not be papered over by a mirroring server."""
+    with pytest.raises(RuntimeError, match="unsupported protocolVersion"):
+        drive(_mock_cmd(), [CallSpec("search", {})], run_id="t", server_id="mock",
+              env={"MOCK_SUPPORTED_PROTOCOLS": "2024-11-05"})
+
+
+def test_probe_negotiates_down_to_what_the_server_supports():
+    """The probe's fallback ladder has to actually walk. Needs a rejecting mock to mean anything."""
+    out = probe(_mock_cmd(), {"MOCK_SUPPORTED_PROTOCOLS": "2024-11-05"})
+    assert out["ok"], out
+    assert out["protocol_version_used"] == "2024-11-05"
+    assert out["server_protocol_version"] == "2024-11-05"
+    # The rejections on the way down are kept as data, not discarded.
+    assert [a["protocol_version_tried"] for a in out["attempts"]] == ["2025-11-25", "2025-06-18",
+                                                                     "2025-03-26"]
+
+
+def test_probe_candidate_list_excludes_post_handshake_revisions():
+    """A handshake probe cannot legitimately negotiate a revision that deleted initialize."""
+    assert CANDIDATE_PROTOCOLS[0] == PROTOCOL_VERSION
+    assert not POST_HANDSHAKE_EXCLUDED & set(CANDIDATE_PROTOCOLS)
+
+
+# --- Bounded reads. A server that starts and says nothing used to hang the harness forever.
+
+def test_hung_server_times_out_and_is_recorded_as_a_failed_call():
+    """The timeout must produce data, not a crash: a hung server is a finding about that server."""
+    started = time.monotonic()
+    with StdioMCPClient(_mock_cmd(), {"MOCK_HANG": "1"}, read_timeout=2.0) as client:
+        with pytest.raises(ServerTimeout):
+            client.initialize()
+    elapsed = time.monotonic() - started
+    assert elapsed < 30, f"read was not bounded: waited {elapsed:.1f}s"
+
+
+def test_probe_of_a_hung_server_reports_not_ok_instead_of_hanging():
+    out = probe(_mock_cmd(), {"MOCK_HANG": "1"}, startup_timeout=1.0, list_timeout=1.0)
+    assert out["ok"] is False
+    assert out["tools"] == [] and out["attempts"]
