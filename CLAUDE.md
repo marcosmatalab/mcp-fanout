@@ -47,7 +47,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 128
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 155
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
@@ -90,7 +90,8 @@ corpus/context/  synthetic bait files with unique CANARY_ tokens (never real sec
 corpus/calls/    the fixed per-server tool-call corpus
 registry/        servers.yaml (what to measure), selfhostable.json (number 6 classification),
                  package-infrastructure.json (number 1 exclusion list), probes/ (real tool schemas)
-docs/            doctrine, method, the six numbers, the gate, threats, stop criteria
+docs/            doctrine, method, the six numbers, the gate, phases, threats, stop criteria
+docs/figures/    committed normalized aggregates: the re-derivable half of a run
 tests/           the core test suite plus a mock MCP server
 ```
 
@@ -98,9 +99,10 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 128 tests, no Docker, no network
+make verify      # 155 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
+make figures     # commit the latest run's normalized aggregate to docs/figures/
 make run         # real capture, needs Docker and network
 ```
 

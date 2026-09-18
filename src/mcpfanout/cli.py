@@ -2,6 +2,7 @@
 
 Subcommands:
   aggregate  Compute the six numbers from a run (the rule-6 commands behind the Makefile).
+  figures    Write a run's normalized aggregate to docs/figures/ as a committed artifact.
   selftest   Build a synthetic run and compute its numbers, with no Docker and no network.
   run        Drive the pinned servers under capture and write a real run (delegates to harness/).
 
@@ -102,6 +103,49 @@ def _cmd_prep_context(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_figures(args: argparse.Namespace) -> int:
+    """Write a run's NORMALIZED AGGREGATE to docs/figures/ as a committed artifact.
+
+    Why this exists. Gate rule 6 wants a command behind every published figure, and gate rule 4
+    refuses to track runs, so a figure quoted in a document was measured but not re-derivable
+    from the repository: a reader could only re-run the capture and get their own numbers. That
+    tension is resolved by committing the AGGREGATE rather than the run. The aggregate is counts,
+    ratios and category breakdowns with no hostname, no server id, no tool name and no digest, so
+    rule 3 holds; the run keeps the per-flow records and the salted digests tied to specific
+    servers, and stays untracked, so rule 4 holds.
+
+    Volatile provenance (run id, wall-clock time, the command) is kept in its own block, apart
+    from the numbers. Two captures of the same servers differ in those fields and must still be
+    comparable on the normalized result, which is level 2 of gate rule 1.
+    """
+    run_dir = _resolve_run(args.run)
+    run = Run.load(run_dir)
+    payload = {
+        "normalized": True,
+        "provenance": {
+            "run_id": run.manifest.run_id,
+            "created": run.manifest.created,
+            "salt_fixed": run.manifest.salt_fixed,
+            "corpus_sha256": run.manifest.corpus_sha256,
+            "server_count": len(run.manifest.server_ids),
+            "notes": run.manifest.notes,
+            # The command that regenerates this file, in the file, so a reader never has to
+            # reconstruct it from a Makefile.
+            "command": f"python -m mcpfanout.cli figures --run runs/{run.manifest.run_id}",
+        },
+        "numbers": compute_all(run, _load_registry(),
+                               ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH))["numbers"],
+    }
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{run.manifest.run_id}.json"
+    # Sorted keys and a trailing newline: this file is committed and diffed, so two runs of the
+    # command over the same run must produce identical bytes (gate rule 1, level 1).
+    out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"wrote {out}")
+    return 0
+
+
 def _cmd_run(args: argparse.Namespace) -> int:
     script = Path(__file__).resolve().parents[2] / "harness" / "run.sh"
     if not script.exists():
@@ -140,6 +184,11 @@ def build_parser() -> argparse.ArgumentParser:
     pc.add_argument("--context-dir", default="corpus/context")
     pc.add_argument("--out", default="runs/live/context.json")
     pc.set_defaults(func=_cmd_prep_context)
+
+    f = sub.add_parser("figures", help="write a run's normalized aggregate to docs/figures/")
+    f.add_argument("--run", default="latest", help="'latest' or a path to runs/<id>")
+    f.add_argument("--out", default="docs/figures", help="directory for the committed artifact")
+    f.set_defaults(func=_cmd_figures)
 
     r = sub.add_parser("run", help="drive the pinned servers under capture (needs Docker)")
     r.add_argument("--registry", default="registry/servers.yaml")
