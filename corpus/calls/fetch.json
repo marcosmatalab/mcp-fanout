@@ -1,0 +1,4 @@
+[
+  {"tool": "fetch", "arguments": {"url": "https://example.com/"}},
+  {"tool": "fetch", "arguments": {"url": "https://example.com/search?q=CANARY_QRY_ab12cd34ef56"}}
+]

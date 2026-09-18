@@ -1,0 +1,130 @@
+"""Rolling-hash shingling and winnowing.
+
+Why this file exists
+--------------------
+Numbers 4 and 5 (see docs/THE-SIX-NUMBERS.md) ask whether a fragment of one byte string
+(a context file, or the arguments of a tool call) appears *literally* inside another byte
+string (an outbound request body). This is the classic Indexed Document Matching problem
+(rolling hashes over overlapping fragments), the same technique DLP vendors have shipped for
+fifteen years. We reimplement it in ~120 lines of standard library so the measurement core
+has zero third-party dependencies (see pyproject.toml for the rationale).
+
+Design decisions, each with its why and trade-off
+--------------------------------------------------
+- Literal matching, no normalization. Doctrine negativa 3: we do not chase paraphrase.
+  A literal match is auditable evidence with a quantifiable false-positive rate; a fuzzy
+  match is inference. We therefore hash raw bytes, never lowercased or whitespace-stripped.
+  Cost: if a server re-encodes a value (base64, gzip) before sending, we will not match it.
+  That is a false negative, and a false negative is the safe direction: we under-claim
+  EFECTIVO rather than over-claim it.
+
+- Rolling hash: polynomial, base 257, modulus 2**61 - 1 (a Mersenne prime). Reason for the
+  prime: uniform distribution of hash values and a collision probability we can bound. For a
+  61-bit hash the probability that two *distinct* k-grams collide is about 2**-61; over N
+  distinct k-grams the expected number of accidental collisions is about N**2 / 2**62. For a
+  payload of 100 KB (N ~ 1e5) that is ~1e10 / 4.6e18 ~ 2e-9 expected false matches. This is
+  the one place probability is warranted (hash collisions are genuinely probabilistic); the
+  rest of the pipeline is deterministic.
+
+- k (k-gram size in bytes), default 16. Trade-off: a shorter k makes common substrings
+  ("http", "{\"id\":") match by coincidence and inflates numbers 4 and 5; a longer k misses
+  short secrets. 16 bytes is long enough that a shared run is not coincidental in structured
+  payloads and short enough to catch real secrets (API keys are typically >= 20 chars).
+
+- Winnowing (Schleimer, Wilkerson, Aiken, 2003), window w, default 8. Winnowing selects a
+  deterministic subset of fingerprints with a guarantee: any shared substring of length
+  >= w + k - 1 (here 8 + 16 - 1 = 23 bytes) is detected. We use winnowing only for the
+  *persisted, digest-only* artifacts (fewer fingerprints stored, better privacy). The numbers
+  themselves are computed by exact k-gram coverage in match.py, so winnowing never changes a
+  number; it only bounds what we keep on disk. Trade-off: a larger w stores fewer fingerprints
+  but raises the guaranteed-detection threshold.
+"""
+
+from __future__ import annotations
+
+# Polynomial rolling-hash parameters. Fixed constants, not tunables: changing them changes
+# every stored digest and breaks cross-artifact comparison within a run. Documented as fixed.
+_BASE = 257
+_MOD = (1 << 61) - 1  # 2**61 - 1, Mersenne prime.
+
+DEFAULT_K = 16
+DEFAULT_W = 8
+
+
+def rolling_hashes(data: bytes, k: int = DEFAULT_K) -> list[int]:
+    """Return the polynomial rolling hash of every k-gram in ``data``, left to right.
+
+    Returns an empty list when ``data`` is shorter than ``k``: a string with no k-gram has
+    no fingerprint, which is the correct and safe answer (it can match nothing).
+    """
+    n = len(data)
+    if k <= 0:
+        raise ValueError("k must be positive")
+    if n < k:
+        return []
+
+    # Precompute BASE**(k-1) mod MOD once, for the rolling subtraction of the outgoing byte.
+    high = pow(_BASE, k - 1, _MOD)
+
+    # Hash of the first window, computed directly.
+    h = 0
+    for i in range(k):
+        h = (h * _BASE + data[i]) % _MOD
+
+    out = [h]
+    for i in range(k, n):
+        # Roll: drop the leftmost byte's contribution, shift, add the new byte.
+        h = (h - data[i - k] * high) % _MOD
+        h = (h * _BASE + data[i]) % _MOD
+        out.append(h)
+    return out
+
+
+def winnow(hashes: list[int], w: int = DEFAULT_W) -> set[int]:
+    """Winnow a hash sequence to a deterministic subset of fingerprints.
+
+    Classic algorithm: slide a window of ``w`` consecutive hashes; in each window select the
+    minimum, breaking ties by choosing the rightmost occurrence; emit a fingerprint only when
+    the selected position differs from the last emitted one. We return the set of selected
+    *values* because matching compares value sets, not positions.
+
+    Guarantee: any substring shared by two documents of length >= w + k - 1 yields at least
+    one common selected fingerprint. Proof is in the cited paper; we rely on it, we do not
+    restate it.
+    """
+    if w <= 0:
+        raise ValueError("w must be positive")
+    n = len(hashes)
+    if n == 0:
+        return set()
+    if n < w:
+        # Fewer hashes than a window: the whole sequence is one window. Selecting its minimum
+        # is the consistent extension of the algorithm and keeps short inputs matchable.
+        return {min(hashes)}
+
+    selected: set[int] = set()
+    last_pos = -1
+    for start in range(0, n - w + 1):
+        window = hashes[start:start + w]
+        # Rightmost minimum: iterate and keep updating on <= so ties resolve to the right.
+        min_val = window[0]
+        min_idx = 0
+        for j in range(1, w):
+            if window[j] <= min_val:
+                min_val = window[j]
+                min_idx = j
+        pos = start + min_idx
+        if pos != last_pos:
+            selected.add(min_val)
+            last_pos = pos
+    return selected
+
+
+def fingerprints(data: bytes, k: int = DEFAULT_K, w: int = DEFAULT_W) -> set[int]:
+    """Convenience: rolling hashes then winnowing, returning raw (unsalted) fingerprints.
+
+    Raw fingerprints are for tests and in-memory use only. Anything persisted must be salted;
+    see redact.Redactor. Keeping the raw path here lets tests assert the algorithm without the
+    salt, which would otherwise make expected values environment-dependent.
+    """
+    return winnow(rolling_hashes(data, k), w)
