@@ -11,6 +11,29 @@ of two very different architectures it should have. The rationale for measuring 
 building is in [`docs/METHOD.md`](docs/METHOD.md): you cannot design the causal-union layer
 without knowing the fan-out, and choosing blind means building the wrong one.
 
+## What the eventual product would be, and what category it is not in
+
+The harness measures. If the numbers support building something, that something is:
+
+> **Runtime provenance and evidence for autonomous agents.**
+
+MCP is the **first supported environment**, not the category. That distinction is the whole
+positioning, and both of the obvious alternative framings are wrong in a way that costs money:
+
+- **Not "MCP security".** It ties the product to one protocol that is still changing under it
+  (the current revision removed the session, the handshake and three methods in a single
+  release) and to a function that a gateway absorbs as a feature the moment it is worth having.
+  A product whose category is a protocol dies when the protocol moves.
+- **Not "data lineage".** That is Cyberhaven's category. They have the brand, the funding and
+  the enterprise motion. Entering an occupied category with a smaller version of the incumbent's
+  story is not a positioning, it is a comparison you lose by default.
+
+What "runtime provenance and evidence" claims, and it is narrower than either of the above: at
+the moment an autonomous agent acts, what left, where it went, and what evidence ties the two to
+the action that caused it. Runtime rather than configuration, evidence rather than inference,
+provenance rather than policy. The agent is the subject; the protocol it happens to speak is an
+adapter.
+
 ## What this is, and what it is not
 
 | It is | It is not |
