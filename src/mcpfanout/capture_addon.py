@@ -19,13 +19,21 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
+from dataclasses import asdict
 from pathlib import Path
 
-from . import match as _match
-from .classify import classify_host
-from .record import Flow, write_jsonl
-from .redact import Redactor
+# Absolute imports, deliberately, even though this file lives inside the package. mitmproxy
+# loads an addon BY PATH under a synthetic package name ("__mitmproxy_script__.capture_addon")
+# that does not exist, so a relative import raises ModuleNotFoundError and the addon never
+# loads -- silently, because mitmdump logs it and carries on proxying, producing a run with zero
+# flows that looks like a server that never egressed. tests/test_capture_addon_loads.py loads
+# this file the way mitmproxy does, so the mistake cannot come back.
+from mcpfanout import match as _match
+from mcpfanout.classify import classify_host
+from mcpfanout.record import Flow
+from mcpfanout.redact import Redactor
 
 
 class FanoutRecorder:
@@ -71,7 +79,17 @@ class FanoutRecorder:
 
         tp = current.get("traceparent", "")
         header_tp = req.headers.get("traceparent", "")
-        our_tp_present = bool(tp) and (tp == header_tp or (body and tp.encode() in body))
+        # Each clause is forced to bool separately. Written as
+        #   bool(tp) and (tp == header_tp or (body and tp.encode() in body))
+        # this silently produced b"" instead of False: with an active call, an empty body and no
+        # traceparent header, `body and ...` short-circuits to b"", `or` propagates it, and `and`
+        # returns it. A bytes value in a bool field then made json.dumps raise inside done(),
+        # which discarded every buffered flow in the run -- the whole capture, lost to a GET with
+        # no body. Rejected the shorter form for that reason; tests/test_capture_addon_hooks.py
+        # pins this exact case.
+        in_header = bool(tp) and tp == header_tp
+        in_body = bool(tp) and bool(body) and tp.encode() in body
+        our_tp_present = in_header or in_body
 
         state = _match.decide_state(result.causal, body_observed=True, has_time_and_pid=True)
 
@@ -91,18 +109,34 @@ class FanoutRecorder:
         ))
 
     def done(self) -> None:
-        """Flush buffered flows when mitmdump shuts down. Append so multiple servers accumulate."""
-        existing = []
-        if self.flows_path.exists():
-            existing = self.flows_path.read_text(encoding="utf-8").splitlines()
-        # Rewrite existing + new so the file stays valid JSONL even across addon restarts.
-        with self.flows_path.open("a", encoding="utf-8") as _:
-            pass
-        write_jsonl(self.flows_path.with_suffix(".tmp"), self._buffer)
-        new_lines = self.flows_path.with_suffix(".tmp").read_text(encoding="utf-8").splitlines()
-        self.flows_path.write_text("\n".join([*existing, *new_lines]) + ("\n" if existing or new_lines else ""),
-                                   encoding="utf-8")
-        self.flows_path.with_suffix(".tmp").unlink(missing_ok=True)
+        """Flush buffered flows when mitmdump shuts down, one line at a time, appending.
+
+        Per record, not per buffer, and that is the whole point. The previous version serialised
+        the entire buffer in one write_jsonl call and rewrote the file from it, so a single
+        unserialisable field raised and destroyed every flow in the run -- which is exactly what
+        happened, to a bool field holding b"". One bad record now costs one record and says so on
+        stderr, where mitmdump logs it. A capture layer that loses everything on one malformed
+        value is worse than one that loses a line, because the empty file reads as "no server
+        egressed anything".
+
+        Appending, rather than rewriting, is also what the file needs: mitmdump may restart
+        within a run, and re-reading and rewriting the accumulated file is both quadratic and a
+        chance to truncate what earlier passes already wrote.
+        """
+        written = failed = 0
+        with self.flows_path.open("a", encoding="utf-8") as fh:
+            for row in self._buffer:
+                try:
+                    fh.write(json.dumps(asdict(row), sort_keys=True,
+                                        separators=(",", ":")) + "\n")
+                    written += 1
+                except (TypeError, ValueError) as exc:
+                    failed += 1
+                    print(f"[capture_addon] dropped one unserialisable flow: {exc}",
+                          file=sys.stderr)
+        self._buffer.clear()
+        if failed:
+            print(f"[capture_addon] wrote {written} flows, dropped {failed}", file=sys.stderr)
 
 
 addons = [FanoutRecorder()]
