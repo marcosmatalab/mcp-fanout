@@ -161,8 +161,24 @@ def number_4(run: Run) -> dict:
     b_matched = sum(f.body_matched_bytes for f in run.flows)
     t_obs = sum(f.target_bytes for f in observed)
     b_obs = sum(f.body_bytes for f in observed)
-    return {"number": 4, "name": "outbound_bytes_matching_context",
+    # The provenance claim, reported on its own. It says WHAT recognisable material of ours the
+    # requests carried, and nothing about which call caused them: that is number 5's claim, and
+    # the two are kept in separate numbers so no sentence can join them.
+    prov = {k: 0 for k in (_match.PROVENANCE_NONE, _match.PROVENANCE_CONTEXT,
+                           _match.PROVENANCE_ARGUMENTS, _match.PROVENANCE_BOTH,
+                           _match.PROVENANCE_UNKNOWN)}
+    for f in run.flows:
+        prov[f.provenance] = prov.get(f.provenance, 0) + 1
+    occ = {k: 0 for k in (_match.OCCURRENCE_OBSERVED, _match.OCCURRENCE_CONNECTION_ONLY)}
+    for f in run.flows:
+        occ[f.occurrence] = occ.get(f.occurrence, 0) + 1
+    return {"number": 4, "name": "provenance_coverage",
             "flows_total": len(run.flows),
+            # Claim one, occurrence, kept visible here because a provenance figure means nothing
+            # without knowing how many requests could be read at all.
+            "occurrence_counts": occ,
+            # Claim two, provenance.
+            "provenance_counts": prov,
             "flows_with_context_match": len(any_hits),
             "flows_with_target_match": len(target_hits),
             "flows_with_body_match": len(body_hits),
@@ -176,33 +192,71 @@ def number_4(run: Run) -> dict:
             "command": "make n4"}
 
 
-def number_5(run: Run) -> dict:
-    """Fraction of connections causally unifiable by content match. The decisive number.
+def number_5(run: Run, exclusions: ExclusionList | None = None) -> dict:
+    """Distribution of attribution grades. The decisive number, and the honest shape of it.
 
-    Reports the full state distribution, because the doctrine publishes the percentage of each
-    state, not a single headline. The headline is the EFECTIVO share.
+    The grade is DERIVED HERE, not read from the record, because it depends on the declared
+    exclusion list in registry/, which is versioned and will change. Deriving it at aggregation
+    time means the same captured run can be re-graded against a better list; a grade frozen at
+    capture time could not. See Flow's comment in record.py.
 
-    And it reports WHICH CHANNEL carried each match, because the headline is only auditable with
-    that split. A match in a query string and a match in a request body are both literal causal
-    evidence, but they are not the same claim, and an EFECTIVO share that turned out to be all
-    target matches would deserve a different reading than one built on bodies. Publishing the
-    breakdown next to the fraction is what stops the fraction being taken on trust.
+    What this number does NOT do is publish a single "causally unifiable" fraction. That figure
+    was the old EFECTIVO share, and under sequential driving it counted every content match as
+    strong evidence when nothing had been discriminated. The grades are published in full, and
+    the strong-attribution figure counts only TRACE_PROPAGATED and CONTENT_UNIQUE.
+
+    ``sequential_driving`` is emitted because it is the precondition that makes CONTENT_UNIQUE
+    unreachable. While it is true, a reader should expect zero CONTENT_UNIQUE and should not read
+    the strong-attribution figure as an answer to whether content matching recovers attribution.
+    That question belongs to phase C (docs/PHASES.md).
     """
-    counts = {_match.EFECTIVO: 0, _match.DECLARADO: 0, _match.INDETERMINADO: 0}
-    for f in run.flows:
-        counts[f.state] = counts.get(f.state, 0) + 1
+    grades = {g: 0 for g in _match.ATTRIBUTION_GRADES}
+    reasons: dict[str, int] = {}
     by_channel = {_match.CHANNEL_TARGET: 0, _match.CHANNEL_BODY: 0, _match.CHANNEL_BOTH: 0}
     for f in run.flows:
-        if f.state == _match.EFECTIVO and f.causal_channel in by_channel:
+        eligible = not (exclusions is not None and exclusions.matches(f.dest_host))
+        grade, reason = _match.grade_attribution(
+            traceparent_present=f.our_traceparent_present,
+            argument_match=f.causal,
+            active_calls_in_window=f.active_calls_in_window,
+            matching_calls_in_window=f.matching_calls_in_window,
+            eligible=eligible,
+            has_time_and_pid=f.has_time_and_pid,
+        )
+        grades[grade] = grades.get(grade, 0) + 1
+        reasons[reason] = reasons.get(reason, 0) + 1
+        # Channel split over every flow whose argument material matched, WHATEVER grade it
+        # ended at. Not conditioned on the grade: a flow that matched by body and then graded
+        # TRACE_PROPAGATED still matched by body, and hiding it would understate the body
+        # channel. This split exists so a content figure cannot be quietly inflated with URLs.
+        if f.causal and f.causal_channel in by_channel:
             by_channel[f.causal_channel] += 1
+
     total = len(run.flows)
-    efectivo = counts[_match.EFECTIVO]
-    return {"number": 5, "name": "connections_causally_unifiable",
-            "efectivo_fraction": round((efectivo / total) if total else 0.0, 4),
-            "efectivo_by_channel": by_channel,
-            "state_counts": counts,
-            "flows_total": total,
-            "command": "make n5"}
+    strong = sum(grades[g] for g in _match.STRONG_ATTRIBUTION)
+    max_window = max((f.active_calls_in_window for f in run.flows), default=0)
+    out = {"number": 5, "name": "attribution_grade_distribution",
+           "flows_total": total,
+           "attribution_grades": grades,
+           "attribution_reasons": reasons,
+           "content_match_by_channel": by_channel,
+           "strong_attribution_count": strong,
+           "strong_attribution_fraction": round((strong / total) if total else 0.0, 4),
+           "strong_attribution_grades": list(_match.STRONG_ATTRIBUTION),
+           "sequential_driving": max_window <= 1,
+           "max_active_calls_in_window": max_window,
+           "command": "make n5"}
+    if max_window <= 1:
+        out["sequential_driving_note"] = (
+            "every flow was seen with at most one call in flight, so CONTENT_UNIQUE is "
+            "unreachable by construction and content matches grade as "
+            "CONTENT_MATCH_UNCONTESTED. Whether content matching recovers attribution when time "
+            "cannot is answerable only with concurrent calls; see docs/PHASES.md, phase C")
+    out["exclusion_list"] = ({"loaded": True, **exclusions.citation()} if exclusions
+                             else {"loaded": False,
+                                   "reason": "no exclusion list, so no flow was graded "
+                                             "ineligible; package traffic falls to TEMPORAL_ONLY"})
+    return out
 
 
 def number_6(run: Run, registry: Registry | None = None) -> dict:
@@ -224,6 +278,6 @@ def compute_all(run: Run, registry: Registry | None = None,
         "salt_fixed": run.manifest.salt_fixed,
         "numbers": [
             number_1(run, exclusions), number_2(run), number_3(run),
-            number_4(run), number_5(run), number_6(run, registry),
+            number_4(run), number_5(run, exclusions), number_6(run, registry),
         ],
     }

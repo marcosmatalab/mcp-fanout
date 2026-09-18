@@ -92,7 +92,8 @@ digest-only policy, it was a blind spot covering the entire GET channel, which i
 most third-party APIs use and the one the incidents this project cites travel on. With body-only
 matching, numbers 4 and 5 were structurally zero for every GET-based server, and the first real
 capture of `fetch` demonstrated exactly that: the canary rode in the URL, was on the wire, and
-scored `DECLARADO`.
+the flow recorded no provenance at all (under the single-column model then in force it scored
+`DECLARADO`, which is the conflation the evidence model later replaced).
 
 Three constraints on how it is done, each of which is a correctness requirement, not a style
 choice:
@@ -112,11 +113,19 @@ choice:
 Residual limit, in the same direction as before: a value the client percent-encodes, base64s, or
 splits across parameters is not detected in the target. That is a false negative, the safe side.
 
-## Number 4: outbound bytes that literally match context files
+## Number 4: provenance coverage
 
-**Definition.** Across all observed outbound requests, the number of bytes covered (exactly, by
-k-gram interval union) by any session context file, reported **per channel** (target and body)
-with the total, and the count of flows with at least one context match in each channel.
+**Definition.** Two of the three evidence claims (`docs/DOCTRINE.md`, the evidence model),
+reported together because neither means anything alone:
+
+- **occurrence**: how many flows were `observed` (TLS terminated, request read) versus
+  `connection_only`. A provenance figure is meaningless without knowing how many requests could
+  be read at all.
+- **provenance**: how many flows carried `none` / `context` / `arguments` / `both` / `unknown`
+  recognisable material of ours, plus the number of bytes covered (exactly, by k-gram interval
+  union) by any session context file, **per channel** (target and body) with the total.
+
+The third claim, attribution, is number 5's and is never joined to these in one sentence.
 
 **Decides.** Whether content matching has signal at all. If nothing from the context ever leaves,
 Half B has no measurable base.
@@ -127,29 +136,38 @@ Half B has no measurable base.
 (`match_request`, renamed from `match_body` when the name stopped being true). A match shorter
 than k = 16 bytes is not counted, which is the safe direction (under-count, never over-count).
 
-## Number 5: fraction of connections causally unifiable by content match
+## Number 5: distribution of attribution grades
 
-**Definition.** Of all outbound connections, the fraction classified `EFECTIVO`, that is, whose
-**request target or body** contains a literal fragment of the causing call's arguments. Reported
-with the full state distribution (`EFECTIVO` / `DECLARADO` / `INDETERMINADO`) **and with
-`efectivo_by_channel`**, the split of the EFECTIVO count across `target` / `body` / `both`.
+**Definition.** Of all outbound connections, the count in each attribution grade:
+`TRACE_PROPAGATED`, `CONTENT_UNIQUE`, `CONTENT_AMBIGUOUS`, `CONTENT_MATCH_UNCONTESTED`,
+`TEMPORAL_ONLY`, `UNATTRIBUTED`. Defined in `docs/DOCTRINE.md`, the evidence model. Reported with
+the named reason for each grade, the channel split of content matches, and the declared exclusion
+list that graded eligibility, cited by name, version and digest.
 
-The channel split is part of the definition, not decoration. An EFECTIVO share built entirely on
-query strings supports a different reading than one built on request bodies, and publishing the
-fraction without the split would invite exactly the objection that the number was inflated with
-URLs.
+**Strong attribution counts `TRACE_PROPAGATED` and `CONTENT_UNIQUE` only.**
+`CONTENT_MATCH_UNCONTESTED` is deliberately excluded: a match with one call in flight
+discriminated nothing.
 
-**Decides.** Whether the whole product works. This is the number nobody has measured. Because the
-corpus is driven sequentially, we have ground-truth attribution for every flow; number 5 measures
-how often content matching ALONE would have recovered that attribution, which is exactly the case
-that matters when calls are concurrent and time attribution fails.
+**There is no single "causally unifiable" fraction any more.** That figure was the old `EFECTIVO`
+share, and under sequential driving it counted every content match as strong evidence when
+nothing had been told apart. It is replaced by the full distribution, which cannot be quoted as
+one flattering ratio.
+
+**What it cannot decide yet, and the output says so.** The number emits `sequential_driving:
+true` while every flow was seen with at most one call in flight. While that holds,
+`CONTENT_UNIQUE` is unreachable by construction and the strong-attribution figure must not be
+read as an answer to whether content matching recovers attribution where time cannot. That is
+phase C's question (`docs/PHASES.md`), and the tautology it avoids is written out in
+`docs/DOCTRINE.md`.
+
+**Decides.** Whether the whole product works, once phase C exists. This is the number nobody has
+measured.
 
 **Command.** `make n5`.
 
 **Honest denominator.** An argument-less call ("list my files") has nothing to match and falls to
-`DECLARADO` or `INDETERMINADO` by construction. That split is itself a publishable result: the
-causal-union rate depends on tool type, and we report the breakdown rather than a single flattering
-ratio.
+`TEMPORAL_ONLY` or `UNATTRIBUTED` by construction. That split is itself a publishable result: the
+attributable share depends on tool type, and the breakdown is reported rather than a single ratio.
 
 ## Number 6: fraction of touched third parties that are self-hostable
 

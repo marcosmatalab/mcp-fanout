@@ -25,10 +25,57 @@ from dataclasses import dataclass, field
 
 from .redact import Redactor
 
-# The three resolution states, as strings so they serialize verbatim into records.
-EFECTIVO = "EFECTIVO"
-DECLARADO = "DECLARADO"
-INDETERMINADO = "INDETERMINADO"
+# ---------------------------------------------------------------------------------------------
+# The evidence model: THREE SEPARATE CLAIMS.
+#
+# These replace the single EFECTIVO / DECLARADO / INDETERMINADO column, which conflated three
+# different questions into one word and so could not answer any of them precisely. The three
+# never appear together in one sentence, in a record or in a report, because a sentence that
+# joins them is the conflation coming back:
+#
+#   OCCURRENCE   was the transfer observed at all
+#   PROVENANCE   did the request carry recognisable material of ours (a file, an argument)
+#   ATTRIBUTION  could it be tied to a specific tool call, and HOW STRONGLY
+#
+# What forced the split: the first real capture produced 90 DECLARADO flows, of which 87 were a
+# package registry that cannot carry a tool call's arguments at all. Calling those DECLARADO
+# asserts temporal correlation where the truth is ineligibility. They are UNATTRIBUTED, with the
+# reason named.
+# ---------------------------------------------------------------------------------------------
+
+# OCCURRENCE. Did we see the transfer, and could we read it.
+OCCURRENCE_OBSERVED = "observed"                  # TLS terminated, request read
+OCCURRENCE_CONNECTION_ONLY = "connection_only"    # connection seen, contents unreadable
+
+# PROVENANCE. What recognisable material of ours the request carried. Says nothing about which
+# call caused it: that is attribution's job, and keeping them apart is the point.
+PROVENANCE_NONE = "none"              # read it, found nothing of ours
+PROVENANCE_CONTEXT = "context"        # material from a session context file
+PROVENANCE_ARGUMENTS = "arguments"    # material from a driven call's arguments
+PROVENANCE_BOTH = "both"
+PROVENANCE_UNKNOWN = "unknown"        # could not read it, so nothing may be claimed either way
+
+# ATTRIBUTION, a graded dimension, strongest first. A grade is a claim about EVIDENCE QUALITY,
+# never about certainty of cause.
+TRACE_PROPAGATED = "TRACE_PROPAGATED"
+CONTENT_UNIQUE = "CONTENT_UNIQUE"
+CONTENT_AMBIGUOUS = "CONTENT_AMBIGUOUS"
+CONTENT_MATCH_UNCONTESTED = "CONTENT_MATCH_UNCONTESTED"
+TEMPORAL_ONLY = "TEMPORAL_ONLY"
+UNATTRIBUTED = "UNATTRIBUTED"
+
+ATTRIBUTION_GRADES = (TRACE_PROPAGATED, CONTENT_UNIQUE, CONTENT_AMBIGUOUS,
+                      CONTENT_MATCH_UNCONTESTED, TEMPORAL_ONLY, UNATTRIBUTED)
+
+# Grades that may be called strong attribution. CONTENT_MATCH_UNCONTESTED is deliberately NOT
+# among them: see grade_attribution.
+STRONG_ATTRIBUTION = (TRACE_PROPAGATED, CONTENT_UNIQUE)
+
+# Named reasons. An UNATTRIBUTED flow without a reason is a shrug recorded as data.
+REASON_INELIGIBLE_PACKAGE_INFRASTRUCTURE = (
+    "ineligible: package infrastructure traffic, carries no tool-call arguments")
+REASON_NO_EVIDENCE = "no trace, no content match, and no temporal correlation available"
+REASON_UNREADABLE_NO_CORRELATION = "request unreadable and no temporal correlation available"
 
 # Which channel of the request carried the causal fragment. Reported alongside the state, never
 # folded into it: a match in the query string and a match in the body are both causal evidence,
@@ -121,7 +168,8 @@ def _match_channel(
 
     # Number 5: causal union. Non-empty intersection with the call's own arguments.
     # A match shorter than k bytes is not detected; that is a false negative and the safe
-    # direction (we say DECLARADO instead of falsely EFECTIVO).
+    # direction: the flow grades TEMPORAL_ONLY rather than being falsely credited with a
+    # content match it did not have.
     return matched, refs, bool(args_digests & present)
 
 
@@ -148,8 +196,9 @@ def match_request(
     ``context_index`` maps reference id -> digest set for the session context files (number 4).
     ``args_digests`` is the digest set of the causing call's arguments (number 5, the causal
     key). Passing args separately, rather than as one more reference, is deliberate: a match
-    against args is a causal claim (EFECTIVO), a match against a context file is a leak claim.
-    They answer different questions and must not be conflated.
+    against args is an attribution claim, a match against a context file is a provenance claim.
+    Those are two of the three separate claims in the evidence model, and conflating them is
+    exactly what the single-column state was doing.
 
     Caveat, and it is a real one: matching is byte-literal, so a value the client
     percent-encodes, base64s, or splits across parameters is not detected in the target. That is
@@ -179,17 +228,84 @@ def match_request(
     )
 
 
-def decide_state(causal: bool, body_observed: bool, has_time_and_pid: bool) -> str:
-    """Map available evidence to a resolution state (docs/DOCTRINE.md, the three states).
+def decide_occurrence(request_observed: bool) -> str:
+    """Claim one: was the transfer observed, and could it be read."""
+    return OCCURRENCE_OBSERVED if request_observed else OCCURRENCE_CONNECTION_ONLY
 
-    Order matters: content evidence beats correlation. If a fragment of the arguments is in the
-    payload, the connection is EFECTIVO regardless of how many other calls were concurrent. If
-    we only have a time window and a pid, we say DECLARADO and call it correlation. If the body
-    was never observed (TLS we did not terminate, an argument-less call, an async pool with no
-    body), we say INDETERMINADO with the cause named by the caller.
+
+def decide_provenance(request_observed: bool, has_context_match: bool,
+                      has_argument_match: bool) -> str:
+    """Claim two: what recognisable material of ours the request carried.
+
+    Unreadable means UNKNOWN, never NONE. "We looked and found nothing" and "we could not look"
+    are different findings and collapsing them into one value is how a blind spot reads as a
+    clean result.
     """
-    if causal:
-        return EFECTIVO
-    if body_observed and has_time_and_pid:
-        return DECLARADO
-    return INDETERMINADO
+    if not request_observed:
+        return PROVENANCE_UNKNOWN
+    if has_context_match and has_argument_match:
+        return PROVENANCE_BOTH
+    if has_context_match:
+        return PROVENANCE_CONTEXT
+    if has_argument_match:
+        return PROVENANCE_ARGUMENTS
+    return PROVENANCE_NONE
+
+
+def grade_attribution(*, traceparent_present: bool, argument_match: bool,
+                      active_calls_in_window: int, matching_calls_in_window: int,
+                      eligible: bool, has_time_and_pid: bool) -> tuple[str, str]:
+    """Claim three: how strongly this flow can be tied to a tool call. Returns (grade, reason).
+
+    THE TAUTOLOGY THIS FUNCTION EXISTS TO AVOID. The corpus is driven sequentially, so in every
+    window there is exactly ONE active call. Under that regime, "the fragment matched and there
+    was no competing candidate" is true of every match by construction, and implementing
+    CONTENT_UNIQUE that way would publish 100% strong attribution while having discriminated
+    nothing. It would be a restatement of the experimental setup wearing a measurement's
+    clothes. So:
+
+      CONTENT_UNIQUE               requires active_calls_in_window > 1 AND the fragment present
+                                   in exactly one of them. That is discrimination: candidates
+                                   existed and the content told them apart.
+      CONTENT_AMBIGUOUS            more than one active call and the fragment in several of
+                                   them. Content matched and did NOT discriminate. A real
+                                   outcome, and the one that bounds precision.
+      CONTENT_MATCH_UNCONTESTED    a match with only one call active. Honest and weaker: there
+                                   was nothing to tell apart. This is what sequential driving
+                                   can yield, and it is NOT strong attribution.
+
+    So today, with sequential driving, this function emits no CONTENT_UNIQUE at all, and a test
+    asserts that. The question the project exists to answer, whether content matching recovers
+    attribution when time cannot, is answerable only in phase C with concurrent calls
+    (docs/PHASES.md). The code says so instead of pretending otherwise.
+
+    ELIGIBILITY ONLY DOWNGRADES THE WEAKEST GRADE. It is checked after trace and content
+    evidence, never before. A package-registry flow that did carry our traceparent, or a literal
+    fragment of a call's arguments, is attributed on that evidence and stays visible: the
+    exclusion list withholds a temporal guess, it never suppresses direct evidence. Same
+    principle as number 1 never filtering its raw count.
+    """
+    if traceparent_present:
+        return TRACE_PROPAGATED, "our traceparent appeared in the outbound request"
+
+    if argument_match:
+        if active_calls_in_window > 1 and matching_calls_in_window == 1:
+            return CONTENT_UNIQUE, (
+                f"fragment present in exactly 1 of {active_calls_in_window} concurrent calls")
+        if active_calls_in_window > 1:
+            return CONTENT_AMBIGUOUS, (
+                f"fragment present in {matching_calls_in_window} of "
+                f"{active_calls_in_window} concurrent calls; content did not discriminate")
+        return CONTENT_MATCH_UNCONTESTED, (
+            "fragment matched with only one call active: no competing candidate existed, so "
+            "nothing was discriminated")
+
+    if not eligible:
+        return UNATTRIBUTED, REASON_INELIGIBLE_PACKAGE_INFRASTRUCTURE
+
+    if has_time_and_pid and active_calls_in_window >= 1:
+        return TEMPORAL_ONLY, (
+            f"time window and pid only, with {active_calls_in_window} call(s) active")
+
+    return UNATTRIBUTED, (REASON_NO_EVIDENCE if has_time_and_pid
+                          else REASON_UNREADABLE_NO_CORRELATION)
