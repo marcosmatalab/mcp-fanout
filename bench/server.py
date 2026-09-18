@@ -43,8 +43,12 @@ PROTOCOL_VERSION = "2025-11-25"
 # wire by itself and attributes by trace, content and window, never by hostname. The slot arrives
 # as an INTEGER argument, never as a hostname, so the destination name cannot leak into the
 # matchable argument material and manufacture a content match out of the destination itself.
-SINK_HOST_TEMPLATE = "sink{slot:02d}.bench.invalid"
-MAX_SLOTS = 16
+SINK_HOST_TEMPLATE = "sink{slot:03d}.bench.invalid"
+# One destination per CALL in the whole run, not per position within a wave. Sixteen slots reused
+# across waves would make sink03 the destination of many calls, and the comparator's join would
+# be ambiguous exactly where concurrency makes it interesting. The harness assigns a global slot
+# index; the image maps this many names to loopback.
+MAX_SLOTS = 128
 
 
 def _sink_host(slot: int) -> str:

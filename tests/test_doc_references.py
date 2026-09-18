@@ -73,10 +73,20 @@ def test_the_phase_and_gate_documents_exist_and_cross_reference():
         assert phase in phases
 
 
+THRESHOLD_HEADING = "Thresholds, because an instrument has a specification."
+
+
 def _sensor_gate_rows() -> dict[str, str]:
-    """The sensor gate's table, as criterion -> threshold."""
+    """The sensor gate's THRESHOLD table, as criterion -> threshold.
+
+    Anchored on the threshold heading and not on "### Sensor gate", because the document now also
+    carries a measured-result section under a similar heading. A parser that grabbed the first
+    match would read the results table and silently stop checking the commitments, which is the
+    failure mode this whole file exists to prevent.
+    """
     phases = (REPO / "docs" / "PHASES.md").read_text()
-    section = phases.split("### Sensor gate")[1].split("### Product gate")[0]
+    assert phases.count(THRESHOLD_HEADING) == 1, "the threshold table's heading is not unique"
+    section = phases.split(THRESHOLD_HEADING)[1].split("### Product gate")[0]
     rows = {}
     for line in section.splitlines():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]

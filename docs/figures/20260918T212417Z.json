@@ -1,0 +1,164 @@
+{
+  "normalized": true,
+  "numbers": [
+    {
+      "command": "make n1",
+      "connections_excluding_package_infrastructure": {
+        "max": 4,
+        "n": 82,
+        "p50": 0,
+        "p95": 1
+      },
+      "connections_raw": {
+        "max": 4,
+        "n": 82,
+        "p50": 0,
+        "p95": 1
+      },
+      "distinct_hosts": {
+        "max": 1,
+        "n": 82,
+        "p50": 0,
+        "p95": 1
+      },
+      "distinct_hosts_note": "same quantity as number 2; published here so the raw connection count is never read on its own",
+      "exclusion_list": {
+        "list_name": "package-infrastructure",
+        "loaded": true,
+        "path": "registry/package-infrastructure.json",
+        "sha256": "3137eb3defc936d9ef5a06485242589a9adfb233d9573fae3489318157f9ceb0",
+        "suffix_count": 20,
+        "version": "2026-09-18"
+      },
+      "name": "outbound_connections_per_tool_call",
+      "number": 1,
+      "package_infrastructure_connections": 0
+    },
+    {
+      "command": "make n2",
+      "distribution": {
+        "max": 1,
+        "n": 82,
+        "p50": 0,
+        "p95": 1
+      },
+      "name": "distinct_domains_per_tool_call",
+      "number": 2
+    },
+    {
+      "by_protocol_revision": {
+        "2025-11-25": {
+          "fraction": 0.0,
+          "servers_propagating": 0,
+          "servers_total": 1
+        }
+      },
+      "command": "make n3",
+      "name": "servers_propagating_traceparent",
+      "number": 3,
+      "pooled_fraction": 0.0,
+      "pooled_note": "read the segments; SEP-414 is a 2026-07-28 change, so a server answering an earlier revision predates the convention",
+      "servers_propagating": 0,
+      "servers_total": 1
+    },
+    {
+      "body_matched_bytes": 0,
+      "command": "make n4",
+      "flows_total": 85,
+      "flows_with_body_match": 0,
+      "flows_with_context_match": 0,
+      "flows_with_target_match": 0,
+      "fraction_flows_with_match": 0.0,
+      "matched_bytes_total": 0,
+      "name": "provenance_coverage",
+      "number": 4,
+      "observed_body_bytes": 3216,
+      "observed_outbound_bytes_total": 4497,
+      "observed_target_bytes": 1281,
+      "occurrence_counts": {
+        "connection_only": 0,
+        "observed": 85
+      },
+      "provenance_counts": {
+        "arguments": 59,
+        "both": 0,
+        "context": 0,
+        "none": 26,
+        "unknown": 0
+      },
+      "target_matched_bytes": 0
+    },
+    {
+      "attribution_grades": {
+        "CONTENT_AMBIGUOUS": 21,
+        "CONTENT_MATCH_UNCONTESTED": 5,
+        "CONTENT_UNIQUE": 33,
+        "TEMPORAL_ONLY": 3,
+        "TRACE_PROPAGATED": 0,
+        "UNATTRIBUTED": 23
+      },
+      "attribution_reasons": {
+        "fragment matched with only one call active: no competing candidate existed, so nothing was discriminated": 5,
+        "fragment present in 10 of 10 concurrent calls; content did not discriminate": 10,
+        "fragment present in 2 of 10 concurrent calls; content did not discriminate": 2,
+        "fragment present in 2 of 2 concurrent calls; content did not discriminate": 2,
+        "fragment present in 2 of 5 concurrent calls; content did not discriminate": 2,
+        "fragment present in 5 of 5 concurrent calls; content did not discriminate": 5,
+        "fragment present in exactly 1 of 10 concurrent calls": 18,
+        "fragment present in exactly 1 of 2 concurrent calls": 2,
+        "fragment present in exactly 1 of 5 concurrent calls": 13,
+        "no trace, no content match, and no temporal correlation available": 1,
+        "time window and pid, with exactly one call in flight": 3,
+        "time window covers 10 concurrent calls: correlation identifies no single call": 10,
+        "time window covers 2 concurrent calls: correlation identifies no single call": 2,
+        "time window covers 5 concurrent calls: correlation identifies no single call": 10
+      },
+      "command": "make n5",
+      "content_match_by_channel": {
+        "body": 54,
+        "both": 0,
+        "target": 5
+      },
+      "exclusion_list": {
+        "list_name": "package-infrastructure",
+        "loaded": true,
+        "path": "registry/package-infrastructure.json",
+        "sha256": "3137eb3defc936d9ef5a06485242589a9adfb233d9573fae3489318157f9ceb0",
+        "suffix_count": 20,
+        "version": "2026-09-18"
+      },
+      "flows_total": 85,
+      "max_active_calls_in_window": 10,
+      "name": "attribution_grade_distribution",
+      "number": 5,
+      "sequential_driving": false,
+      "strong_attribution_count": 33,
+      "strong_attribution_fraction": 0.3882,
+      "strong_attribution_grades": [
+        "TRACE_PROPAGATED",
+        "CONTENT_UNIQUE"
+      ]
+    },
+    {
+      "category_counts": {
+        "local": 0,
+        "remote_leaf": 82,
+        "self_hostable": 0
+      },
+      "command": "make n6",
+      "distinct_nodes": 82,
+      "name": "selfhostable_third_parties",
+      "number": 6,
+      "selfhostable_fraction": 0.0
+    }
+  ],
+  "provenance": {
+    "command": "python -m mcpfanout.cli figures --run runs/20260918T212417Z",
+    "corpus_sha256": "e5f7da022712432af13f44d3f5fd8d21b824909b32ca256d3f3120225beb61d8",
+    "created": "2026-09-18T21:24:22.522137+00:00",
+    "notes": "PHASE A BENCH run, not a measurement of any third-party server. Ground truth is the bench's own ledger; see docs/PHASES.md and mcpfanout.bench_metrics.",
+    "run_id": "20260918T212417Z",
+    "salt_fixed": true,
+    "server_count": 1
+  }
+}

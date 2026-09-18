@@ -27,16 +27,32 @@ from mcpfanout.driver import CallSpec, StdioMCPClient, drive_wave
 from mcpfanout.record import RunManifest, ToolCall, write_jsonl, write_manifest
 from mcpfanout.redact import DEFAULT_SALT, Redactor
 
-# 40 bytes of unique synthetic material per fragment, well over k = 16 so a literal run is
-# detectable and not coincidental. Never a real secret (docs/DOCTRINE.md).
-FRAGMENT_TEMPLATE = "BENCHFRAG_{tag}_0123456789abcdef0123456"
+# 40 bytes of synthetic material per fragment, well over k = 16 so a literal run is detectable
+# and not coincidental. Never a real secret (docs/DOCTRINE.md).
+#
+# NO TWO FRAGMENTS MAY SHARE A 16-BYTE RUN, and this is a correctness requirement of the
+# experiment, not tidiness. The first version was "BENCHFRAG_<tag>_0123456789abcdef0123456":
+# readable, and wrong. Every fragment shared the 10-byte prefix AND a 24-byte constant tail, so
+# k-grams from the tail appeared in every call's argument digests, every flow matched every call,
+# and the all_distinct cell reported matching_calls_in_window = N. The bench said CONTENT_AMBIGUOUS
+# where the answer was CONTENT_UNIQUE, and the sensor was right each time. A bench whose fragments
+# collide cannot measure discrimination: it measures its own collisions.
+#
+# So the body is a keyed digest of the tag, which makes a shared 16-byte run a hash collision
+# rather than a design property. The 2-byte "BF" prefix keeps the material greppable and is far
+# too short to be a shared run.
+FRAGMENT_PREFIX = "BF"
+FRAGMENT_BODY_HEX = 38
 
 
 def _fragment(tag: str) -> str:
-    return FRAGMENT_TEMPLATE.format(tag=tag)
+    import hashlib
+    body = hashlib.blake2b(tag.encode(), key=b"mcp-fanout/bench/fragments/v1",
+                           digest_size=32).hexdigest()
+    return FRAGMENT_PREFIX + body[:FRAGMENT_BODY_HEX]
 
 
-def _wave_specs(cell: dict, n: int, wave_id: str) -> list[CallSpec]:
+def _wave_specs(cell: dict, n: int, wave_id: str, first_slot: int) -> list[CallSpec]:
     """Expand one cell at one concurrency level into N concurrent CallSpecs.
 
     fragment_mode is the experiment's independent variable:
@@ -58,7 +74,10 @@ def _wave_specs(cell: dict, n: int, wave_id: str) -> list[CallSpec]:
         else:
             frag = _fragment(f"{wave_id}u{i}")
 
-        args: dict = {"slot": i}
+        # A GLOBAL slot per call, not a position within the wave: each call therefore has its
+        # own destination host for the whole run, which is what lets the comparator join one
+        # truth-ledger row to one observed flow without ambiguity.
+        args: dict = {"slot": first_slot + i}
         if tpl["tool"] == "bench_emit_encoded":
             args["encoding"] = tpl["encoding"]
         else:
@@ -79,7 +98,7 @@ def _plan(waves_path: Path) -> list[tuple[dict, int, str]]:
     for group in ("discrimination_cells", "channel_cells", "sensor_cells"):
         for cell in plan[group]:
             for n in cell["n"]:
-                out.append((cell, n, f"{cell['cell'][:6]}{n}"))
+                out.append(({**cell, "group": group}, n, f"{cell['cell'][:6]}{n}"))
     return out
 
 
@@ -115,6 +134,11 @@ def main() -> int:
 
     plan = _plan(Path(args.waves))
     all_calls: list[ToolCall] = []
+    # The harness's declaration of WHAT IT DROVE: which call used which destination slot, in
+    # which cell, and what grade that cell expects. The comparator needs it to know which cell a
+    # flow belongs to; it is intent, not observation, and it is kept apart from both the bench's
+    # ledger and the sensor's flows. Three files, three authors.
+    plan_rows: list[dict] = []
     index = 0
 
     with StdioMCPClient([sys.executable, args.server, "--truth", args.truth], env,
@@ -122,7 +146,7 @@ def main() -> int:
         client.initialize(timeout=60.0)
         client.list_tools()
         for cell, n, wave_id in plan:
-            specs = _wave_specs(cell, n, wave_id)
+            specs = _wave_specs(cell, n, wave_id, first_slot=index)
             results = drive_wave(client, specs, run_id=run_id, server_id=server_id,
                                  redactor=redactor, control_dir=control_dir,
                                  start_index=index, timeout=60.0)
@@ -130,6 +154,14 @@ def main() -> int:
                 all_calls.append(ToolCall(run_id, server_id, r.call_id, r.tool_name,
                                           r.args_present, r.traceparent, ok=r.ok, error=r.error,
                                           stdout_noise_lines=r.stdout_noise_lines))
+                plan_rows.append({
+                    "call_id": r.call_id, "cell": cell["cell"], "group": cell["group"],
+                    "n": n, "slot": spec.arguments["slot"], "tool": spec.tool_name,
+                    "channel": spec.arguments.get("channel",
+                                                  "body:" + spec.arguments.get("encoding", "")),
+                    "expect": cell.get("expect", ""),
+                    "fragment_present": bool(spec.arguments.get("fragment")),
+                })
             failed = [r for r in results if not r.ok]
             print(f"[bench] {cell['cell']} n={n}: {len(results)} calls"
                   + (f", {len(failed)} errored" if failed else ""))
@@ -145,6 +177,8 @@ def main() -> int:
             time.sleep(args.settle_seconds)
 
     write_jsonl(run_dir / "bench_calls.jsonl", all_calls)
+    (run_dir / "bench_plan.jsonl").write_text(
+        "".join(json.dumps(r, sort_keys=True) + "\n" for r in plan_rows), encoding="utf-8")
     write_manifest(run_dir / "manifest.json", RunManifest(
         run_id=run_id, created=datetime.now(timezone.utc).isoformat(),
         salt_fixed=(salt == DEFAULT_SALT), k=redactor.k, w=redactor.w,

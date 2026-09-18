@@ -11,11 +11,13 @@ set -euo pipefail
 REGISTRY="registry/servers.yaml"
 OUT_ROOT="runs"
 ONLY=()
+BENCH=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --registry) REGISTRY="$2"; shift 2 ;;
     --out) OUT_ROOT="$2"; shift 2 ;;
     --only) ONLY+=(--only "$2"); shift 2 ;;
+    --bench) BENCH=1; shift ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -50,14 +52,34 @@ export MCPFANOUT_W="8"
 # 1. Pre-digest the session context (content-free) for the addon.
 python -m mcpfanout.cli prep-context --context-dir corpus/context --out "${MCPFANOUT_CONTEXT}"
 
+# 1a-bench. Phase A needs its destinations to resolve and its sink to be listening, both before
+#           the proxy starts. The hostnames are staged in the image (one per call, all loopback)
+#           and appended here because /etc/hosts cannot be baked into a layer.
+if [[ "${BENCH}" == "1" ]]; then
+  cat /etc/hosts.bench >> /etc/hosts
+  python bench/sink.py --host 127.0.0.1 --port 8099 >"${RUN_DIR}/sink.log" 2>&1 &
+  SINK_PID=$!
+  trap 'kill "${SINK_PID}" 2>/dev/null || true' EXIT
+  for _ in $(seq 1 40); do
+    python -c "import socket,sys; s=socket.create_connection(('127.0.0.1',8099),0.25); s.close()" \
+      2>/dev/null && break
+    sleep 0.25
+  done
+  echo "[run] bench sink up on 127.0.0.1:8099"
+fi
+
 # 1b. Populate the npx/uv package caches BEFORE the proxy exists. Without this, the installer's
 #     own downloads pass through mitmdump and are recorded as the server's fan-out: the first
 #     working smoke run of `fetch` captured 129 flows, all of them uvx talking to pypi.org and
 #     files.pythonhosted.org, and none from the tool call. See drive_all.warm() for the
 #     trade-off (this launch is unobserved) and docs/THREATS.md threat 10.
-echo "[run] warming package caches (unproxied, before capture starts)"
-python harness/drive_all.py --registry "${REGISTRY}" --run-dir "${RUN_DIR}" --warm \
-       "${ONLY[@]+"${ONLY[@]}"}"
+if [[ "${BENCH}" == "1" ]]; then
+  echo "[run] bench mode: no package caches to warm, the bench server is ours"
+else
+  echo "[run] warming package caches (unproxied, before capture starts)"
+  python harness/drive_all.py --registry "${REGISTRY}" --run-dir "${RUN_DIR}" --warm \
+         "${ONLY[@]+"${ONLY[@]}"}"
+fi
 
 # 2. Start mitmdump with our addon. First start also generates the CA under ~/.mitmproxy.
 echo "[run] starting mitmdump on :8080"
@@ -88,15 +110,30 @@ if command -v tcpdump >/dev/null 2>&1; then
   trap 'kill "${MITM_PID}" "${TCPDUMP_PID}" 2>/dev/null || true' EXIT
 fi
 
-# 5. Drive every server through the proxy, sequentially.
-python harness/drive_all.py --registry "${REGISTRY}" --run-dir "${RUN_DIR}" \
-       --proxy "http://127.0.0.1:8080" --salt "${MCPFANOUT_SALT}" "${ONLY[@]+"${ONLY[@]}"}"
+# 5. Drive. Bench mode drives CONCURRENT waves against our own server; the phenomenon mode
+#    drives the registry sequentially.
+if [[ "${BENCH}" == "1" ]]; then
+  python bench/drive_bench.py --run-dir "${RUN_DIR}" \
+         --truth "${RUN_DIR}/bench_truth.jsonl" \
+         --proxy "http://127.0.0.1:8080" --salt "${MCPFANOUT_SALT}" --sink-port 8099
+else
+  python harness/drive_all.py --registry "${REGISTRY}" --run-dir "${RUN_DIR}" \
+         --proxy "http://127.0.0.1:8080" --salt "${MCPFANOUT_SALT}" "${ONLY[@]+"${ONLY[@]}"}"
+fi
 
 # 6. Stop capture cleanly so the addon flushes flows.jsonl in its done() hook.
 kill -TERM "${MITM_PID}" 2>/dev/null || true
 wait "${MITM_PID}" 2>/dev/null || true
 [[ -n "${TCPDUMP_PID:-}" ]] && kill "${TCPDUMP_PID}" 2>/dev/null || true
 
-# 7. Compute the six numbers. Rule 6: this is the command behind the published figures.
+# 7. Compute the numbers. Rule 6: these are the commands behind the published figures.
 python -m mcpfanout.cli aggregate --run "${RUN_DIR}" --number all | tee "${RUN_DIR}/numbers.json"
-echo "[run] done: ${RUN_DIR}/numbers.json"
+if [[ "${BENCH}" == "1" ]]; then
+  # The instrument block, which exists only for a bench run: recall and precision have no
+  # denominator anywhere else (gate rule 8).
+  python -m mcpfanout.cli bench-verify --run "${RUN_DIR}" \
+         | tee "${RUN_DIR}/instrument.json" || true
+  echo "[run] done: ${RUN_DIR}/numbers.json and ${RUN_DIR}/instrument.json"
+else
+  echo "[run] done: ${RUN_DIR}/numbers.json"
+fi
