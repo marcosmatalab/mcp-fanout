@@ -3,6 +3,7 @@
 Subcommands:
   aggregate  Compute the six numbers from a run (the rule-6 commands behind the Makefile).
   figures    Write a run's normalized aggregate to docs/figures/ as a committed artifact.
+  bench-verify  Phase A instrument metrics (recall, precision, false provenance).
   selftest   Build a synthetic run and compute its numbers, with no Docker and no network.
   run        Drive the pinned servers under capture and write a real run (delegates to harness/).
 
@@ -103,6 +104,20 @@ def _cmd_prep_context(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_bench_verify(args: argparse.Namespace) -> int:
+    """Compare the phase A bench's own truth ledger against what the sensor recorded.
+
+    Separate from `aggregate` on purpose. The six numbers describe the PHENOMENON and are
+    computable for any run; these three describe the INSTRUMENT and are computable only where we
+    caused every transfer and know its cause. Putting them in one command would invite quoting a
+    recall figure off a phase B run, which is a number with no denominator (gate rule 8).
+    """
+    from .bench_metrics import compute
+    out = compute(_resolve_run(args.run), args.truth)
+    print(json.dumps(out, indent=2, sort_keys=True))
+    return 0 if out.get("ok") else 1
+
+
 def _cmd_figures(args: argparse.Namespace) -> int:
     """Write a run's NORMALIZED AGGREGATE to docs/figures/ as a committed artifact.
 
@@ -143,7 +158,51 @@ def _cmd_figures(args: argparse.Namespace) -> int:
     # command over the same run must produce identical bytes (gate rule 1, level 1).
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"wrote {out}")
+
+    # A phase A run carries a second, differently shaped artifact: the instrument block. It is
+    # written by the same command so there is one command behind both figures (rule 2), and it is
+    # a separate file because the two answer different questions and must not be quotable as one.
+    if (run_dir / "bench_truth.jsonl").is_file():
+        inst_out = out_dir / f"{run.manifest.run_id}-instrument.json"
+        inst_out.write_text(json.dumps(_instrument_artifact(run_dir, run.manifest.run_id),
+                                       indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"wrote {inst_out}")
     return 0
+
+
+def _instrument_artifact(run_dir: Path, run_id: str) -> dict:
+    """The publishable form of the phase A instrument block.
+
+    One transformation, and it is a rule-3 requirement rather than tidiness:
+    ``hosts_sent_to_but_never_observed`` is a list of DESTINATION HOSTNAMES, and no host may
+    appear in published output. Committed, it becomes a count. The full list stays in the run's
+    own instrument.json for the operator, which is the same division everything else uses: the
+    run keeps identifying detail, the artifact keeps counts.
+    """
+    from .bench_metrics import compute
+    inst = compute(run_dir)
+    capture = dict(inst.get("capture", {}))
+    missed = capture.pop("hosts_sent_to_but_never_observed", [])
+    capture["hosts_sent_to_but_never_observed_count"] = len(missed)
+    return {
+        "normalized": True,
+        "phase": "A",
+        "provenance": {
+            "run_id": run_id,
+            "command": f"python -m mcpfanout.cli bench-verify --run runs/{run_id}",
+            "what_this_is": ("the phase A bench's instrument block: capture recall, attribution "
+                             "precision and false provenance matches, from comparing the bench's "
+                             "own truth ledger against what the sensor recorded"),
+            "ground_truth_author": ("bench/server.py, from inside its own handler. It imports "
+                                    "nothing from mcpfanout and never reads the harness control "
+                                    "directory; tests/test_bench_isolation.py enforces both"),
+            "not_computable_elsewhere": ("recall needs a denominator of transfers we caused and "
+                                         "precision needs a known cause, so these three exist "
+                                         "only for phase A (gate rule 8)"),
+        },
+        "instrument": {**{k: v for k, v in inst.items() if k not in ("command", "capture")},
+                       "capture": capture},
+    }
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
@@ -162,6 +221,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
         sys.exit("error: harness/docker-compose.yml not found.")
     cmd = ["docker", "compose", "-f", str(compose), "run", "--rm", "--build", "harness",
            "--registry", args.registry, "--out", args.out]
+    if getattr(args, "bench", False):
+        cmd.append("--bench")
     for sid in args.only:
         cmd += ["--only", sid]
     return subprocess.call(cmd)
@@ -185,6 +246,13 @@ def build_parser() -> argparse.ArgumentParser:
     pc.add_argument("--out", default="runs/live/context.json")
     pc.set_defaults(func=_cmd_prep_context)
 
+    bv = sub.add_parser("bench-verify",
+                        help="phase A instrument metrics: recall, precision, false provenance")
+    bv.add_argument("--run", default="latest", help="'latest' or a path to runs/<id>")
+    bv.add_argument("--truth", default=None,
+                    help="the bench's own ledger (default: <run>/bench_truth.jsonl)")
+    bv.set_defaults(func=_cmd_bench_verify)
+
     f = sub.add_parser("figures", help="write a run's normalized aggregate to docs/figures/")
     f.add_argument("--run", default="latest", help="'latest' or a path to runs/<id>")
     f.add_argument("--out", default="docs/figures", help="directory for the committed artifact")
@@ -195,6 +263,8 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--out", default="runs/")
     r.add_argument("--only", action="append", default=[], metavar="ID",
                    help="drive only these server ids (repeatable), for a smoke test")
+    r.add_argument("--bench", action="store_true",
+                   help="phase A: drive concurrent waves against our own bench server and sink")
     r.set_defaults(func=_cmd_run)
     return p
 

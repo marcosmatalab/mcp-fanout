@@ -4,7 +4,7 @@
 #
 # We set RECIPEPREFIX to '>' so recipe lines do not depend on literal tabs.
 .RECIPEPREFIX = >
-.PHONY: install verify test selftest run numbers n1 n2 n3 n4 n5 n6 figures clean
+.PHONY: install verify test selftest run numbers n1 n2 n3 n4 n5 n6 figures bench bench-verify clean
 
 RUN ?= latest
 
@@ -44,6 +44,15 @@ n5:
 > python3 -m mcpfanout.cli aggregate --run $(RUN) --number 5
 n6:
 > python3 -m mcpfanout.cli aggregate --run $(RUN) --number 6
+
+# Phase A bench: build the instrument's own measurement. Needs Docker and network.
+# Gate rule 8: this must pass before any phase B figure is published.
+bench:
+> python3 -m mcpfanout.cli run --bench --out runs/
+
+# The instrument block from a bench run: capture recall, attribution precision, false provenance.
+bench-verify:
+> python3 -m mcpfanout.cli bench-verify --run $(RUN)
 
 # Write the latest run's normalized aggregate into docs/figures/ as a committed artifact.
 # This is what makes a figure quoted in a document re-derivable without committing the run

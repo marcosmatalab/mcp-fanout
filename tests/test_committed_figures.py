@@ -20,7 +20,18 @@ FIGURES = REPO / "docs" / "figures"
 
 
 def _artifacts() -> list[Path]:
-    return sorted(FIGURES.glob("*.json"))
+    """The six-number normalized aggregates. Instrument artifacts are a different shape."""
+    return sorted(p for p in FIGURES.glob("*.json") if not p.name.endswith("-instrument.json"))
+
+
+def _instrument_artifacts() -> list[Path]:
+    """The phase A instrument blocks: recall, precision, false provenance.
+
+    A separate family on purpose. They answer a different question from the six numbers and are
+    computable only on a bench run, so keeping them in one file would make it possible to quote a
+    recall figure alongside a phenomenon figure as though both described the same thing.
+    """
+    return sorted(FIGURES.glob("*-instrument.json"))
 
 
 def test_at_least_one_normalized_aggregate_is_committed():
@@ -146,3 +157,114 @@ def test_threat_10_quotes_the_committed_artifact_not_a_vanished_run():
         for phrase in expected:
             assert phrase in threat10, (
                 f"threat 10 does not quote the artifact: expected {phrase!r}")
+
+
+# --- Phase A instrument artifacts. Gate rule 8's evidence, and rule 3 still applies to it.
+
+def test_an_instrument_artifact_is_committed():
+    """Gate rule 8 blocks phase B on phase A passing, so the pass has to be re-derivable."""
+    assert _instrument_artifacts(), (
+        "no phase A instrument artifact; gate rule 8 cannot be shown to be satisfied")
+
+
+@pytest.mark.parametrize("path", _instrument_artifacts(), ids=lambda p: p.name)
+def test_the_instrument_artifact_carries_its_command_and_its_author(path):
+    d = json.loads(path.read_text())
+    assert d["phase"] == "A"
+    prov = d["provenance"]
+    assert "bench-verify" in prov["command"]
+    # Who wrote the ground truth is part of the figure's meaning: a precision number computed
+    # against a ledger the sensor could have influenced would be worthless, so the artifact says
+    # where the truth came from.
+    assert "bench/server.py" in prov["ground_truth_author"]
+    assert "imports" in prov["ground_truth_author"]
+    for block in ("capture", "attribution", "provenance", "known_negatives", "per_cell"):
+        assert block in d["instrument"], block
+
+
+@pytest.mark.parametrize("path", _instrument_artifacts(), ids=lambda p: p.name)
+def test_the_instrument_artifact_publishes_no_destination_host(path):
+    """Rule 3 applies to this artifact too, and one field had to be reduced to satisfy it.
+
+    bench_metrics reports hosts_sent_to_but_never_observed as a list of hostnames, which is a
+    useful diagnostic for the operator and a rule-3 violation the moment it is committed. The
+    artifact carries the count instead; the list stays in the untracked run.
+    """
+    text = path.read_text()
+    assert "bench.invalid" not in text, "a bench destination hostname is published"
+    assert "hosts_sent_to_but_never_observed" not in json.loads(text)["instrument"]["capture"]
+    assert "hosts_sent_to_but_never_observed_count" in json.loads(text)["instrument"]["capture"]
+
+
+@pytest.mark.parametrize("path", _instrument_artifacts(), ids=lambda p: p.name)
+def test_the_committed_instrument_result_passes_the_sensor_gate(path):
+    """The four pre-registered criteria of docs/PHASES.md, read out of the artifact.
+
+    Written as a test rather than left in prose because gate rule 8 turns this on a threshold,
+    and a threshold nobody checks is a sentence. If a future bench run regresses, this fails and
+    the phase B figures stop being publishable, which is exactly what rule 8 says.
+    """
+    inst = json.loads(path.read_text())["instrument"]
+    assert inst["ok"] is True
+    assert inst["capture"]["capture_recall"] >= 0.95, inst["capture"]
+    # Tolerance zero, not negotiable: one false strong attribution destroys the evidentiary claim.
+    assert inst["attribution"]["false_strong_attributions"] == 0, inst["attribution"]
+    assert inst["provenance"]["false_provenance_rate"] < 0.01, inst["provenance"]
+    # And the thesis has to have actually been exercised, or the gate passes on an empty bench.
+    assert inst["attribution"]["strong_attributions"] > 0, (
+        "no strong attribution was produced at all; the bench did not exercise the thesis")
+
+
+@pytest.mark.parametrize("path", _instrument_artifacts(), ids=lambda p: p.name)
+def test_every_discrimination_cell_got_the_grade_it_predicted(path):
+    """The cells are pre-registered predictions, so each one is checked against its own claim.
+
+    The mixture cell is checked on the SPLIT rather than on a single grade, because right counts
+    with the wrong pairing is a failure and a per-cell grade tally alone cannot see it: the
+    comparator's per-flow correct_call and wrong_call are what settle it.
+    """
+    cells = json.loads(path.read_text())["instrument"]["per_cell"]
+    for name, expected in (("all_distinct", "CONTENT_UNIQUE"),
+                           ("all_shared", "CONTENT_AMBIGUOUS"),
+                           ("no_arguments", "UNATTRIBUTED"),
+                           ("target_channel", "CONTENT_UNIQUE"),
+                           ("header_channel", "UNATTRIBUTED")):
+        cell = cells[name]
+        assert set(cell["grades"]) == {expected}, f"{name}: {cell['grades']}"
+        assert cell["flows"] > 0, name
+
+    mixture = cells["two_shared_rest_distinct"]
+    assert set(mixture["grades"]) == {"CONTENT_UNIQUE", "CONTENT_AMBIGUOUS"}, mixture["grades"]
+    assert mixture["wrong_call"] == 0, "the mixture cell attributed a flow to the wrong call"
+    assert mixture["correct_call"] == mixture["grades"]["CONTENT_UNIQUE"]
+    assert mixture["no_call"] == mixture["grades"]["CONTENT_AMBIGUOUS"]
+
+
+@pytest.mark.parametrize("path", _instrument_artifacts(), ids=lambda p: p.name)
+def test_the_known_negatives_really_were_missed(path):
+    """A known negative that the sensor accidentally caught would not be sizing anything.
+
+    These cells exist to produce the figure for what byte-literal matching loses (negative 3).
+    If the sensor attributed one strongly, the cell would be measuring a hit while being reported
+    as a loss.
+    """
+    inst = json.loads(path.read_text())["instrument"]
+    kn = inst["known_negatives"]
+    assert kn["flows_carrying_material_in_an_unread_channel"] > 0, "nothing was measured"
+    assert kn["of_which_the_sensor_attributed_strongly"] == 0
+    for cell in ("reencoded_base64", "reencoded_gzip", "reencoded_json_escaped"):
+        grades = inst["per_cell"][cell]["grades"]
+        assert "CONTENT_UNIQUE" not in grades and "CONTENT_AMBIGUOUS" not in grades, (
+            f"{cell}: a re-encoded payload produced a content match, so it left a literal run")
+
+
+@pytest.mark.parametrize("path", _instrument_artifacts(), ids=lambda p: p.name)
+def test_late_egress_is_unattributed_rather_than_pinned_to_the_last_call(path):
+    """Egress after its wave has no window to sit in, and must not be guessed at.
+
+    This is the case that shows a time window is not a substitute for content: the harness clears
+    the in-flight set after each wave precisely so this comes out honest.
+    """
+    cells = json.loads(path.read_text())["instrument"]["per_cell"]
+    assert set(cells["late_egress"]["grades"]) == {"UNATTRIBUTED"}, cells["late_egress"]
+    assert cells["late_egress"]["no_call"] == cells["late_egress"]["flows"]
