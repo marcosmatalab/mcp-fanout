@@ -24,6 +24,34 @@ cannot be passive and report at the same time, and because a chain deeper than t
 non-self-hostable node is not observable by anyone without cooperation. That limit is physical.
 The harness states it as a result, not an apology (see "The recursion" below).
 
+## The protocol revision we speak, and the one SEP-414 landed in
+
+These are two different revisions and the distinction is load-bearing, so it is stated rather
+than left to be inferred from a constant.
+
+The wire the driver implements is **2025-11-25**: `initialize`, `notifications/initialized`,
+`tools/list`, `tools/call`. `mcpfanout.driver.PROTOCOL_VERSION` says so, and
+`harness/probe.py` negotiates down from there through the older handshake revisions.
+
+The **current** revision is 2026-07-28, and we deliberately do not speak it. It removed the
+handshake entirely: every request carries its own `io.modelcontextprotocol/protocolVersion` in
+`_meta` and servers must implement a `server/discover` RPC (SEP-2575, major changes 2 and 3 of
+<https://modelcontextprotocol.io/specification/2026-07-28/changelog>). Announcing `2026-07-28`
+inside an `initialize` request, which is what this harness did until the defect was found,
+describes a protocol neither side is speaking. Speaking it properly is a driver rewrite, not a
+constant, and no reference server implements it yet; the servers in the registry answer
+2025-11-25.
+
+The convention this harness relies on, trace context in `_meta` under the unprefixed keys
+`traceparent`, `tracestate` and `baggage` in W3C Trace Context format, is documented by
+**SEP-414**, which is Final (<https://modelcontextprotocol.io/seps/414-request-meta>) and is
+minor change 2 of that same 2026-07-28 changelog. So the convention we use is documented one
+revision ahead of the wire we speak. That is legitimate: `_meta` is an open extension field in
+both revisions, so the key is carried by a field built to carry it. It is also not an injection
+under negativa 1 (docs/DOCTRINE.md): the request goes to a server we launched ourselves, on our
+own machine, and nothing is planted in a third party. Whether the server then forwards it
+downstream is the server's own choice, and observing that choice is number 3.
+
 ## The capture layer: why a proxy, not eBPF, for the measurement
 
 To read the plaintext of an HTTPS body you must terminate the TLS. There are three ways:
