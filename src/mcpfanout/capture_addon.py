@@ -6,8 +6,8 @@ does that with one dependency and no kernel privileges, which is the right cost 
 afternoon measurement. eBPF uprobes on SSL_write/SSL_read (docs/METHOD.md) are the product-grade
 path: they also catch certificate-pinned clients and non-proxied flows, at the cost of being
 Linux and kernel specific. The measurement accepts the proxy's blind spots and reports them
-(a pinned or non-HTTP flow is counted by the pcap backstop in harness/run.sh and marked
-INDETERMINADO for content).
+(a pinned or non-HTTP flow is counted by the pcap backstop in harness/run.sh and recorded with
+occurrence connection_only and provenance unknown).
 
 This addon runs inside mitmdump's process. It never stores a captured byte: it hashes the body
 in memory, keeps counts and a state, and writes one Flow line. Configuration comes from the
@@ -57,15 +57,15 @@ class FanoutRecorder:
 
         self._buffer: list[Flow] = []
 
-    def _current_call(self) -> dict:
-        """Read the active call published by the driver. Empty dict if none is active yet."""
-        p = self.control / "current_call.json"
+    def _active_calls(self) -> dict:
+        """Read the in-flight calls published by the driver. Empty dict if none are active yet."""
+        p = self.control / "active_calls.json"
         if not p.exists():
             return {}
         try:
             return json.loads(p.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
-            # A torn read is treated as "no active call": attribute nothing rather than guess.
+            # A torn read is treated as "no active calls": attribute nothing rather than guess.
             return {}
 
     # mitmproxy hook. Named exactly as mitmproxy expects.
@@ -76,13 +76,40 @@ class FanoutRecorder:
         # is exactly that, and NOT the absolute URL -- req.url would drag in scheme and host,
         # which are not content out of our context and would manufacture self-matches.
         target = (req.path or "").encode("utf-8", "surrogateescape")
-        current = self._current_call()
-        args_digests = frozenset(current.get("args_digests", []))
+        published = self._active_calls()
+        active = published.get("active_calls", [])
 
-        result = _match.match_request(target, body, self.context_index, args_digests,
+        # Match against the UNION of every in-flight call's arguments, then count how many of
+        # them individually contain the matched fragment. The union answers "was any of our
+        # argument material in this request"; the per-call count is what tells CONTENT_UNIQUE
+        # (one candidate of several) from CONTENT_AMBIGUOUS (several) and from
+        # CONTENT_MATCH_UNCONTESTED (only one candidate existed). Without the second number the
+        # strongest grade would be unearnable and unfalsifiable at once.
+        union_digests: frozenset[str] = frozenset()
+        for call in active:
+            union_digests |= frozenset(call.get("args_digests", []))
+
+        result = _match.match_request(target, body, self.context_index, union_digests,
                                       self.redactor)
 
-        tp = current.get("traceparent", "")
+        matching = []
+        if result.causal:
+            for call in active:
+                per_call = frozenset(call.get("args_digests", []))
+                if per_call and _match.match_request(target, body, {}, per_call,
+                                                     self.redactor).causal:
+                    matching.append(call)
+
+        # The attributed call: the single matching one if content discriminated, else the single
+        # active one if there is only one, else nothing. Never "whichever ran last".
+        if len(matching) == 1:
+            attributed = matching[0]
+        elif len(active) == 1:
+            attributed = active[0]
+        else:
+            attributed = {}
+
+        tp = attributed.get("traceparent", "")
         header_tp = req.headers.get("traceparent", "")
         # Each clause is forced to bool separately. Written as
         #   bool(tp) and (tp == header_tp or (body and tp.encode() in body))
@@ -96,7 +123,12 @@ class FanoutRecorder:
         in_body = bool(tp) and bool(body) and tp.encode() in body
         our_tp_present = in_header or in_body
 
-        state = _match.decide_state(result.causal, body_observed=True, has_time_and_pid=True)
+        occurrence = _match.decide_occurrence(request_observed=True)
+        provenance = _match.decide_provenance(
+            request_observed=True,
+            has_context_match=bool(result.matched_refs),
+            has_argument_match=result.causal,
+        )
 
         try:
             dest_ip = flow.server_conn.peername[0] if flow.server_conn.peername else ""
@@ -104,15 +136,18 @@ class FanoutRecorder:
             dest_ip = ""
 
         self._buffer.append(Flow(
-            run_id=self.run_id, server_id=current.get("server_id", ""),
-            call_id=current.get("call_id"), ts=time.time(),
+            run_id=self.run_id, server_id=published.get("server_id", ""),
+            call_id=attributed.get("call_id"), ts=time.time(),
             dest_host=req.pretty_host, dest_ip=dest_ip, scheme=req.scheme, method=req.method,
             body_observed=True, our_traceparent_present=our_tp_present,
             target_bytes=result.target_bytes, target_matched_bytes=result.target_matched_bytes,
             body_bytes=result.body_bytes, body_matched_bytes=result.body_matched_bytes,
             matched_refs=result.matched_refs, causal=result.causal,
-            causal_channel=result.causal_channel, state=state,
+            causal_channel=result.causal_channel,
             node_category=classify_host(req.pretty_host), has_time_and_pid=True,
+            occurrence=occurrence, provenance=provenance,
+            active_calls_in_window=len(active),
+            matching_calls_in_window=len(matching),
         ))
 
     def done(self) -> None:

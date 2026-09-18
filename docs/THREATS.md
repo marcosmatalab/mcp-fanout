@@ -156,10 +156,11 @@ gate rule 6. Each names the threat and what it does to the numbers.
 11. **The canary is only detectable where the client does not re-encode it.** Numbers 4 and 5
     match the request target and the body byte-literally (`docs/THE-SIX-NUMBERS.md`, "The two
     matched channels"). A value the server percent-encodes, base64s, splits across parameters, or
-    puts in a header we do not match is a false negative: the flow reads `DECLARADO` when it was
-    causally ours. Every such miss pushes number 5 **down**, so the published figure is a floor on
-    the causal-union rate, not an estimate of it. The first `fetch` capture yielded
-    `efectivo_fraction` 0.011, one flow of 91, matched through the target channel; that figure is
-    a floor over a two-call corpus in which a single call carried a canary, and it is not an
-    estimate of what the technique achieves at scale.
+    puts in a header we do not match is a false negative: the flow grades `TEMPORAL_ONLY` when it
+    was causally ours. Every such miss pushes the attributable share **down**, so the published
+    distribution is a floor, not an estimate. The first `fetch` capture produced exactly one flow
+    of 91 with a content match, through the target channel, and under sequential driving it grades
+    `CONTENT_MATCH_UNCONTESTED` rather than `CONTENT_UNIQUE` (`docs/DOCTRINE.md`, the evidence
+    model). That is a floor over a two-call corpus in which one call carried a canary, and it is
+    not an estimate of what the technique achieves at scale.
 

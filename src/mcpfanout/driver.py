@@ -244,21 +244,27 @@ class StdioMCPClient:
         })
 
 
-def _write_current(control_dir, payload: dict) -> None:
-    """Atomically publish the currently active call so the capture addon can attribute egress.
+def _write_active_calls(control_dir, payload: dict) -> None:
+    """Atomically publish the set of IN-FLIGHT calls so the addon can attribute egress.
 
-    The corpus is driven sequentially, one call at a time per server, so at any instant there is
-    exactly one active call. Writing it here gives the addon ground-truth attribution without a
-    time-window guess. Atomic write (temp + rename) so the addon never reads a half-written file.
+    A LIST, not a single call, and the name says so. Today the corpus is driven sequentially so
+    the list always holds exactly one entry, which is why the previous version wrote
+    "current_call.json" and a scalar. That shape made the tautology in
+    match.grade_attribution unfalsifiable: with no way to record how many calls were in flight,
+    every content match looked uncontested and looked unique at the same time. Publishing the
+    list means phase C (concurrent calls) is a change to the driver's loop and to this payload,
+    not a change to the evidence model or the addon.
+
+    Atomic write (temp + rename) so the addon never reads a half-written file.
     """
     import json as _json
     import os as _os
     from pathlib import Path as _Path
     control_dir = _Path(control_dir)
     control_dir.mkdir(parents=True, exist_ok=True)
-    tmp = control_dir / "current_call.json.tmp"
+    tmp = control_dir / "active_calls.json.tmp"
     tmp.write_text(_json.dumps(payload), encoding="utf-8")
-    _os.replace(tmp, control_dir / "current_call.json")
+    _os.replace(tmp, control_dir / "active_calls.json")
 
 
 def drive(command: list[str], corpus: list[CallSpec], run_id: str, server_id: str,
@@ -286,9 +292,14 @@ def drive(command: list[str], corpus: list[CallSpec], run_id: str, server_id: st
             if control_dir is not None and redactor is not None:
                 args_bytes = json.dumps(spec.arguments, sort_keys=True).encode() if args_present else b""
                 args_digests = sorted(redactor.kgram_digest_set(args_bytes)) if args_present else []
-                _write_current(control_dir, {
-                    "run_id": run_id, "server_id": server_id, "call_id": call_id,
-                    "traceparent": tp, "args_present": args_present, "args_digests": args_digests,
+                # One entry, because driving is sequential. The list shape is what phase C fills
+                # with several; nothing downstream has to change for that to work.
+                _write_active_calls(control_dir, {
+                    "run_id": run_id, "server_id": server_id,
+                    "active_calls": [{
+                        "call_id": call_id, "traceparent": tp,
+                        "args_present": args_present, "args_digests": args_digests,
+                    }],
                 })
 
             noise_before = client.stdout_noise_lines

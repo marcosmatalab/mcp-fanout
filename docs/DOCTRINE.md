@@ -29,22 +29,73 @@ comment says "negativa 3" or "rule 6", this is the referent.
    enforcement. It is the negative that shapes everything: it forces the edge-observer design
    and forbids the marker.
 
-## The three states
+## The evidence model: three separate claims
 
-Every outbound connection resolves to exactly one state. The harness publishes the percentage
-of each; that is measurement, not a promise.
+This replaces the single `EFECTIVO` / `DECLARADO` / `INDETERMINADO` column. That column asked
+three questions and answered with one word, so it could answer none of them precisely. The three
+claims are recorded and reported separately, and **they never appear together in one sentence**,
+because a sentence that joins them is the conflation returning.
 
-- `EFECTIVO`: a fragment of the causing call's arguments appears literally in the outbound
-  payload. This connection was caused by this call, with the citation. Content evidence, not a
-  temporal guess.
-- `DECLARADO`: only a time window and a pid are available. Stated as correlation, called
-  correlation.
-- `INDETERMINADO`: the payload was not observable (TLS we did not terminate, an argument-less
-  call, an async pool), with the cause named.
+| Claim | Question | Where |
+| --- | --- | --- |
+| Occurrence | was the transfer observed, and readable | number 4, `occurrence_counts` |
+| Provenance | did the request carry recognisable material of ours | number 4, `provenance_counts` |
+| Attribution | could it be tied to a tool call, and how strongly | number 5, `attribution_grades` |
 
-Implemented in `match.decide_state`. Content evidence outranks correlation: if a call's
-arguments are in the payload, the connection is `EFECTIVO` no matter how many other calls were
-concurrent.
+**Occurrence**: `observed` (TLS terminated, request read) or `connection_only`. An unreadable
+request yields provenance `unknown`, never `none`: "we looked and found nothing" and "we could
+not look" are different findings, and collapsing them is how a blind spot reads as a clean
+result.
+
+**Provenance**: `none`, `context` (material from a session context file), `arguments` (material
+from a driven call's arguments), `both`, or `unknown`. A context match is a leak claim; an
+argument match is a causal key. Different questions, kept apart.
+
+**Attribution is a graded dimension**, strongest first. A grade is a claim about the QUALITY OF
+THE EVIDENCE, never about certainty of cause.
+
+- `TRACE_PROPAGATED`: our exact W3C `traceparent` appeared in the outbound request.
+- `CONTENT_UNIQUE`: more than one call was in flight and the matched fragment was present in
+  exactly one of them. Candidates existed and content told them apart.
+- `CONTENT_AMBIGUOUS`: more than one call in flight, fragment in several. Content matched and
+  did not discriminate. A real outcome, and the one that bounds precision.
+- `CONTENT_MATCH_UNCONTESTED`: a match with only one call in flight. Honest and weaker, because
+  there was nothing to tell apart.
+- `TEMPORAL_ONLY`: a time window and a pid, and nothing else. Correlation, called correlation.
+- `UNATTRIBUTED`: no evidence, or the flow was ineligible. Always with a named reason.
+
+### The tautology this design exists to avoid
+
+The corpus is driven sequentially, so in every window there is exactly one call in flight. If
+`CONTENT_UNIQUE` meant "the fragment matched and nothing competed", it would be true of every
+match by construction, and the harness would publish 100% strong attribution having
+discriminated nothing. That is a restatement of the experimental setup wearing a measurement's
+clothes.
+
+So `CONTENT_UNIQUE` requires `active_calls_in_window > 1`. **Today the harness emits none**, and
+`tests/test_evidence_model.py` asserts that it emits none. The question this project exists to
+answer, whether content matching recovers attribution when time cannot, is answerable only with
+concurrent calls, which is phase C (`docs/PHASES.md`). Strong attribution counts
+`TRACE_PROPAGATED` and `CONTENT_UNIQUE` only; `CONTENT_MATCH_UNCONTESTED` is deliberately
+excluded from it.
+
+### Ineligibility is not correlation
+
+The first real capture produced 90 flows that the old column called `DECLARADO`, of which 87 were
+a package registry that cannot carry a tool call's arguments at all. `DECLARADO` asserted
+temporal correlation where the truth was ineligibility. Those flows are now `UNATTRIBUTED` with
+the reason named: *ineligible: package infrastructure traffic, carries no tool-call arguments*.
+
+Eligibility is checked **after** trace and content evidence, never before. A package-registry
+flow that did carry our traceparent, or a literal fragment of a call's arguments, is attributed
+on that evidence and stays visible. The declared exclusion list
+(`registry/package-infrastructure.json`) withholds a temporal guess; it never suppresses direct
+evidence. Same principle as number 1 never filtering its raw count.
+
+Implemented in `match.decide_occurrence`, `match.decide_provenance` and
+`match.grade_attribution`. The grade is derived at aggregation time rather than stored in the
+record, because it depends on the versioned exclusion list: deriving it means the same captured
+run can be re-graded against a better list, which a frozen grade could not.
 
 ## Never discard unstaged work
 
