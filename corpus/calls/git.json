@@ -1,0 +1,8 @@
+[
+  {"tool": "git_status", "arguments": {"repo_path": "/app"},
+   "why": "The image copies the repository to /app with its .git intact (harness/Dockerfile, no .dockerignore), so /app is a real repository inside the container. repo_path is required on all twelve tools, so this server admits no argument-less call."},
+  {"tool": "git_log", "arguments": {"repo_path": "/app", "max_count": 5},
+   "why": "Bounded on purpose: an unbounded log on a large history is a slow call, and a slow call eats the driver's per-request budget for no extra information."},
+  {"tool": "git_show", "arguments": {"repo_path": "/app", "revision": "HEAD"},
+   "why": "Reads a commit body, which is the largest payload this server produces. If a local server egresses, a diff is the thing worth noticing it egressed."}
+]
