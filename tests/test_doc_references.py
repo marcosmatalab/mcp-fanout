@@ -1,0 +1,120 @@
+"""Every docs/ path referenced from code or from another doc must exist.
+
+Written because the evidence-model commit cited docs/PHASES.md one commit before it existed. A
+dangling reference in a governance document is worse than a missing section: it reads as though
+the rule is written down somewhere, so nobody writes it.
+
+Deliberately narrow: it checks repository-relative paths that look like project files, and does
+not try to validate URLs, anchors, or prose. A link checker that needs the network cannot run in
+`make verify`, and one that parses anchors would fail on ordinary English containing a slash.
+"""
+
+import re
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).resolve().parent.parent
+SEARCHED = ("src", "docs", "harness", "tests", "registry")
+# Repository-relative paths under a known top-level directory with a known extension. The
+# examples are written with angle brackets on purpose: a path-shaped example in this file would
+# be picked up by the scan below, which reads every file including this one.
+#   docs/<name>.md, registry/<name>.json, src/<pkg>/<mod>.py, tests/<name>.py
+PATH_RE = re.compile(r"\b((?:docs|registry|corpus|harness|tests|src)/[A-Za-z0-9_./-]+"
+                     r"\.(?:md|json|py|ya?ml|sh))\b")
+
+
+def _files_to_scan() -> list[Path]:
+    out: list[Path] = []
+    for top in SEARCHED:
+        for path in sorted((REPO / top).rglob("*")):
+            if path.is_file() and path.suffix in (".py", ".md", ".sh", ".yaml", ".yml"):
+                if "__pycache__" in path.parts or ".egg-info" in str(path):
+                    continue
+                out.append(path)
+    for name in ("README.md", "CLAUDE.md", "Makefile", "pyproject.toml"):
+        if (REPO / name).is_file():
+            out.append(REPO / name)
+    return out
+
+
+def _references() -> dict[str, set[str]]:
+    """Referenced repo path -> the files that reference it."""
+    found: dict[str, set[str]] = {}
+    for path in _files_to_scan():
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for ref in PATH_RE.findall(text):
+            found.setdefault(ref, set()).add(str(path.relative_to(REPO)))
+    return found
+
+
+def test_every_referenced_repo_path_exists():
+    missing = {}
+    for ref, sources in sorted(_references().items()):
+        # A glob is a pattern, not a path: registry/probes/*.json is satisfied by the directory.
+        target = REPO / ref
+        if "*" in ref:
+            if not (REPO / ref).parent.is_dir():
+                missing[ref] = sorted(sources)
+            continue
+        if not target.exists():
+            missing[ref] = sorted(sources)
+    assert not missing, "referenced but absent:\n" + "\n".join(
+        f"  {ref}  <- {', '.join(src)}" for ref, src in missing.items())
+
+
+def test_the_phase_and_gate_documents_exist_and_cross_reference():
+    """These two carry gate rule 8 between them, so a break here silently drops the rule."""
+    phases = (REPO / "docs" / "PHASES.md").read_text()
+    gate = (REPO / "docs" / "THE-GATE.md").read_text()
+    assert "docs/PHASES.md" in gate, "the gate must point at the phase definitions"
+    assert "rule 8" in phases.lower(), "phases must name the gate rule that enforces the order"
+    for phase in ("Phase A", "Phase B", "Phase C"):
+        assert phase in phases
+
+
+def _sensor_gate_rows() -> dict[str, str]:
+    """The sensor gate's table, as criterion -> threshold."""
+    phases = (REPO / "docs" / "PHASES.md").read_text()
+    section = phases.split("### Sensor gate")[1].split("### Product gate")[0]
+    rows = {}
+    for line in section.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) == 2 and not set(cells[0]) <= set("- "):
+            rows[cells[0].lower()] = cells[1]
+    return rows
+
+
+def test_the_sensor_gate_thresholds_are_written_down():
+    """Pre-registered means the numbers exist before the data. Absent, they get invented later."""
+    rows = _sensor_gate_rows()
+    recall = next(v for k, v in rows.items() if "recall" in k)
+    provenance = next(v for k, v in rows.items() if "provenance" in k)
+    assert "95%" in recall
+    assert "1%" in provenance
+    assert any("reproducible" in k for k in rows)
+
+
+def test_false_strong_attribution_tolerance_stays_at_zero():
+    """Read from the threshold cell itself, not from the surrounding prose.
+
+    The first version of this test looked for the word "zero" anywhere in the document, so
+    softening the table row to "under 2%" passed: the prose beside the table still said zero.
+    One false strong attribution destroys the evidentiary claim the product rests on, so this is
+    the one threshold that must be read out of the cell that defines it.
+    """
+    rows = _sensor_gate_rows()
+    cell = next(v for k, v in rows.items() if "strong attribution" in k)
+    assert "zero" in cell.lower(), cell
+    assert "not negotiable" in cell.lower(), cell
+    assert not re.search(r"\d", cell), f"a numeric tolerance appeared where zero is required: {cell}"
+
+
+def test_the_product_gate_has_no_invented_threshold():
+    """A bar with no baseline behind it kills good projects and passes bad ones equally well."""
+    phases = (REPO / "docs" / "PHASES.md").read_text()
+    product = phases.split("### Product gate")[1].split("### Stop gate")[0]
+    assert "WITHOUT a threshold" in product or "without a threshold" in product
+    # No percentage may appear in the product-gate section at all.
+    assert not re.search(r"\d+\s*%", product), (
+        "a threshold appeared in the product gate; it was pre-registered as having none")

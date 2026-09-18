@@ -1,12 +1,27 @@
 # The gate
 
-Seven conditions a run must pass before any number from it is reported. The gate is on the first
+Eight conditions a run must pass before any number from it is reported. The gate is on the first
 screen on purpose: it is where credibility is won or lost.
 
-1. **Reproducible.** Two runs over the same corpus and the same pinned servers produce the same
-   numbers, and the measurement core produces byte-identical artifacts, demonstrated, not
-   asserted. `make verify` proves the core (tests/test_reproducibility.py). A capture run adds
-   network non-determinism; pin server versions by digest so the controllable part stays fixed.
+1. **Reproducible, at two levels.** The levels are different because the things being reproduced
+   are different, and demanding one standard for both produced a rule that failed for the wrong
+   reason.
+
+   **Level 1, byte for byte: the measurement core and normalized artifacts.** Two runs over the
+   same input produce byte-identical output. Proved, not asserted, by `make verify`
+   (`tests/test_reproducibility.py`).
+
+   **Level 2, normalized result: a capture run.** Two captures of the same pinned servers must
+   agree on the NORMALIZED result: the same destinations or destination categories, the same
+   logical graph, the same provenance sources, the same distribution of attribution grades, and
+   figures within declared tolerances. They must NOT be expected to agree byte for byte.
+   Timestamps, traceparents, nonces, socket order and DNS answers all differ between captures,
+   so a byte-for-byte rule over a capture fails on clerical noise while saying nothing about
+   whether the phenomenon reproduced. It would be a rule that fails for the wrong reason, which
+   is worse than no rule because it trains everyone to ignore it.
+
+   A capture's normalized aggregate is committed as an artifact so the figures quoted from it
+   are re-derivable; see rule 4 for why that does not conflict with never committing a run.
 
 2. **A command behind every number.** Each of the six has a `make` target and an `aggregate`
    subcommand (rule 6). A figure with no command does not ship.
@@ -15,12 +30,39 @@ screen on purpose: it is where credibility is won or lost.
    Counts, ratios, and category breakdowns only. Enforced by test
    (tests/test_aggregate.py::test_aggregate_output_leaks_no_server_names).
 
-4. **No content stored.** Only salted digests and references. Raw payloads exist in memory during
-   the hashing pass and nowhere else. `.gitignore` refuses to track runs at all as a backstop.
+4. **No content stored, and no run committed.** Only salted digests and references. Raw payloads
+   exist in memory during the hashing pass and nowhere else. `.gitignore` refuses to track
+   `runs/` at all as a backstop.
 
-5. **Nothing runs outside the container, no real credentials.** The harness runs in Docker with a
-   throwaway network. Servers that need a token are launched without one; we watch the attempt,
-   we never hand a real secret to a server under test.
+   What rule 1 permits, and why it does not conflict: the NORMALIZED AGGREGATE of a capture may
+   be committed under `docs/figures/`. It is counts, ratios and category breakdowns with no
+   hostname, no server id, no tool name and no digest, and it is what the aggregate command
+   already emits. It is not the run: the run holds per-flow records and salted digests tied to
+   specific servers, and that is what must never be tracked. Committing the aggregate is what
+   makes a quoted figure re-derivable, which rule 6 asks for; committing the run would break
+   this rule and rule 3 at once.
+
+5. **Nothing runs outside the container, and lab accounts only.** The harness runs in Docker with
+   a throwaway network, enforced by a check in `harness/run.sh` rather than a comment.
+
+   "No credentials at all" was the previous rule and the probe sweep measured why it does not
+   work: `brave-search` exits before the JSON-RPC handshake without `BRAVE_API_KEY`, so there is
+   no failed call to observe and no connection attempt to watch. The rule produced zero data for
+   the servers it was meant to cover, and it implied a safety it did not deliver either, since
+   what matters is not the absence of a token but the blast radius of the one used.
+
+   So: **lab accounts**, with every one of these properties, and a server is not measured until
+   they all hold.
+
+   - a fictitious organization, not a real one with a test project inside it
+   - synthetic data only, and zero personal data of any kind
+   - minimum permissions: read-only wherever the API offers it
+   - revocable tokens, held outside the repository and outside the image
+   - a spending limit set on the account before the first run
+   - rotated at the end of the measurement, whether or not anything looked wrong
+
+   Bait tokens in `corpus/context/` stay synthetic and unique (`CANARY_*`) and are never real
+   secrets. That part of the old rule was right and is unchanged.
 
 6. **Threats to validity written, at least four.** See docs/THREATS.md. A measurement that does
    not state how it could be wrong is not a measurement.
@@ -28,3 +70,15 @@ screen on purpose: it is where credibility is won or lost.
 7. **Responsible disclosure.** If a server egresses to a destination its documentation does not
    declare, stop and flag it. Publish nothing that locates that specific server until the finding
    is authorized. Aggregate first, name never (see rule 3).
+
+8. **The instrument passes before the phenomenon is measured.** No figure from a real-server run
+   (phase B) may be published until the controlled bench (phase A) has passed the sensor gate in
+   `docs/PHASES.md`: capture recall at or above 95%, zero false strong attributions, false
+   provenance matches under 1%, and a reproducible normalized result.
+
+   This is a gate and not advice because the failure it prevents is silent. A sensor that loses
+   known traffic produces numbers whose error is unknown, and recall and precision cannot be
+   computed against a third-party server at all: recall needs a denominator of transfers we
+   caused on purpose, precision needs a known cause to check against. A phase B run therefore
+   cannot tell you whether the sensor worked. Measuring the phenomenon first means finding out
+   afterwards, if ever, and every figure published in between is unfalsifiable.
