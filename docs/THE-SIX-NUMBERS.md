@@ -6,10 +6,50 @@ Numbers 1 to 4 are the paper. Number 5 is the viability. Number 6 sizes the recu
 The commands read the latest run under `runs/`. Build a run with `make run` (real capture) or
 `make selftest` (synthetic, no Docker), then run `make numbers` or an individual `make n<N>`.
 
+## Two blocks of metrics, and what each block may conclude
+
+The figures divide into two blocks that answer different questions and must not be mixed in one
+claim.
+
+**Instrument block. Bench only (phase A, `docs/PHASES.md`), where ground truth is known because
+we built the servers and the destinations.**
+
+| Metric | Question |
+| --- | --- |
+| Capture recall | of the transfers we caused on purpose, what fraction did the sensor see |
+| Attribution precision | of the strong attributions claimed, what fraction were correct |
+| False provenance matches | how often material was claimed present that was not ours |
+
+These cannot be computed against real servers at all: recall needs a denominator of known
+transfers, and precision needs a known cause. Quoting a recall figure from a phase B run would be
+quoting a number with no denominator.
+
+**Phenomenon block. Real servers (phase B).**
+
+| Metric | Number |
+| --- | --- |
+| Egress per invocation, p50 / p95 / max | 1 |
+| Distinct domains per invocation | 2 |
+| `traceparent` propagation, segmented by answered revision | 3 |
+| Provenance coverage | 4 |
+| Attribution grade distribution | 5 |
+| Self-hostable fraction of touched destinations | 6 |
+
+**No means.** Every per-call distribution reports p50, p95 and max, and no mean. The mean
+misleads on exactly these shapes: the first real capture had one call at 89 connections and one
+at 2, giving a mean of 45.5, a figure no call produced. Percentiles are computed by nearest rank,
+never interpolated, so every published figure is a value some call actually produced. Reporting
+the mean alongside was rejected: a single number always ends up quoted alone.
+
+**Deliberately out of scope for now: CPU and latency overhead.** It is an MVP measurement and it
+decides nothing about whether the phenomenon is real or whether attribution works. Measuring it
+here would spend bench time on a figure that cannot change the architecture decision.
+
 ## Number 1: outbound connections per tool call, in three figures
 
-**Definition.** For each driven tool call, three distributions (n, mean, median, max) over all
-calls including those that produced zero egress. **They are published together, always.**
+**Definition.** For each driven tool call, three distributions over all calls including those
+that produced zero egress, each reported as **n, p50, p95 and max**. **They are published
+together, always.**
 
 | Figure | What it counts |
 | --- | --- |
@@ -58,7 +98,7 @@ a floor, stated as a floor.
 ## Number 2: distinct domains per tool call
 
 **Definition.** Per call, the count of distinct destination hostnames among its outbound
-connections. Reported as a distribution.
+connections. Reported as a distribution (n, p50, p95, max).
 
 **Decides.** The size of the publishable finding. Domain sequences alone leak information (the
 local-research-agent study measured 64 to 155 distinct domains per query and recovered most of
@@ -70,10 +110,20 @@ the headline.
 ## Number 3: fraction of servers that propagate `traceparent`
 
 **Definition.** Of the servers driven, the fraction for which at least one outbound request
-carried the exact W3C `traceparent` we set in `params._meta` (SEP-414).
+carried the exact W3C `traceparent` we set in `params._meta` (SEP-414), **segmented by the
+protocol revision the server answered with**, plus the pooled figure.
 
-**Decides.** Whether the cooperative path is worth anything today. If near zero, an instrumented
-server is rare and the observational approach is the only one that works against real servers.
+**Why segmented.** SEP-414 is a minor change of the **2026-07-28** revision. A server that
+answers `2024-11-05` predates the convention being written down, so "it does not propagate" is a
+fact about its age, not about the convention's uptake. Pooling distorts in both directions: it
+understates uptake among servers that could have implemented it, and it implies the older ones
+declined something that did not yet exist. The pooled figure is still published, because
+withholding it would be its own distortion, but the segments are the answer. Servers whose
+answered revision is unknown get their own bucket; "not known" is not a revision.
+
+**Decides.** Whether the cooperative path is worth anything today. If near zero **among servers
+on a revision that documents it**, an instrumented server is rare and the observational approach
+is the only one that works against real servers.
 
 **Command.** `make n3`.
 
