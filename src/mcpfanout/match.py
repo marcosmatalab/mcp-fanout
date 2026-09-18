@@ -76,6 +76,9 @@ REASON_INELIGIBLE_PACKAGE_INFRASTRUCTURE = (
     "ineligible: package infrastructure traffic, carries no tool-call arguments")
 REASON_NO_EVIDENCE = "no trace, no content match, and no temporal correlation available"
 REASON_UNREADABLE_NO_CORRELATION = "request unreadable and no temporal correlation available"
+# A time window that covers several in-flight calls identifies a SET, not a call. Prefix only:
+# the count is interpolated, and tests match on the prefix.
+REASON_TEMPORAL_AMBIGUOUS_PREFIX = "time window covers "
 
 # Which channel of the request carried the causal fragment. Reported alongside the state, never
 # folded into it: a match in the query string and a match in the body are both causal evidence,
@@ -274,6 +277,12 @@ def grade_attribution(*, traceparent_present: bool, argument_match: bool,
                                    was nothing to tell apart. This is what sequential driving
                                    can yield, and it is NOT strong attribution.
 
+    The same reasoning applies to the temporal grade, symmetrically. TEMPORAL_ONLY requires
+    exactly one call in flight, because a window covering several identifies a set rather than a
+    call. With more than one in flight and no content evidence the grade is UNATTRIBUTED, with
+    the count in the reason. Anything else would let the weakest evidence claim what the
+    strongest is not allowed to.
+
     So today, with sequential driving, this function emits no CONTENT_UNIQUE at all, and a test
     asserts that. The question the project exists to answer, whether content matching recovers
     attribution when time cannot, is answerable only in phase C with concurrent calls
@@ -303,9 +312,19 @@ def grade_attribution(*, traceparent_present: bool, argument_match: bool,
     if not eligible:
         return UNATTRIBUTED, REASON_INELIGIBLE_PACKAGE_INFRASTRUCTURE
 
-    if has_time_and_pid and active_calls_in_window >= 1:
-        return TEMPORAL_ONLY, (
-            f"time window and pid only, with {active_calls_in_window} call(s) active")
+    if has_time_and_pid and active_calls_in_window == 1:
+        return TEMPORAL_ONLY, "time window and pid, with exactly one call in flight"
+
+    if has_time_and_pid and active_calls_in_window > 1:
+        # A window covering several in-flight calls identifies a SET, not a call, so it is not
+        # attribution at all. Returning TEMPORAL_ONLY here would assert a correlation that
+        # discriminates nothing, which is the same overstatement the old single-column model made
+        # when it called package-registry traffic DECLARADO. Found while designing the phase A
+        # bench: its fourth concurrency cell (N calls, none carrying arguments) has to land on
+        # UNATTRIBUTED, and it would have landed on TEMPORAL_ONLY and looked like a pass.
+        return UNATTRIBUTED, (
+            f"{REASON_TEMPORAL_AMBIGUOUS_PREFIX}{active_calls_in_window} concurrent calls: "
+            f"correlation identifies no single call")
 
     return UNATTRIBUTED, (REASON_NO_EVIDENCE if has_time_and_pid
                           else REASON_UNREADABLE_NO_CORRELATION)
