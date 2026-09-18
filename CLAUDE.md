@@ -9,6 +9,13 @@ decide whether a runtime tool-call tracing product is viable and which of two ar
 should have. Read `README.md`, then `docs/METHOD.md`. Do not turn it into a gateway, a firewall,
 a DLP product, or a monitoring service.
 
+The product it would serve, if the numbers justify one, is **runtime provenance and evidence for
+autonomous agents**, with MCP as the first supported environment and not the category. Not "MCP
+security": that binds the product to a protocol still changing under it and to a function a
+gateway absorbs. Not "data lineage": that is Cyberhaven's category, with the brand and the
+capital already in it. Keep the code written in terms of an agent's action and its egress, so a
+second environment is an adapter rather than a rewrite.
+
 ## Language
 
 - Repo content (code, comments, docs, commit messages): **English**.
