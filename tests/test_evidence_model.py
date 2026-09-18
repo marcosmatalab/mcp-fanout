@@ -178,3 +178,36 @@ def test_the_old_state_vocabulary_is_gone_from_the_code():
     assert not hasattr(m, "decide_state")
     for name in ("EFECTIVO", "DECLARADO", "INDETERMINADO"):
         assert not hasattr(m, name), f"{name} still exported"
+
+
+# --- Concurrency and the temporal grade. The fourth bench cell depends on this.
+
+def test_temporal_only_requires_exactly_one_call_in_flight():
+    """A window covering several in-flight calls identifies a SET, not a call.
+
+    Grading that TEMPORAL_ONLY would assert a correlation that discriminates nothing, which is
+    the same overstatement the old single-column model made when it called package-registry
+    traffic DECLARADO. Found while designing the phase A bench: its fourth concurrency cell (N
+    calls, none carrying arguments) must land on UNATTRIBUTED, and before this it landed on
+    TEMPORAL_ONLY and would have read as a pass.
+    """
+    assert _grade(active_calls_in_window=1)[0] == m.TEMPORAL_ONLY
+    for n in (2, 5, 10):
+        grade, reason = _grade(active_calls_in_window=n)
+        assert grade == m.UNATTRIBUTED, f"N={n} graded {grade}"
+        assert reason.startswith(m.REASON_TEMPORAL_AMBIGUOUS_PREFIX)
+        assert f"{n} concurrent calls" in reason
+
+
+def test_the_weakest_evidence_may_not_claim_what_the_strongest_cannot():
+    """Symmetry check, stated as a property rather than left implied.
+
+    CONTENT_UNIQUE needs more than one call in flight to mean anything; TEMPORAL_ONLY needs
+    exactly one. Both follow from the same rule: a grade may only claim what the evidence
+    discriminated. If the temporal grade survived concurrency while the content grade required
+    it, the weakest evidence would be claiming more than the strongest.
+    """
+    concurrent = dict(active_calls_in_window=4)
+    assert _grade(argument_match=True, matching_calls_in_window=1, **concurrent)[0] == m.CONTENT_UNIQUE
+    assert _grade(argument_match=True, matching_calls_in_window=4, **concurrent)[0] == m.CONTENT_AMBIGUOUS
+    assert _grade(**concurrent)[0] == m.UNATTRIBUTED
