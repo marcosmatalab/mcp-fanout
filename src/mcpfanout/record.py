@@ -54,13 +54,23 @@ class Flow:
     dest_ip: str
     scheme: str             # "https", "http", or "tcp" for a flow we saw but could not read
     method: str             # HTTP method, or "" for a non-HTTP flow
-    request_size: int
-    body_observed: bool     # did we read the plaintext body (proxy terminated the TLS)?
+    body_observed: bool     # did we read the plaintext request (proxy terminated the TLS)?
+                            # False means neither channel below was readable, which is what
+                            # forces INDETERMINADO. A GET has an empty body and a full target;
+                            # that is observed-and-empty, not unobserved.
     our_traceparent_present: bool   # did OUR traceparent appear in this outbound request?
-    total_bytes: int
-    matched_bytes: int
+    # Two channels, counted apart. The request target is path + query, never the absolute URL.
+    # Summing them into one figure would let number 5 be inflated with URLs, so the split is
+    # carried all the way to the record rather than reconstructed later. Replaces the former
+    # total_bytes/matched_bytes pair, and request_size with it: request_size was already an
+    # exact duplicate of total_bytes, and both meant "body length".
+    target_bytes: int
+    target_matched_bytes: int
+    body_bytes: int
+    body_matched_bytes: int
     matched_refs: list[str]
     causal: bool
+    causal_channel: str     # none / target / body / both -- which channel carried the match
     state: str              # EFECTIVO / DECLARADO / INDETERMINADO
     node_category: str      # local / self_hostable / remote_leaf
     has_time_and_pid: bool  # whether temporal+pid correlation evidence exists for this flow
