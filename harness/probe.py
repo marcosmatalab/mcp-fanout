@@ -99,10 +99,16 @@ def main() -> int:
     if not command:
         ap.error("no launch command given (use -- before it)")
 
-    out = probe(command, json.loads(args.env))
+    env = json.loads(args.env)
+    out = probe(command, env)
     out["id"] = args.id
     out["command"] = command
     out["tool_count"] = len(out["tools"])
+    # Which env keys we supplied, so a reader can tell "started with nothing" from "started only
+    # because we handed it a placeholder". Keys, never values: the registry records that a
+    # variable was set, not what it was set to, and a probe file is committed.
+    out["env_keys_supplied"] = sorted(env)
+    out["started_without_credentials"] = out["ok"] and not env
     json.dump(out, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
     return 0 if out["ok"] else 1

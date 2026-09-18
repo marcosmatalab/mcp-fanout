@@ -1,0 +1,95 @@
+{
+  "attempts": [],
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    }
+  },
+  "command": [
+    "npx",
+    "-y",
+    "@modelcontextprotocol/server-sequential-thinking@2026.8.31"
+  ],
+  "env_keys_supplied": [],
+  "id": "sequential-thinking",
+  "ok": true,
+  "protocol_version_used": "2025-11-25",
+  "server_info": {
+    "name": "sequential-thinking-server",
+    "version": "2026.8.31"
+  },
+  "server_protocol_version": "2025-11-25",
+  "started_without_credentials": true,
+  "tool_count": 1,
+  "tools": [
+    {
+      "description": "A detailed tool for dynamic and reflective problem-solving through thoughts.\nThis tool helps analyze problems through a flexible thinking process that can adapt and evolve.\nEach thought can build on, question, or revise previous insights as understanding deepens.\n\nWhen to use this tool:\n- Breaking d",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "branchFromThought": {
+            "description": "Branching point thought number",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "branchId": {
+            "description": "Branch identifier",
+            "type": "string"
+          },
+          "isRevision": {
+            "description": "Whether this revises previous thinking",
+            "type": [
+              "boolean",
+              "string"
+            ]
+          },
+          "needsMoreThoughts": {
+            "description": "If more thoughts are needed",
+            "type": [
+              "boolean",
+              "string"
+            ]
+          },
+          "nextThoughtNeeded": {
+            "description": "Whether another thought step is needed",
+            "type": [
+              "boolean",
+              "string"
+            ]
+          },
+          "revisesThought": {
+            "description": "Which thought is being reconsidered",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "thought": {
+            "description": "Your current thinking step",
+            "type": "string"
+          },
+          "thoughtNumber": {
+            "description": "Current thought number (numeric value, e.g., 1, 2, 3)",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "totalThoughts": {
+            "description": "Estimated total thoughts needed (numeric value, e.g., 5, 10)",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "thought",
+          "nextThoughtNeeded",
+          "thoughtNumber",
+          "totalThoughts"
+        ],
+        "type": "object"
+      },
+      "name": "sequentialthinking"
+    }
+  ]
+}
