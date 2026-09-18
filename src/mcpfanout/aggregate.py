@@ -16,7 +16,8 @@ from collections import defaultdict
 from pathlib import Path
 
 from . import match as _match
-from .classify import Registry, selfhostable_fraction
+from . import classify as _classify
+from .classify import ExclusionList, Registry, selfhostable_fraction
 from .record import Flow, RunManifest, ToolCall, read_jsonl, read_manifest
 
 
@@ -57,16 +58,63 @@ def _dist(values: list[int]) -> dict:
     }
 
 
-def number_1(run: Run) -> dict:
-    """Outbound connections per tool call. Decides whether the causal union is trivial."""
-    per_call = [len(fs) for cid, fs in _flows_by_call(run).items() if cid != "<unattributed>"]
-    # Include calls that produced zero egress: a call with no outbound connection is a real,
-    # informative data point (the union is trivially empty for it).
+def number_1(run: Run, exclusions: ExclusionList | None = None) -> dict:
+    """Outbound connections per tool call, in three figures that are published together.
+
+    One figure here is misleading and the first real capture proved it. mcp-server-fetch opened
+    87 connections to registry.npmjs.org while serving one fetch call, because it installs an npm
+    package at tool-call time. A raw mean of 45.5 connections per call is a TRUE number that
+    answers the WRONG question: those 87 are serial connections to a single host of package
+    infrastructure during a known call, so they are trivially attributable. What decides the
+    architecture -- whether the causal union is the product or a footnote -- is concurrent
+    connections to DISTINCT domains. So three figures, never one:
+
+      connections_raw        every observed connection. Never discarded, never filtered. A
+                             server with real fan-out to a host on the exclusion list stays
+                             fully visible here.
+      distinct_hosts         the same quantity as number 2, repeated here on purpose so the raw
+                             figure cannot be quoted without it.
+      connections_excluding_package_infrastructure
+                             raw minus connections to hosts on the DECLARED list in registry/,
+                             cited in the output by name, version and digest.
+
+    If the exclusion list is not loaded, the third figure is None with the reason named, never
+    silently computed against an empty list: "no list" and "no package traffic" would otherwise
+    produce identical output, and only one of those is a finding.
+    """
+    grouped = {cid: fs for cid, fs in _flows_by_call(run).items() if cid != "<unattributed>"}
+    # Calls that produced zero egress are real, informative data points (the union is trivially
+    # empty for them), so they enter every distribution as a zero.
     driven = {c.call_id for c in run.calls}
     seen = {f.call_id for f in run.flows if f.call_id}
-    per_call += [0] * len(driven - seen)
-    return {"number": 1, "name": "outbound_connections_per_tool_call",
-            "distribution": _dist(per_call), "command": "make n1"}
+    zeros = [0] * len(driven - seen)
+
+    raw = [len(fs) for fs in grouped.values()] + zeros
+    hosts = [len({f.dest_host for f in fs}) for fs in grouped.values()] + zeros
+
+    out = {"number": 1, "name": "outbound_connections_per_tool_call",
+           "connections_raw": _dist(raw),
+           "distinct_hosts": _dist(hosts),
+           "distinct_hosts_note": "same quantity as number 2; published here so the raw "
+                                  "connection count is never read on its own",
+           "command": "make n1"}
+
+    if exclusions is None:
+        out["connections_excluding_package_infrastructure"] = None
+        out["package_infrastructure_connections"] = None
+        out["exclusion_list"] = {
+            "loaded": False,
+            "reason": f"{_classify.PACKAGE_INFRASTRUCTURE_PATH} not loaded; the excluded figure "
+                      f"is withheld rather than computed against an empty list",
+        }
+        return out
+
+    kept = [len([f for f in fs if not exclusions.matches(f.dest_host)]) for fs in grouped.values()]
+    excluded_total = sum(1 for f in run.flows if exclusions.matches(f.dest_host))
+    out["connections_excluding_package_infrastructure"] = _dist(kept + zeros)
+    out["package_infrastructure_connections"] = excluded_total
+    out["exclusion_list"] = {"loaded": True, **exclusions.citation()}
+    return out
 
 
 def number_2(run: Run) -> dict:
@@ -168,13 +216,14 @@ def number_6(run: Run, registry: Registry | None = None) -> dict:
             "command": "make n6"}
 
 
-def compute_all(run: Run, registry: Registry | None = None) -> dict:
+def compute_all(run: Run, registry: Registry | None = None,
+                exclusions: ExclusionList | None = None) -> dict:
     return {
         "run_id": run.manifest.run_id,
         "created": run.manifest.created,
         "salt_fixed": run.manifest.salt_fixed,
         "numbers": [
-            number_1(run), number_2(run), number_3(run),
+            number_1(run, exclusions), number_2(run), number_3(run),
             number_4(run), number_5(run), number_6(run, registry),
         ],
     }
