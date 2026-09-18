@@ -1,5 +1,14 @@
 # Method
 
+**What this measurement serves.** If the numbers justify building, the product is *runtime
+provenance and evidence for autonomous agents*, with MCP as the first supported environment
+rather than the category. Deliberately not "MCP security", which binds a product to a protocol
+that is still changing and to a function a gateway absorbs; and deliberately not "data lineage",
+which is an occupied category with an incumbent that has brand and capital. See README.md. The
+consequence for this document is concrete: the observation model below is written in terms of an
+agent's action and its egress, never in terms of MCP messages, so that a second environment is an
+adapter and not a rewrite.
+
 ## The three phases
 
 The instrument is measured before the phenomenon: a controlled bench of our own servers (phase A),
