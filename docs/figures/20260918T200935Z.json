@@ -1,0 +1,154 @@
+{
+  "normalized": true,
+  "numbers": [
+    {
+      "command": "make n1",
+      "connections_excluding_package_infrastructure": {
+        "max": 2,
+        "n": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "connections_raw": {
+        "max": 89,
+        "n": 2,
+        "p50": 2,
+        "p95": 89
+      },
+      "distinct_hosts": {
+        "max": 2,
+        "n": 2,
+        "p50": 1,
+        "p95": 2
+      },
+      "distinct_hosts_note": "same quantity as number 2; published here so the raw connection count is never read on its own",
+      "exclusion_list": {
+        "list_name": "package-infrastructure",
+        "loaded": true,
+        "path": "registry/package-infrastructure.json",
+        "sha256": "3137eb3defc936d9ef5a06485242589a9adfb233d9573fae3489318157f9ceb0",
+        "suffix_count": 20,
+        "version": "2026-09-18"
+      },
+      "name": "outbound_connections_per_tool_call",
+      "number": 1,
+      "package_infrastructure_connections": 87
+    },
+    {
+      "command": "make n2",
+      "distribution": {
+        "max": 2,
+        "n": 2,
+        "p50": 1,
+        "p95": 2
+      },
+      "name": "distinct_domains_per_tool_call",
+      "number": 2
+    },
+    {
+      "by_protocol_revision": {
+        "unknown": {
+          "fraction": 0.0,
+          "servers_propagating": 0,
+          "servers_total": 1
+        }
+      },
+      "command": "make n3",
+      "name": "servers_propagating_traceparent",
+      "number": 3,
+      "pooled_fraction": 0.0,
+      "pooled_note": "read the segments; SEP-414 is a 2026-07-28 change, so a server answering an earlier revision predates the convention",
+      "servers_propagating": 0,
+      "servers_total": 1
+    },
+    {
+      "body_matched_bytes": 0,
+      "command": "make n4",
+      "flows_total": 91,
+      "flows_with_body_match": 0,
+      "flows_with_context_match": 0,
+      "flows_with_target_match": 0,
+      "fraction_flows_with_match": 0.0,
+      "matched_bytes_total": 0,
+      "name": "provenance_coverage",
+      "number": 4,
+      "observed_body_bytes": 543,
+      "observed_outbound_bytes_total": 3060,
+      "observed_target_bytes": 2517,
+      "occurrence_counts": {
+        "connection_only": 0,
+        "observed": 91
+      },
+      "provenance_counts": {
+        "arguments": 1,
+        "both": 0,
+        "context": 0,
+        "none": 90,
+        "unknown": 0
+      },
+      "target_matched_bytes": 0
+    },
+    {
+      "attribution_grades": {
+        "CONTENT_AMBIGUOUS": 0,
+        "CONTENT_MATCH_UNCONTESTED": 1,
+        "CONTENT_UNIQUE": 0,
+        "TEMPORAL_ONLY": 3,
+        "TRACE_PROPAGATED": 0,
+        "UNATTRIBUTED": 87
+      },
+      "attribution_reasons": {
+        "fragment matched with only one call active: no competing candidate existed, so nothing was discriminated": 1,
+        "ineligible: package infrastructure traffic, carries no tool-call arguments": 87,
+        "time window and pid only, with 1 call(s) active": 3
+      },
+      "command": "make n5",
+      "content_match_by_channel": {
+        "body": 0,
+        "both": 0,
+        "target": 1
+      },
+      "exclusion_list": {
+        "list_name": "package-infrastructure",
+        "loaded": true,
+        "path": "registry/package-infrastructure.json",
+        "sha256": "3137eb3defc936d9ef5a06485242589a9adfb233d9573fae3489318157f9ceb0",
+        "suffix_count": 20,
+        "version": "2026-09-18"
+      },
+      "flows_total": 91,
+      "max_active_calls_in_window": 1,
+      "name": "attribution_grade_distribution",
+      "number": 5,
+      "sequential_driving": true,
+      "sequential_driving_note": "every flow was seen with at most one call in flight, so CONTENT_UNIQUE is unreachable by construction and content matches grade as CONTENT_MATCH_UNCONTESTED. Whether content matching recovers attribution when time cannot is answerable only with concurrent calls; see docs/PHASES.md, phase C",
+      "strong_attribution_count": 0,
+      "strong_attribution_fraction": 0.0,
+      "strong_attribution_grades": [
+        "TRACE_PROPAGATED",
+        "CONTENT_UNIQUE"
+      ]
+    },
+    {
+      "category_counts": {
+        "local": 0,
+        "remote_leaf": 2,
+        "self_hostable": 0
+      },
+      "command": "make n6",
+      "distinct_nodes": 2,
+      "name": "selfhostable_third_parties",
+      "number": 6,
+      "selfhostable_fraction": 0.0
+    }
+  ],
+  "provenance": {
+    "command": "python -m mcpfanout.cli figures --run runs/20260918T200935Z",
+    "corpus_sha256": "01c66f73140375ff9b3c64759642c225ae04b041aee814e6aafeaa4a93dcd422",
+    "created": "2026-09-18T20:09:43.087103+00:00",
+    "notes": "Capture run. See docs/THE-GATE.md before publishing any number. SUBSET RUN: --only ['fetch']; the registry holds 10 servers. Not a measurement of the registry.",
+    "run_id": "20260918T200935Z",
+    "salt_fixed": true,
+    "server_count": 1
+  }
+}

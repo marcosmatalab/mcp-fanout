@@ -129,29 +129,41 @@ gate rule 6. Each names the threat and what it does to the numbers.
     implementation after that snapshot is taken. There is no version in our records for the code
     that actually ran.
 
-    What it does to the numbers, and how that is handled: number 1 would read 45.5 connections
-    per call as a raw mean, which is true and misleading, because those 87 are serial connections
-    to a single infrastructure host during one known call and so are trivially attributable.
-    Number 1 therefore publishes three figures together (raw, distinct hosts, and raw excluding
-    the declared list in `registry/package-infrastructure.json`), and for this run they read 45.5,
-    1.5 and 2.0. The raw figure is never discarded: this server's 87 connections stay visible in
-    it, which is exactly how a reader finds this threat from the numbers alone. See
-    `docs/THE-SIX-NUMBERS.md`, number 1.
+    What it does to the numbers, and how that is handled. Number 1 publishes three figures
+    together (raw connections, distinct hosts, and raw excluding the declared list in
+    `registry/package-infrastructure.json`), because a single figure here is true and misleading
+    at once: those 87 are serial connections to one infrastructure host during a known call, so
+    they are trivially attributable and say nothing about whether the causal union is hard. For
+    this run the three read, as p50 / p95 / max: raw 2 / 89 / 89, distinct hosts 1 / 2 / 2, and
+    excluding package infrastructure 2 / 2 / 2, with `package_infrastructure_connections` = 87.
+    The raw figure is never discarded, so this server's 87 connections stay visible in it, which
+    is how a reader finds this threat from the numbers alone.
+
+    Number 5 grades all 87 as `UNATTRIBUTED` with the reason *ineligible: package infrastructure
+    traffic, carries no tool-call arguments*, alongside 3 `TEMPORAL_ONLY` and 1
+    `CONTENT_MATCH_UNCONTESTED`, for a strong-attribution fraction of 0.0. Under the previous
+    single-column model this same run read as 90 `DECLARADO` and an `EFECTIVO` fraction of 0.011,
+    which asserted temporal correlation for 87 flows that cannot carry an argument at all. See
+    `docs/DOCTRINE.md`, the evidence model, and `docs/THE-SIX-NUMBERS.md`, numbers 1 and 5.
 
     Not generalised from one server. Whether other servers install at call time is unmeasured;
     this says only that one of the ten does, and that the raw-versus-excluded gap is where to
     look for the rest.
 
-    Provenance of the figures above, and a tension worth naming. They come from run
-    `20260918T193234Z`, a single-server capture driven with `--only fetch`, and the command behind
-    them is `python -m mcpfanout.cli aggregate --run runs/20260918T193234Z --number 1`. Gate rule 2
-    wants a command behind every number and gate rule 4 refuses to track runs at all, so a reader
-    with only this repository **cannot re-derive these figures**; they can only re-run the
-    capture, which will produce its own run with its own numbers. That is the honest state: these
-    are measured, reproducible in method, and not reproducible from the repository alone. The
-    counts checked automatically against committed data are the tool counts in threat 8
-    (`tests/test_corpus_matches_probes.py`); these are not, and saying so is the alternative to
-    committing a run and breaking rule 4.
+    Provenance of the figures above, and how the tension that used to sit here was resolved.
+    They come from run `20260918T200935Z`, a single-server capture driven with `--only fetch`.
+    Its **normalized aggregate is committed** at `docs/figures/20260918T200935Z.json`, and the
+    command that regenerates it is recorded inside that file. So every figure quoted above is
+    re-derivable from this repository alone, and `tests/test_committed_figures.py` fails if this
+    prose and that artifact drift apart.
+
+    Earlier this paragraph said the opposite, and the reason is worth keeping. Gate rule 2 wants
+    a command behind every number, gate rule 4 refuses to track runs, and the two together made a
+    quoted figure measured but unverifiable. The way out was not to relax either rule but to
+    notice they govern different objects: the AGGREGATE is counts and category breakdowns with no
+    host, no server id and no payload digest, while the RUN holds per-flow records and salted
+    digests tied to specific servers. Committing the first satisfies rule 2; not committing the
+    second satisfies rules 3 and 4. See `docs/THE-GATE.md`, rules 1 and 4.
 
 11. **The canary is only detectable where the client does not re-encode it.** Numbers 4 and 5
     match the request target and the body byte-literally (`docs/THE-SIX-NUMBERS.md`, "The two
