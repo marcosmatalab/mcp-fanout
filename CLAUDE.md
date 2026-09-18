@@ -47,7 +47,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 181
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 205
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
@@ -101,7 +101,7 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 181 tests, no Docker, no network
+make verify      # 205 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
@@ -138,12 +138,19 @@ gated by `tests/test_corpus_matches_probes.py`, `registry/servers.yaml` is pinne
 versions with measured per-server facts, and the protocol defect is fixed. A one-server capture
 of `fetch` has run end to end.
 
-1. **Build the phase A bench** (`docs/PHASES.md`): two or three of our own MCP servers with known
-   egress to our own destinations. Until it passes the sensor gate, no phase B figure may be
-   published. That is gate rule 8, and it blocks everything below it.
-2. **Then** the ten-server phase B capture.
-3. **Then** phase C, attacking attribution with concurrent calls. Only there can
-   `CONTENT_UNIQUE` be earned; see `docs/DOCTRINE.md`, the evidence model.
+Phase A is built and it passes its pre-registered sensor gate: capture recall 1.0, zero false
+strong attributions over 33 strong claims, false provenance 0.0, normalized result reproducible
+across two runs. Content matching discriminates between concurrent calls at N up to 10. Measured
+figures and the cells in `docs/PHASES.md`; committed artifact under `docs/figures/`.
+
+1. **The ten-server phase B capture.** Now unblocked: gate rule 8 is satisfied. Use `make run`;
+   a subset run for a smoke test is `--only <id>`.
+2. **Then** phase C, attacking attribution adversarially: the same fragment across concurrent
+   calls on a real server, pooled connections, delayed egress. Phase A shows the sensor can
+   discriminate when the pattern is ours to design; phase C is where it is not.
+3. Standing items, neither blocking: the `redact.py` PENDING gaps (a per-installation key with
+   rotation, and a minimum-fragment-length policy) before any real deployment, and the bench's
+   HTTP-only limit if a TLS-specific capture defect ever needs ruling out.
 
 ## Commit style
 
