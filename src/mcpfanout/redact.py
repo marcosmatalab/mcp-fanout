@@ -26,6 +26,28 @@ Design decisions
   identical across runs. The NUMBERS are invariant to the salt regardless (they are counts and
   ratios over set intersections), so a secret salt in a real deployment changes what is stored
   but never what is reported.
+
+PENDING, and deliberately not built here
+----------------------------------------
+Two gaps in the privacy boundary, written down because the argument above reads as finished and
+is not. Neither is a to-do a later refactor absorbs; both are limits on what this code may
+honestly be used for today.
+
+1. PER-INSTALLATION KEY MANAGEMENT, WITH ROTATION. There is one constant, DEFAULT_SALT, published
+   in this file. Correct for a reproducible measurement, wrong for a deployment: a published salt
+   is not a key, so the dictionary attack the keyed hash exists to prevent is wide open against
+   any run using the default. What is missing is a key generated per installation at install
+   time, never committed, plus rotation. Rotation is not a config change: digests are only
+   comparable within one key, so rotating invalidates every stored fingerprint, which makes it a
+   data-lifecycle decision. Until it exists, treat every digest made with DEFAULT_SALT as public.
+
+2. AN EXPLICIT MINIMUM-FRAGMENT-LENGTH POLICY. k = 16 bytes is a DETECTION parameter, chosen so a
+   shared run is not coincidental. It is currently doing double duty as a privacy parameter and it
+   is not adequate for that. A salted hash does not protect a value with low entropy and a known
+   format, which is precisely the class this harness hunts: a four-digit PIN, a date of birth, a
+   short account number, an enum. An adversary holding the salt only has to enumerate the format.
+   No value of k fixes this. What is needed is a stated policy on which fragment classes may be
+   fingerprinted at all, written before a real deployment rather than after one.
 """
 
 from __future__ import annotations
