@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from mcpfanout.driver import (PROTOCOL_VERSION, CallSpec, ServerTimeout, StdioMCPClient, drive,
-                              new_traceparent)
+from mcpfanout.driver import (PROTOCOL_VERSION, CallSpec, DriveResult, ServerTimeout,
+                              StdioMCPClient, drive, new_traceparent)
 
 # harness/ is a directory of scripts, not a package, so it is not on the path by install.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "harness"))
@@ -108,3 +108,60 @@ def test_probe_of_a_hung_server_reports_not_ok_instead_of_hanging():
     out = probe(_mock_cmd(), {"MOCK_HANG": "1"}, startup_timeout=1.0, list_timeout=1.0)
     assert out["ok"] is False
     assert out["tools"] == [] and out["attempts"]
+
+
+# --- Servers that corrupt their own stdout. MCP stdio reserves stdout for JSON-RPC and sends
+# --- logging to stderr; mcp-server-fetch 2026.8.18 lets npm write to stdout during a tools/call.
+
+def test_non_json_stdout_is_skipped_and_counted_not_fatal():
+    """Reproduces the real failure: npm output on the JSON-RPC channel.
+
+    Before this, _read() called json.loads on every line, so one npm progress line made every
+    call to that server fail with "Expecting value: line 2 column 1" -- a server we can observe
+    egressing became a server we could not measure at all.
+    """
+    results = drive(_mock_cmd(), [CallSpec("search", {"q": "x"})], run_id="t", server_id="mock",
+                    env={"MOCK_STDOUT_NOISE": "1"})
+    assert results[0].ok, results[0].error
+    assert results[0].stdout_noise_lines > 0, "noise was absorbed silently instead of counted"
+
+
+def test_stdout_noise_reaches_the_persisted_record(tmp_path):
+    """Counting it in memory is no use if the run does not carry it out to the reader."""
+    from mcpfanout.record import ToolCall, read_jsonl
+    calls = tmp_path / "calls.jsonl"
+    drive(_mock_cmd(), [CallSpec("search", {})], run_id="t", server_id="mock",
+          env={"MOCK_STDOUT_NOISE": "1"}, calls_path=calls)
+    rows = list(read_jsonl(calls, ToolCall))
+    assert rows[0].stdout_noise_lines > 0
+    assert rows[0].ok is True
+
+
+def test_a_failed_call_persists_its_reason(tmp_path):
+    """A call that errored after egressing and one that never reached the network are opposite
+    findings, and only the error text tells them apart."""
+    from mcpfanout.record import ToolCall, read_jsonl
+    calls = tmp_path / "calls.jsonl"
+    drive(_mock_cmd(), [CallSpec("no_such_tool", {})], run_id="t", server_id="mock",
+          calls_path=calls)
+    rows = list(read_jsonl(calls, ToolCall))
+    assert rows[0].ok is False
+    assert "method not found" in rows[0].error or "error" in rows[0].error.lower()
+
+
+def test_drive_result_and_toolcall_do_not_drift():
+    """Two code paths build a ToolCall from a DriveResult: driver.drive and drive_all.main.
+
+    When only one of them learned about ok/error/stdout_noise_lines, the persisted run claimed
+    every call succeeded with zero noise while the driver was reporting seven noise lines. A
+    field that exists on both records has to be carried by both paths, so this test names the
+    overlap instead of trusting two call sites to stay in step.
+    """
+    from dataclasses import fields
+    from mcpfanout.record import ToolCall
+    shared = {f.name for f in fields(DriveResult)} & {f.name for f in fields(ToolCall)}
+    assert {"ok", "error", "stdout_noise_lines"} <= shared
+    src = (Path(__file__).resolve().parent.parent / "harness" / "drive_all.py").read_text()
+    call = src.split("all_calls.append(ToolCall(")[1].split("))")[0]
+    for name in sorted(shared - {"run_id", "server_id"}):
+        assert name in call, f"drive_all drops ToolCall.{name} and it silently defaults"

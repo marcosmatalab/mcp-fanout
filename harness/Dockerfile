@@ -16,8 +16,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && apt-get install -y --no-install-recommends nodejs \
  && rm -rf /var/lib/apt/lists/*
 
-# uv for uvx-launched Python MCP servers.
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && ln -s /root/.local/bin/uv /usr/local/bin/uv || true
+# uv AND uvx for uvx-launched Python MCP servers. Both binaries, because registry/servers.yaml
+# launches fetch, git and time with `uvx` and the installer puts two separate executables in
+# ~/.local/bin -- symlinking only `uv` left the image unable to start three of the ten servers
+# with FileNotFoundError: 'uvx'. No `|| true` either: that swallowed the failure so the image
+# built green and broke at capture time instead, which is the worst place to find out.
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+ && ln -s /root/.local/bin/uv /usr/local/bin/uv \
+ && ln -s /root/.local/bin/uvx /usr/local/bin/uvx \
+ && uv --version && uvx --version
 
 WORKDIR /app
 COPY pyproject.toml README.md ./

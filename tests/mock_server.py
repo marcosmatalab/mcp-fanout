@@ -12,6 +12,8 @@ nothing. Two knobs, both env vars, so one file covers every case:
 
   MOCK_SUPPORTED_PROTOCOLS   comma-separated; anything else is rejected. Default: 2025-11-25.
   MOCK_HANG                  "1" to accept the request and never answer, for timeout tests.
+  MOCK_STDOUT_NOISE          "1" to emit npm-style junk on stdout before each reply, the way
+                             mcp-server-fetch 2026.8.18 does when it shells out to npm.
 """
 
 import json
@@ -20,6 +22,7 @@ import sys
 import time
 
 DEFAULT_SUPPORTED = "2025-11-25"
+TOOL_NAMES = {"search"}
 
 
 def supported() -> list[str]:
@@ -62,14 +65,29 @@ def main() -> None:
                 error = {"code": -32602, "message": f"unsupported protocolVersion {asked}",
                          "data": {"supported": supported()}}
         elif method == "tools/list":
-            result = {"tools": [{"name": "search", "description": "mock",
-                                 "inputSchema": {"type": "object"}}]}
+            result = {"tools": [{"name": n, "description": "mock",
+                                 "inputSchema": {"type": "object"}} for n in sorted(TOOL_NAMES)]}
         elif method == "tools/call":
             params = msg.get("params", {})
-            result = {"content": [{"type": "text", "text": f"called {params.get('name')}"}],
-                      "isError": False}
+            name = params.get("name")
+            if name not in TOOL_NAMES:
+                # A real server rejects a tool it does not have. The mock used to answer any
+                # name at all, which meant no driver test could tell a real call from a call to
+                # a tool that does not exist -- the exact defect the corpus had.
+                error = {"code": -32602, "message": f"Unknown tool: {name}",
+                         "data": {"available": sorted(TOOL_NAMES)}}
+            else:
+                result = {"content": [{"type": "text", "text": f"called {name}"}],
+                          "isError": False}
         else:
             error = {"code": -32601, "message": "method not found"}
+
+        if os.environ.get("MOCK_STDOUT_NOISE") == "1":
+            # Verbatim shape of what mcp-server-fetch 2026.8.18 puts on its JSON-RPC channel:
+            # a bare newline, then npm's summary. Both must be skipped, and both counted.
+            sys.stdout.write("\n")
+            sys.stdout.write("added 41 packages, and audited 42 packages in 4s\n")
+            sys.stdout.flush()
 
         payload = {"jsonrpc": "2.0", "id": mid}
         payload["error" if error else "result"] = error if error else result

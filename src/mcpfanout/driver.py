@@ -91,6 +91,7 @@ class DriveResult:
     traceparent: str
     ok: bool
     error: str = ""
+    stdout_noise_lines: int = 0   # non-JSON-RPC lines the server wrote to stdout; see _read()
 
 
 class StdioMCPClient:
@@ -113,6 +114,9 @@ class StdioMCPClient:
         self._stderr_tail: list[str] = []
         # Lines arrive on a reader thread so no read can block the harness indefinitely.
         self._stdout_q: "queue.Queue[str | None]" = queue.Queue()
+        # Non-JSON-RPC lines seen on stdout. See _read().
+        self.stdout_noise_lines = 0
+        self._noise_tail: list[str] = []
 
     def __enter__(self) -> "StdioMCPClient":
         self.proc = subprocess.Popen(
@@ -157,18 +161,43 @@ class StdioMCPClient:
         self.proc.stdin.flush()
 
     def _read(self, deadline: float) -> dict:
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise ServerTimeout(f"no response within {self.read_timeout}s. "
-                                f"stderr tail: {self._stderr_tail[-5:]}")
-        try:
-            line = self._stdout_q.get(timeout=remaining)
-        except queue.Empty:
-            raise ServerTimeout(f"no response within {self.read_timeout}s. "
-                                f"stderr tail: {self._stderr_tail[-5:]}") from None
-        if line is None:
-            raise EOFError(f"server closed stdout. stderr tail: {self._stderr_tail[-5:]}")
-        return json.loads(line)
+        """Read the next JSON-RPC message, skipping lines that are not one.
+
+        MCP stdio reserves stdout for the protocol and directs logging to stderr, but real
+        servers break that. mcp-server-fetch 2026.8.18 shells out to npm during a tools/call and
+        lets npm write to its own stdout, so the JSON-RPC channel carries lines like "added 41
+        packages, and audited 42 packages in 4s" and bare newlines. Parsing every line made
+        every call to that server fail with "Expecting value: line 2 column 1".
+
+        So non-JSON lines are skipped AND COUNTED, which is the point. The previous behaviour of
+        raising was chosen to stop a broken server producing a falsely clean measurement, and
+        that concern is right; silently swallowing the noise would have the same fault in the
+        other direction. Counting keeps the concern and drops the crash: the count rides out in
+        the ToolCall record, so "this server corrupts its own protocol channel" is reported as a
+        property of the server instead of losing us the measurement entirely.
+        """
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ServerTimeout(f"no response within {self.read_timeout}s. "
+                                    f"stderr tail: {self._stderr_tail[-5:]}")
+            try:
+                line = self._stdout_q.get(timeout=remaining)
+            except queue.Empty:
+                raise ServerTimeout(f"no response within {self.read_timeout}s. "
+                                    f"stderr tail: {self._stderr_tail[-5:]}") from None
+            if line is None:
+                raise EOFError(f"server closed stdout. stderr tail: {self._stderr_tail[-5:]}")
+            if not line.strip():
+                self.stdout_noise_lines += 1
+                continue
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError:
+                self.stdout_noise_lines += 1
+                self._noise_tail.append(line.rstrip()[:200])
+                del self._noise_tail[:-10]
+                continue
 
     def request(self, method: str, params: dict | None = None,
                 *, timeout: float | None = None) -> dict:
@@ -262,15 +291,19 @@ def drive(command: list[str], corpus: list[CallSpec], run_id: str, server_id: st
                     "traceparent": tp, "args_present": args_present, "args_digests": args_digests,
                 })
 
+            noise_before = client.stdout_noise_lines
             try:
                 client.call_tool(spec, tp)
                 ok, err = True, ""
             except Exception as exc:  # a failing call is data, not a crash: record and continue
-                ok, err = False, str(exc)
+                ok, err = False, f"{type(exc).__name__}: {exc}"
 
+            noise = client.stdout_noise_lines - noise_before
             results.append(DriveResult(call_id=call_id, tool_name=spec.tool_name,
-                                       args_present=args_present, traceparent=tp, ok=ok, error=err))
-            tool_calls.append(ToolCall(run_id, server_id, call_id, spec.tool_name, args_present, tp))
+                                       args_present=args_present, traceparent=tp, ok=ok,
+                                       error=err, stdout_noise_lines=noise))
+            tool_calls.append(ToolCall(run_id, server_id, call_id, spec.tool_name, args_present,
+                                       tp, ok=ok, error=err, stdout_noise_lines=noise))
 
     if calls_path is not None:
         write_jsonl(calls_path, tool_calls)
