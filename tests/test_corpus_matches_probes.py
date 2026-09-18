@@ -230,3 +230,26 @@ def test_argument_less_calls_are_possible_on_some_servers_and_not_others():
             f"{server['id']}: offers an argument-less tool = {offers}, corpus drives one = "
             f"{server['id'] in without}")
     assert without == {"everything", "filesystem", "memory"}
+
+
+# --- Figures quoted in prose. Gate rule 2: no figure without a command behind it. docs/THREATS.md
+# --- threat 8 quotes a tool count per server, and prose drifts from data silently.
+
+def test_threats_doc_tool_counts_match_the_probes():
+    import re
+    text = (ROOT / "docs" / "THREATS.md").read_text()
+    for server in _servers():
+        probe = json.loads((ROOT / server["probe_ref"]).read_text())
+        # Only where the prose actually quotes a count: "<id> (13 tools)" or "<id> (13)".
+        for quoted in re.findall(rf"\b{re.escape(server['id'])}\s*\((\d+)\b", text):
+            assert int(quoted) == probe["tool_count"], (
+                f"docs/THREATS.md says {server['id']} has {quoted} tools; "
+                f"the probe found {probe['tool_count']}")
+
+
+def test_threats_doc_total_matches_the_sum_of_the_probes():
+    import re
+    text = (ROOT / "docs" / "THREATS.md").read_text()
+    total = sum(json.loads((ROOT / s["probe_ref"]).read_text())["tool_count"] for s in _servers())
+    assert re.search(rf"\b{total} tools in all\b", text), (
+        f"docs/THREATS.md does not state the measured total of {total} tools")
