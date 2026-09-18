@@ -117,6 +117,11 @@ class StdioMCPClient:
         # Non-JSON-RPC lines seen on stdout. See _read().
         self.stdout_noise_lines = 0
         self._noise_tail: list[str] = []
+        # Responses that arrived while we were waiting for a different id. Needed the moment
+        # more than one request is in flight: without it, await_response would DISCARD another
+        # call's answer while looking for its own, and concurrent driving would hang on the
+        # calls whose responses were thrown away.
+        self._pending: dict[int, dict] = {}
 
     def __enter__(self) -> "StdioMCPClient":
         self.proc = subprocess.Popen(
@@ -199,21 +204,48 @@ class StdioMCPClient:
                 del self._noise_tail[:-10]
                 continue
 
-    def request(self, method: str, params: dict | None = None,
-                *, timeout: float | None = None) -> dict:
+    def send_request(self, method: str, params: dict | None = None) -> int:
+        """Send a request WITHOUT waiting, returning its JSON-RPC id.
+
+        Split out from request() so several calls can be in flight at once, which is the whole
+        point of the phase A bench: CONTENT_UNIQUE is unreachable unless more than one call is
+        active, so a client that can only do one at a time cannot measure the project's thesis.
+        """
         rid = self._next_id()
         self._send({"jsonrpc": "2.0", "id": rid, "method": method, "params": params or {}})
-        # One budget for the whole request, not one per read: a server that emits an unrelated
+        return rid
+
+    def await_response(self, rid: int, *, method: str = "", timeout: float | None = None) -> dict:
+        """Wait for one id's response, stashing any other response that arrives first.
+
+        Stashing rather than skipping is the correctness requirement under concurrency. Server
+        notifications have no id and are dropped; another request's response is kept.
+        """
+        if rid in self._pending:
+            msg = self._pending.pop(rid)
+            if "error" in msg:
+                raise RuntimeError(f"{method or 'request'} error: {msg['error']}")
+            return msg.get("result", {})
+        # One budget for the whole wait, not one per read: a server that emits an unrelated
         # notification just inside every per-read window would otherwise stall us forever while
         # looking responsive. Rejected: per-read timeout, for exactly that reason.
         deadline = time.monotonic() + (self.read_timeout if timeout is None else timeout)
-        # Read until we get the response with our id, skipping any server-initiated notifications.
         while True:
             msg = self._read(deadline)
-            if msg.get("id") == rid:
-                if "error" in msg:
-                    raise RuntimeError(f"{method} error: {msg['error']}")
-                return msg.get("result", {})
+            mid = msg.get("id")
+            if mid is None:
+                continue  # a server-initiated notification: not a response to anything of ours
+            if mid != rid:
+                self._pending[mid] = msg
+                continue
+            if "error" in msg:
+                raise RuntimeError(f"{method or 'request'} error: {msg['error']}")
+            return msg.get("result", {})
+
+    def request(self, method: str, params: dict | None = None,
+                *, timeout: float | None = None) -> dict:
+        rid = self.send_request(method, params)
+        return self.await_response(rid, method=method, timeout=timeout)
 
     def notify(self, method: str, params: dict | None = None) -> None:
         self._send({"jsonrpc": "2.0", "method": method, "params": params or {}})
@@ -267,6 +299,74 @@ def _write_active_calls(control_dir, payload: dict) -> None:
     _os.replace(tmp, control_dir / "active_calls.json")
 
 
+def args_digests_for(spec: CallSpec, redactor) -> list[str]:
+    """The sorted digest set of one call's arguments, or empty when it carries none."""
+    if not spec.arguments:
+        return []
+    args_bytes = json.dumps(spec.arguments, sort_keys=True).encode()
+    return sorted(redactor.kgram_digest_set(args_bytes))
+
+
+def publish_active_calls(control_dir, run_id: str, server_id: str,
+                         entries: list[dict]) -> None:
+    """Publish the in-flight set the capture addon reads. Pass [] to declare none in flight.
+
+    Exposed so the phase A bench driver publishes through the same function the sequential
+    driver uses. Two writers of the same file with two notions of its shape is how the addon
+    ends up reading a payload nobody wrote.
+    """
+    _write_active_calls(control_dir, {"run_id": run_id, "server_id": server_id,
+                                      "active_calls": entries})
+
+
+def drive_wave(client: "StdioMCPClient", specs: list[CallSpec], run_id: str, server_id: str,
+               *, redactor, control_dir, start_index: int = 0,
+               timeout: float | None = None) -> list[DriveResult]:
+    """Drive several calls CONCURRENTLY over one connection, as a single wave.
+
+    The wave is the unit that makes attribution measurable. All of the wave's calls are
+    published as in flight BEFORE any of them is sent, so the addon sees a window of N and can
+    grade CONTENT_UNIQUE (N > 1 and the fragment in exactly one) apart from
+    CONTENT_AMBIGUOUS (in several). Then all requests are sent, then all responses collected.
+
+    The in-flight set is cleared after the wave, deliberately. Egress that arrives afterwards is
+    then unattributed, which is the correct answer and is exactly what the bench's
+    "task still alive after the response" case exists to demonstrate: a time window cannot
+    attribute what happens outside it.
+    """
+    entries = []
+    for i, spec in enumerate(specs):
+        entries.append({
+            "call_id": f"{server_id}-c{start_index + i:03d}",
+            "traceparent": new_traceparent(),
+            "args_present": bool(spec.arguments),
+            "args_digests": args_digests_for(spec, redactor),
+        })
+    publish_active_calls(control_dir, run_id, server_id, entries)
+
+    rids = []
+    for spec, entry in zip(specs, entries):
+        rids.append(client.send_request("tools/call", {
+            "name": spec.tool_name, "arguments": spec.arguments,
+            "_meta": {"traceparent": entry["traceparent"]},
+        }))
+
+    results = []
+    for spec, entry, rid in zip(specs, entries, rids):
+        try:
+            client.await_response(rid, method="tools/call", timeout=timeout)
+            ok, err = True, ""
+        except Exception as exc:  # a failing call is data, not a crash
+            ok, err = False, f"{type(exc).__name__}: {exc}"
+        results.append(DriveResult(
+            call_id=entry["call_id"], tool_name=spec.tool_name,
+            args_present=entry["args_present"], traceparent=entry["traceparent"],
+            ok=ok, error=err, stdout_noise_lines=0))
+
+    publish_active_calls(control_dir, run_id, server_id, [])
+    return results
+
+
 def drive(command: list[str], corpus: list[CallSpec], run_id: str, server_id: str,
           env: dict | None = None, *, redactor=None, control_dir=None,
           calls_path=None) -> list[DriveResult]:
@@ -290,17 +390,11 @@ def drive(command: list[str], corpus: list[CallSpec], run_id: str, server_id: st
             args_present = bool(spec.arguments)
 
             if control_dir is not None and redactor is not None:
-                args_bytes = json.dumps(spec.arguments, sort_keys=True).encode() if args_present else b""
-                args_digests = sorted(redactor.kgram_digest_set(args_bytes)) if args_present else []
-                # One entry, because driving is sequential. The list shape is what phase C fills
-                # with several; nothing downstream has to change for that to work.
-                _write_active_calls(control_dir, {
-                    "run_id": run_id, "server_id": server_id,
-                    "active_calls": [{
-                        "call_id": call_id, "traceparent": tp,
-                        "args_present": args_present, "args_digests": args_digests,
-                    }],
-                })
+                # One entry, because this path is sequential. drive_wave publishes several.
+                publish_active_calls(control_dir, run_id, server_id, [{
+                    "call_id": call_id, "traceparent": tp, "args_present": args_present,
+                    "args_digests": args_digests_for(spec, redactor),
+                }])
 
             noise_before = client.stdout_noise_lines
             try:
