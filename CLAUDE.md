@@ -40,8 +40,9 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 23
-  tests. If you add behaviour, add a test.
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 128
+  tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
+  quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
   `record`, `aggregate`, `demo`, `cli` must not gain third-party dependencies. The capture layer
   (`driver`, `capture_addon`, `harness/`) may use the `capture` extra (mitmproxy, PyYAML). This is
@@ -56,6 +57,13 @@ claim, add the command that measures it, or do not add the claim. This applies t
   server, and gate rule 3 forbids naming servers in anything published.
 - **Aggregate output names nothing.** No server id, host, or tool name. There is a test enforcing
   this (`tests/test_aggregate.py::test_aggregate_output_leaks_no_server_names`). Keep it passing.
+- **Never discard unstaged work.** `git checkout -- <path>` and `git restore <path>` are
+  forbidden on work that is not staged. To throw something away, use `git stash push -m "<why>"`,
+  which is recoverable. This cost real edits three times in one session, always the same way: a
+  file is mutated on purpose to prove a test bites, `checkout` undoes the mutation, and every
+  other unstaged change under that path goes back to HEAD with it. To mutate a file for a test,
+  copy it outside the repo first (`cp <file> "$SCRATCH/<file>.bak"`, mutate, run, copy back), or
+  `git add` before mutating so `checkout` restores the right thing.
 - **Weigh cost against benefit explicitly** when proposing work, in euros and hours. The budget is
   tight. Say what something costs before building it.
 
@@ -73,7 +81,8 @@ src/mcpfanout/   measurement core (stdlib only) + driver and capture addon
 harness/         Docker image, run.sh orchestration, drive_all.py, probe.py
 corpus/context/  synthetic bait files with unique CANARY_ tokens (never real secrets)
 corpus/calls/    the fixed per-server tool-call corpus
-registry/        servers.yaml (what to measure) and selfhostable.json (number 6 classification)
+registry/        servers.yaml (what to measure), selfhostable.json (number 6 classification),
+                 package-infrastructure.json (number 1 exclusion list), probes/ (real tool schemas)
 docs/            doctrine, method, the six numbers, the gate, threats, stop criteria
 tests/           the core test suite plus a mock MCP server
 ```
@@ -82,7 +91,7 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 23 tests, no Docker, no network
+make verify      # 128 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make run         # real capture, needs Docker and network
@@ -101,21 +110,29 @@ Verified on 2026-09-18 against the live registries:
   `mcp-server-time==2026.8.18`, `mcp-server-sqlite==2025.4.25`.
   Note `@modelcontextprotocol/server-sequentialthinking` (no hyphen), `server-fetch`,
   `server-sqlite` and `server-time` do NOT exist on npm.
-- Real tool counts from `tools/list`: everything (many), filesystem 14, memory 9,
-  sequential-thinking 1.
-- **Known defect:** `driver.PROTOCOL_VERSION` is set to `"2026-07-28"`, which the reference server
-  accepts but answers with `"2025-11-25"`. Verify the correct current spec revision and fix the
-  constant, and check whether the SEP-414 claim in `docs/METHOD.md` cites the right revision.
+- Real tool counts, all ten probed 2026-09-18 and committed under `registry/probes/`: github 26,
+  filesystem 14, everything 13, git 12, memory 9, puppeteer 7, time 2, brave-search 2, fetch 1,
+  sequential-thinking 1. Nine started with no credentials; brave-search exits before the
+  handshake without `BRAVE_API_KEY`.
+- **Former defect, now fixed (do not re-fix).** `driver.PROTOCOL_VERSION` was `"2026-07-28"`.
+  That revision is current AND is where SEP-414 went Final, so the constant was not naming a
+  wrong spec: it removed the `initialize` handshake (SEP-2575), which this driver is built on, so
+  the harness announced a protocol it does not speak. It is now `"2025-11-25"`, the wire it
+  actually implements. See `docs/METHOD.md`, "The protocol revision we speak".
 
 ## Pending work, in order
 
-1. **Align the corpus.** `corpus/calls/*.json` currently names plausible but unverified tools.
-   Probe every server with `harness/probe.py`, then rewrite each corpus against the real tool
-   names and input schemas. A call to a non-existent tool records zero egress and silently biases
-   numbers 1, 2 and 5 downward.
-2. **Pin `registry/servers.yaml`** to the exact versions above.
-3. **Fix the protocol version defect** noted under measured facts.
-4. Only then run a real capture and report numbers.
+Items 1 to 3 of the previous list are done: the corpus is aligned against the real schemas and
+gated by `tests/test_corpus_matches_probes.py`, `registry/servers.yaml` is pinned to exact
+versions with measured per-server facts, and the protocol defect is fixed. A one-server capture
+of `fetch` has run end to end.
+
+1. **Build the phase A bench** (`docs/PHASES.md`): two or three of our own MCP servers with known
+   egress to our own destinations. Until it passes the sensor gate, no phase B figure may be
+   published. That is gate rule 8, and it blocks everything below it.
+2. **Then** the ten-server phase B capture.
+3. **Then** phase C, attacking attribution with concurrent calls. Only there can
+   `CONTENT_UNIQUE` be earned; see `docs/DOCTRINE.md`, the evidence model.
 
 ## Commit style
 

@@ -46,6 +46,16 @@ Implemented in `match.decide_state`. Content evidence outranks correlation: if a
 arguments are in the payload, the connection is `EFECTIVO` no matter how many other calls were
 concurrent.
 
+## Never discard unstaged work
+
+`git checkout -- <path>` and `git restore <path>` are forbidden on work that is not staged. To
+discard something, use `git stash push -m "<why>"`, which is recoverable. Stated here as well as
+in CLAUDE.md because this file is the one the code comments cite.
+
+The pattern is specific and it recurred three times in one session: a file is mutated on purpose
+to prove a test bites, `checkout` is used to undo the mutation, and everything else unstaged under
+that path returns to HEAD with it. Back up outside the repository before mutating, or stage first.
+
 ## Rule 6: no number without a command
 
 No published figure exists without a command that measures it. Every one of the six numbers has
