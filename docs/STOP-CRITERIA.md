@@ -3,6 +3,12 @@
 When to stop spending on the measurement. The measurement is one afternoon and about 10 EUR of
 compute; these criteria say when that afternoon has answered the question.
 
+The pre-registered version of this, with the sensor and product gates beside it, is
+`docs/PHASES.md`. This file is the reasoning; that file is the commitment made before the data
+existed. Two additions there that are not below, because they are not technical outcomes and
+decide the same thing anyway: a target market of hosted remote MCP, which this method cannot
+observe at all, and buyers who consider their existing gateway sufficient.
+
 ## Stop, small problem
 
 If the median fan-out (number 1) is 1 and literal coincidence (numbers 4 and 5) is zero, the idea
