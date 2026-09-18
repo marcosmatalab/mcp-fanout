@@ -1,0 +1,81 @@
+# The servers under measurement.
+#
+# STARTER SET, not the final ten. Before any number is published, this file must:
+#   1. Pin each server to an exact version by digest (npm integrity or a pinned image), so the
+#      run is reproducible and a later malicious version cannot silently change the result.
+#      A pinned version is gate rule 1; the fields below carry a loose spec on purpose, to be
+#      frozen, not to be trusted as-is.
+#   2. Verify each server's real tools via tools/list and align its corpus file accordingly.
+#      A tool name that does not exist yields an error call (recorded, not fatal), but it also
+#      means that server contributed no real egress, which skews the numbers. Align first.
+#
+# A server that needs credentials is launched WITHOUT them on purpose (gate rule 5: no real
+# credentials). It will fail auth, but the connection attempt still reveals the destination host
+# and whether our arguments were forwarded, which is exactly what numbers 1, 2 and 5 measure.
+# The measurement is of egress behavior, not of a successful API call.
+
+k: 16
+w: 8
+
+servers:
+  # --- Local by design: controls. Expected fan-out ~0. If they egress, that is the finding. ---
+  - id: everything
+    launch: ["npx", "-y", "@modelcontextprotocol/server-everything"]
+    corpus_ref: corpus/calls/everything.json
+    expects_egress: false
+    needs_credentials: false
+
+  - id: filesystem
+    launch: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/app/corpus"]
+    corpus_ref: corpus/calls/filesystem.json
+    expects_egress: false
+    needs_credentials: false
+
+  - id: memory
+    launch: ["npx", "-y", "@modelcontextprotocol/server-memory"]
+    corpus_ref: corpus/calls/memory.json
+    expects_egress: false
+    needs_credentials: false
+
+  - id: sequential-thinking
+    launch: ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
+    corpus_ref: corpus/calls/generic.json
+    expects_egress: false
+    needs_credentials: false
+
+  - id: git
+    launch: ["uvx", "mcp-server-git"]
+    corpus_ref: corpus/calls/generic.json
+    expects_egress: false
+    needs_credentials: false
+
+  - id: time
+    launch: ["uvx", "mcp-server-time"]
+    corpus_ref: corpus/calls/generic.json
+    expects_egress: false
+    needs_credentials: false
+
+  # --- Egress by design: the interesting ones. These reach a third party. ---
+  - id: fetch
+    launch: ["uvx", "mcp-server-fetch"]
+    corpus_ref: corpus/calls/fetch.json
+    expects_egress: true
+    needs_credentials: false
+
+  - id: brave-search
+    launch: ["npx", "-y", "@modelcontextprotocol/server-brave-search"]
+    corpus_ref: corpus/calls/search.json
+    expects_egress: true
+    needs_credentials: true       # BRAVE_API_KEY intentionally absent; we watch the attempt
+
+  - id: github
+    launch: ["npx", "-y", "@modelcontextprotocol/server-github"]
+    corpus_ref: corpus/calls/generic.json
+    expects_egress: true
+    needs_credentials: true       # GITHUB_TOKEN intentionally absent
+
+  - id: puppeteer
+    launch: ["npx", "-y", "@modelcontextprotocol/server-puppeteer"]
+    corpus_ref: corpus/calls/fetch.json
+    expects_egress: true
+    needs_credentials: false

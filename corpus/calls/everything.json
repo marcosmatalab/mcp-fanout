@@ -1,0 +1,6 @@
+[
+  {"tool": "echo", "arguments": {"message": "probe CANARY_QRY_ab12cd34ef56 end"}},
+  {"tool": "add", "arguments": {"a": 40, "b": 2}},
+  {"tool": "printEnv", "arguments": {}},
+  {"tool": "getResourceReference", "arguments": {"resourceId": 1}}
+]

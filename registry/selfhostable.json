@@ -1,0 +1,13 @@
+{
+  "_comment": "Extends the embedded classification defaults in src/mcpfanout/classify.py. remote_leaf_suffixes are hosted APIs that cannot be run on our own machine (a leaf where the chain breaks). self_hostable_suffixes are destinations known to be self-hostable MCP nodes or local services (recursable interior). Both extend, never shrink, the built-in defaults. Curate this down as unknown domains are identified; an unknown public domain counts as a leaf until listed.",
+  "remote_leaf_suffixes": [
+    "search.brave.com",
+    "api.search.brave.com",
+    "raw.githubusercontent.com",
+    "objects.githubusercontent.com",
+    "sentry.io",
+    "segment.io",
+    "google-analytics.com"
+  ],
+  "self_hostable_suffixes": []
+}

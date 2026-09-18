@@ -1,0 +1,25 @@
+# One service: the harness. It builds the image, runs one capture, and writes the run to a
+# bind-mounted ./runs so the results survive the container.
+#
+# Network note: the default bridge network is intentional, not host networking. The servers must
+# reach the real internet to exhibit their real fan-out (that is the whole measurement), but they
+# must NOT reach anything on the host. If you need to prove a server touches nothing, set
+# `network_mode: none` and read the difference: a server that still "works" with no network was
+# doing nothing that leaves the machine.
+services:
+  harness:
+    build:
+      context: ..
+      dockerfile: harness/Dockerfile
+    image: mcp-fanout-harness:0.1.0
+    working_dir: /app
+    volumes:
+      - ../runs:/app/runs           # results out
+      - ../registry:/app/registry:ro
+      - ../corpus:/app/corpus:ro
+    environment:
+      # Override with a secret salt for a real deployment; leave unset for a reproducible run.
+      - MCPFANOUT_SALT=${MCPFANOUT_SALT:-mcp-fanout/fixed-salt/v1}
+    # cap_add NET_RAW is only needed for the tcpdump backstop. Drop it to run proxy-only.
+    cap_add:
+      - NET_RAW

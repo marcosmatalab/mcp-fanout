@@ -1,0 +1,4 @@
+[
+  {"tool": "create_entities", "arguments": {"entities": [{"name": "probe", "entityType": "test", "observations": ["CANARY_QRY_ab12cd34ef56"]}]}},
+  {"tool": "read_graph", "arguments": {}}
+]

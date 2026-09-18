@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-fanout"
+version = "0.1.0"
+description = "A reproducible measurement harness for MCP tool-call fan-out and causal-union rate."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Marcos Mata García" }]
+keywords = ["mcp", "observability", "provenance", "supply-chain", "measurement"]
+
+# Dependency choices, justified (doctrine: every design decision carries its why).
+#
+# Runtime core (matching, classification, aggregation) intentionally depends on the
+# standard library ONLY. Reason: the core is what CI runs and what `make verify` proves
+# reproducible; keeping it dependency-free removes a whole class of "the number changed
+# because a transitive dep changed" failures, which is exactly the supply-chain problem
+# this project studies. Cost: we reimplement a rolling hash and winnowing (about 120 lines).
+# Trade-off accepted: 120 lines we can audit beat a dependency we cannot.
+dependencies = []
+
+[project.optional-dependencies]
+# Capture layer. Only needed to RUN a live capture, never to compute numbers from records.
+# Split out so `pip install mcp-fanout` stays stdlib-only and CI never pulls mitmproxy.
+capture = [
+    "mitmproxy>=11,<13",   # HTTP(S) interception with a local CA. See docs/METHOD.md for why proxy, not eBPF, for the measurement.
+    "PyYAML>=6",           # registry/*.yaml parsing only.
+]
+dev = [
+    "pytest>=8",
+    "PyYAML>=6",
+]
+
+[project.scripts]
+mcp-fanout = "mcpfanout.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
