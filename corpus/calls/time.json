@@ -1,0 +1,6 @@
+[
+  {"tool": "get_current_time", "arguments": {"timezone": "Europe/Madrid"},
+   "why": "timezone is required, so this server admits no argument-less call. An IANA name, which is what the schema description asks for."},
+  {"tool": "convert_time", "arguments": {"source_timezone": "Europe/Madrid", "time": "09:30", "target_timezone": "America/New_York"},
+   "why": "All three required. No canary: the tool takes no free-text field, and a timezone name is not a fragment of our system, so there is nothing here that could travel."}
+]

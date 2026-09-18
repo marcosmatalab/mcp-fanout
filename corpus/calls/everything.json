@@ -1,6 +1,10 @@
 [
-  {"tool": "echo", "arguments": {"message": "probe CANARY_QRY_ab12cd34ef56 end"}},
-  {"tool": "add", "arguments": {"a": 40, "b": 2}},
-  {"tool": "printEnv", "arguments": {}},
-  {"tool": "getResourceReference", "arguments": {"resourceId": 1}}
+  {"tool": "echo", "arguments": {"message": "probe CANARY_QRY_ab12cd34ef56 end"},
+   "why": "Local control. The canary is here on purpose even though this server is not expected to egress: if it ever appears on the wire, that IS the finding (expects_egress: false)."},
+  {"tool": "get-sum", "arguments": {"a": 40, "b": 2},
+   "why": "Both required args, both numbers. Was 'add' in the guessed corpus; no such tool exists."},
+  {"tool": "get-env", "arguments": {},
+   "why": "The argument-less call for this server. Was 'printEnv' in the guessed corpus. Reads the server's own environment, which is the interesting one for a control: if it ships that out, that is egress of our machine's state."},
+  {"tool": "get-resource-reference", "arguments": {"resourceId": 1},
+   "why": "Optional-argument call: the schema requires nothing, we pass one anyway, so 'args_present' is true while 'required' is empty. Was 'getResourceReference' in the guessed corpus."}
 ]
