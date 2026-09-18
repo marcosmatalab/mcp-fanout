@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 from .aggregate import Run, compute_all, number_1, number_2, number_3, number_4, number_5, number_6
-from .classify import Registry
+from .classify import PACKAGE_INFRASTRUCTURE_PATH, ExclusionList, Registry
 
 
 def _resolve_run(run_arg: str, runs_root: Path = Path("runs")) -> Path:
@@ -51,12 +51,16 @@ def _load_registry() -> Registry:
 def _cmd_aggregate(args: argparse.Namespace) -> int:
     run = Run.load(_resolve_run(args.run))
     registry = _load_registry()
+    # A declared exclusion list, loaded from registry/ and cited in the output. None is a
+    # reported state, not a default: number_1 withholds the excluded figure and says why.
+    exclusions = ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH)
     single = {
-        "1": lambda: number_1(run), "2": lambda: number_2(run), "3": lambda: number_3(run),
-        "4": lambda: number_4(run), "5": lambda: number_5(run), "6": lambda: number_6(run, registry),
+        "1": lambda: number_1(run, exclusions), "2": lambda: number_2(run),
+        "3": lambda: number_3(run), "4": lambda: number_4(run), "5": lambda: number_5(run),
+        "6": lambda: number_6(run, registry),
     }
     if args.number == "all":
-        out = compute_all(run, registry)
+        out = compute_all(run, registry, exclusions)
     else:
         out = single[args.number]()
     print(json.dumps(out, indent=2, sort_keys=True))
@@ -68,7 +72,9 @@ def _cmd_selftest(args: argparse.Namespace) -> int:
     out_dir = Path(args.out)
     build_demo_run(out_dir)
     run = Run.load(out_dir)
-    print(json.dumps(compute_all(run, _load_registry()), indent=2, sort_keys=True))
+    print(json.dumps(compute_all(run, _load_registry(),
+                                 ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH)),
+                     indent=2, sort_keys=True))
     return 0
 
 

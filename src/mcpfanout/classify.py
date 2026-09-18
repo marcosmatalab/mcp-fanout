@@ -21,12 +21,19 @@ Classification decisions
 
 from __future__ import annotations
 
+import hashlib
 import ipaddress
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 LOCAL = "local"
 SELF_HOSTABLE = "self_hostable"
 REMOTE_LEAF = "remote_leaf"
+
+# Where the package-infrastructure exclusion list lives. Number 1 publishes a connection count
+# that excludes these hosts alongside the raw count that includes them (see ExclusionList).
+PACKAGE_INFRASTRUCTURE_PATH = "registry/package-infrastructure.json"
 
 # Default remote-leaf suffixes: hosted APIs that cannot be run on our own machine. Starter set,
 # meant to grow through the registry file, never claimed to be exhaustive.
@@ -100,3 +107,61 @@ def selfhostable_fraction(hosts: set[str], registry: Registry | None = None) -> 
     recursable = counts[LOCAL] + counts[SELF_HOSTABLE]
     fraction = (recursable / total) if total else 0.0
     return fraction, counts
+
+
+@dataclass(frozen=True)
+class ExclusionList:
+    """A declared, published, versioned set of host suffixes that a number may exclude.
+
+    Three properties make this an exclusion list rather than a silent filter, and all three are
+    load-bearing:
+
+    1. It is DATA IN THE REPOSITORY, not code. One file, committed, with a version string. There
+       are deliberately NO embedded defaults: defaults would mean the effective list is only
+       half in registry/, which would make the citation below a half-truth. If the file is
+       missing, the excluded figure is not computed at all and says why -- never silently
+       computed against an empty list, which would look identical to "no package traffic".
+    2. The RAW COUNT IS NEVER DISCARDED. Whatever excludes, excludes alongside the unfiltered
+       figure, so a server with real fan-out to a listed host stays visible.
+    3. The output CITES IT by name, version and sha256 (see ``citation``), so a reader can check
+       exactly which list produced a figure. The citation carries no hostnames, because gate
+       rule 3 forbids a host in published output; the digest plus the committed file is what
+       makes the list checkable without naming anything in the aggregate.
+    """
+    name: str
+    version: str
+    suffixes: tuple[str, ...]
+    sha256: str
+    path: str
+
+    @classmethod
+    def load(cls, path: str | Path) -> "ExclusionList | None":
+        """Load the list, or None if the file is absent. Absent is reported, never assumed empty."""
+        p = Path(path)
+        if not p.is_file():
+            return None
+        raw = p.read_bytes()
+        data = json.loads(raw.decode("utf-8"))
+        return cls(
+            name=data.get("list_name", p.stem),
+            version=data.get("version", ""),
+            suffixes=tuple(data.get("suffixes", ())),
+            sha256=hashlib.sha256(raw).hexdigest(),
+            path=str(path),
+        )
+
+    def matches(self, host: str) -> bool:
+        return _suffix_match(host or "", self.suffixes)
+
+    def citation(self) -> dict:
+        """What goes into the aggregate output. Counts and identifiers only, never a hostname.
+
+        The path is published as the canonical repository-relative one (parent directory plus
+        file name), NOT as whatever the caller passed. A caller that loads by absolute path would
+        otherwise publish the operator's home directory into the aggregate -- the same class of
+        leak as a probe file naming /home/<user>, and gate rule 3 territory.
+        """
+        p = Path(self.path)
+        return {"list_name": self.name, "version": self.version,
+                "path": f"{p.parent.name}/{p.name}" if p.parent.name else p.name,
+                "sha256": self.sha256, "suffix_count": len(self.suffixes)}

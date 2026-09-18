@@ -106,3 +106,60 @@ gate rule 6. Each names the threat and what it does to the numbers.
    produces no egress and therefore no fan-out. The alignment makes a future run countable; it
    does not itself count anything. No number in `docs/THE-SIX-NUMBERS.md` has a measured value as
    of this writing, and an aligned corpus must not be mistaken for a result.
+
+10. **A tool call is not atomic: `mcp-server-fetch` reaches a package registry mid-call.** Named
+    as a finding rather than filed as noise, because it is the most interesting thing the first
+    capture produced.
+
+    Measured 2026-09-18 against `mcp-server-fetch@2026.8.18` (PyPI), launched via `uvx`, driven
+    under capture with the two-call corpus in `corpus/calls/fetch.json`. Serving those two calls,
+    the server opened **87 connections to `registry.npmjs.org`** and 4 to the requested host. The
+    npm connections are not our package manager: the uv and npm caches are warmed before the
+    proxy starts (`harness/run.sh`), and they appear *after* the tool call's own request, on the
+    first call only. The server shells out to npm **during** `tools/call`. The same behavior is
+    visible from the other side: it writes npm's output to its own stdout, corrupting the
+    JSON-RPC channel with lines like `added 41 packages, and audited 42 packages in 4s`.
+
+    Why this is supply-chain surface and not a curiosity. A tool call that installs a package
+    while it runs can receive **different code on different calls**, from a registry that is not
+    the one the server itself was pinned from. Pinning `mcp-server-fetch@2026.8.18` pins the
+    Python distribution and says nothing about the npm package resolved at call time. Everything
+    this project pins -- the exact version in `registry/servers.yaml`, the corpus digest in the
+    manifest -- describes the state before the call, and this server mutates its own
+    implementation after that snapshot is taken. There is no version in our records for the code
+    that actually ran.
+
+    What it does to the numbers, and how that is handled: number 1 would read 45.5 connections
+    per call as a raw mean, which is true and misleading, because those 87 are serial connections
+    to a single infrastructure host during one known call and so are trivially attributable.
+    Number 1 therefore publishes three figures together (raw, distinct hosts, and raw excluding
+    the declared list in `registry/package-infrastructure.json`), and for this run they read 45.5,
+    1.5 and 2.0. The raw figure is never discarded: this server's 87 connections stay visible in
+    it, which is exactly how a reader finds this threat from the numbers alone. See
+    `docs/THE-SIX-NUMBERS.md`, number 1.
+
+    Not generalised from one server. Whether other servers install at call time is unmeasured;
+    this says only that one of the ten does, and that the raw-versus-excluded gap is where to
+    look for the rest.
+
+    Provenance of the figures above, and a tension worth naming. They come from run
+    `20260918T193234Z`, a single-server capture driven with `--only fetch`, and the command behind
+    them is `python -m mcpfanout.cli aggregate --run runs/20260918T193234Z --number 1`. Gate rule 2
+    wants a command behind every number and gate rule 4 refuses to track runs at all, so a reader
+    with only this repository **cannot re-derive these figures**; they can only re-run the
+    capture, which will produce its own run with its own numbers. That is the honest state: these
+    are measured, reproducible in method, and not reproducible from the repository alone. The
+    counts checked automatically against committed data are the tool counts in threat 8
+    (`tests/test_corpus_matches_probes.py`); these are not, and saying so is the alternative to
+    committing a run and breaking rule 4.
+
+11. **The canary is only detectable where the client does not re-encode it.** Numbers 4 and 5
+    match the request target and the body byte-literally (`docs/THE-SIX-NUMBERS.md`, "The two
+    matched channels"). A value the server percent-encodes, base64s, splits across parameters, or
+    puts in a header we do not match is a false negative: the flow reads `DECLARADO` when it was
+    causally ours. Every such miss pushes number 5 **down**, so the published figure is a floor on
+    the causal-union rate, not an estimate of it. The first `fetch` capture yielded
+    `efectivo_fraction` 0.011, one flow of 91, matched through the target channel; that figure is
+    a floor over a two-call corpus in which a single call carried a canary, and it is not an
+    estimate of what the technique achieves at scale.
+

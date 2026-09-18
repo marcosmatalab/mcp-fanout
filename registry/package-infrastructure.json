@@ -1,0 +1,30 @@
+{
+  "list_name": "package-infrastructure",
+  "version": "2026-09-18",
+  "_comment": "Hosts whose only purpose is distributing software packages. Number 1 publishes a connection count that EXCLUDES these, alongside the raw count that includes them. Read docs/THE-SIX-NUMBERS.md, number 1, before changing anything here.",
+  "_why_this_list_exists": "The first real capture measured mcp-server-fetch opening 87 connections to registry.npmjs.org while serving one fetch call, because it installs an npm package at tool-call time. That is a genuine finding and it stays in the raw count. But it is 87 serial connections to ONE host of package infrastructure during a known call, so it is trivially attributable and tells us nothing about the question number 1 exists to answer: whether the causal union is hard. What makes the union hard is concurrent connections to DISTINCT domains. A raw mean of 45.5 connections per call, published on its own, is a true number that answers the wrong question.",
+  "_this_is_not_a_silent_filter": "The raw count is never discarded and is always published next to the excluded count. This file is committed, versioned by the date above, and the aggregate output cites it by name, version and sha256 so any reader can check exactly what was excluded. A server with real fan-out to a host listed here remains fully visible in the raw figure.",
+  "_inclusion_criterion": "A host belongs here only if package distribution is its sole purpose. Deliberately NOT included: storage.googleapis.com and edgedl.me.gvt1.com, where puppeteer fetches Chromium. Those are general-purpose CDNs that also carry ordinary application traffic, and excluding them would hide real egress. Being conservative here costs a less flattering number; being generous would hide the thing we are measuring.",
+  "suffixes": [
+    "registry.npmjs.org",
+    "registry.yarnpkg.com",
+    "pypi.org",
+    "files.pythonhosted.org",
+    "crates.io",
+    "static.crates.io",
+    "proxy.golang.org",
+    "sum.golang.org",
+    "rubygems.org",
+    "api.nuget.org",
+    "repo.maven.apache.org",
+    "repo1.maven.org",
+    "deb.debian.org",
+    "security.debian.org",
+    "archive.ubuntu.com",
+    "security.ubuntu.com",
+    "dl-cdn.alpinelinux.org",
+    "registry-1.docker.io",
+    "auth.docker.io",
+    "production.cloudflare.docker.com"
+  ]
+}

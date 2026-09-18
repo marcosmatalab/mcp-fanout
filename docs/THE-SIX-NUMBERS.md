@@ -6,15 +6,48 @@ Numbers 1 to 4 are the paper. Number 5 is the viability. Number 6 sizes the recu
 The commands read the latest run under `runs/`. Build a run with `make run` (real capture) or
 `make selftest` (synthetic, no Docker), then run `make numbers` or an individual `make n<N>`.
 
-## Number 1: outbound connections per tool call
+## Number 1: outbound connections per tool call, in three figures
 
-**Definition.** For each driven tool call, the count of distinct outbound connections observed
-while it was the active call. Reported as a distribution (n, mean, median, max) over all calls,
-including calls that produced zero egress.
+**Definition.** For each driven tool call, three distributions (n, mean, median, max) over all
+calls including those that produced zero egress. **They are published together, always.**
 
-**Decides.** Whether the causal union is trivial or is the product. If the median is 1 (a server
-calls its own API and stops), attribution is trivial and the product is Half B alone. If the
-median is large with concurrency, the union is the whole product.
+| Figure | What it counts |
+| --- | --- |
+| `connections_raw` | every observed connection, unfiltered |
+| `distinct_hosts` | distinct destination hosts per call (the same quantity as number 2) |
+| `connections_excluding_package_infrastructure` | raw minus connections to hosts on the declared list |
+
+**Why three and not one.** One figure is misleading, and the first real capture proved it rather
+than suggested it. `mcp-server-fetch` opened 87 connections to `registry.npmjs.org` while serving
+a single `fetch` call, because it installs an npm package at tool-call time. That gives a raw mean
+of 45.5 connections per call. The number is true and it answers the wrong question: those 87 are
+serial connections to one host of package infrastructure during a known, single active call, so
+they are trivially attributable. What this number exists to decide -- whether the causal union is
+the product or a footnote -- turns on **concurrent connections to distinct domains**, and by that
+measure the same call has 2. Publishing 45.5 on its own would be a false headline built from a
+true count.
+
+**The raw figure is never discarded and never filtered.** A server with genuine fan-out to a host
+that happens to be on the exclusion list stays completely visible in `connections_raw`. The
+excluded figure is an additional view, never a replacement.
+
+**The exclusion list is declared, not a silent filter.** It lives in
+`registry/package-infrastructure.json`: committed, versioned by date, and containing only hosts
+whose sole purpose is distributing software packages. The aggregate output cites it by
+`list_name`, `version` and `sha256`, so any reader can check exactly which list produced the
+figure. The citation deliberately contains **no hostnames**, because gate rule 3 forbids a host in
+published output; the committed file plus the published digest is what makes the list auditable
+without naming anything in the aggregate. General-purpose CDNs are deliberately excluded from the
+list (`storage.googleapis.com`, where puppeteer fetches Chromium, is not on it) because they also
+carry ordinary application traffic and listing them would hide real egress.
+
+If the list cannot be loaded, the third figure is reported as `null` with the reason named. It is
+never computed against an empty list, because "no list loaded" and "no package traffic" would then
+produce identical output and only one of them is a finding.
+
+**Decides.** Whether the causal union is trivial or is the product. If distinct hosts per call is
+1 (a server calls its own API and stops), attribution is trivial and the product is Half B alone.
+If it is large with concurrency, the union is the whole product.
 
 **Command.** `make n1` (`aggregate --number 1`).
 
