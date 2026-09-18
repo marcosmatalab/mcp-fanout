@@ -11,7 +11,7 @@ distribution is what those questions ask for, not because anything is being esti
 
 from __future__ import annotations
 
-import statistics
+import math
 from collections import defaultdict
 from pathlib import Path
 
@@ -47,14 +47,40 @@ def _flows_by_call(run: Run) -> dict[str, list[Flow]]:
     return grouped
 
 
+def _percentile(sorted_values: list[int], p: float) -> int:
+    """Nearest-rank percentile: the smallest observed value at or above rank ceil(p/100 * n).
+
+    Nearest-rank, not linear interpolation, and the difference matters here. Interpolation
+    invents a value that was never observed, which for a connection count means reporting
+    "2.4 connections". These distributions are small, integer, and heavy-tailed, so an
+    interpolated figure would be both fictional and unstable. Every number this returns is a
+    value some call actually produced.
+    """
+    if not sorted_values:
+        return 0
+    n = len(sorted_values)
+    rank = math.ceil((p / 100.0) * n)
+    return sorted_values[min(max(rank, 1), n) - 1]
+
+
 def _dist(values: list[int]) -> dict:
+    """A per-call distribution as n, p50, p95 and max. NO MEAN, deliberately.
+
+    The mean is excluded because it misleads on exactly these distributions. The first real
+    capture had one call at 89 connections and one at 2: the mean is 45.5, a figure no call
+    produced and no architecture decision can be taken from. p50 says what a typical call does,
+    p95 and max say how bad the tail gets, and the tail is what decides whether the causal union
+    has to survive concurrency. Rejected alternative: report the mean alongside. It would be
+    quoted alone, because a single number always is.
+    """
     if not values:
-        return {"n": 0, "mean": 0.0, "median": 0.0, "max": 0}
+        return {"n": 0, "p50": 0, "p95": 0, "max": 0}
+    ordered = sorted(values)
     return {
-        "n": len(values),
-        "mean": round(statistics.fmean(values), 4),
-        "median": statistics.median(values),
-        "max": max(values),
+        "n": len(ordered),
+        "p50": _percentile(ordered, 50),
+        "p95": _percentile(ordered, 95),
+        "max": ordered[-1],
     }
 
 
@@ -132,14 +158,42 @@ def number_2(run: Run) -> dict:
 
 
 def number_3(run: Run) -> dict:
-    """Fraction of servers that propagate our traceparent downstream (SEP-414 cooperative path)."""
+    """Fraction of servers that propagate our traceparent, SEGMENTED by protocol revision.
+
+    Why segmented. SEP-414, which documents trace context in `_meta`, is a minor change of the
+    2026-07-28 revision. A server answering 2024-11-05 predates the convention being written
+    down, so "it does not propagate" says something about its age, not about the convention's
+    uptake. Pooling the two answers the question badly in both directions: it understates uptake
+    among servers that could have implemented it, and it implies the older ones declined
+    something that did not exist yet. The pooled figure is still published, because withholding
+    it would be its own distortion, but it is published next to the segments.
+
+    Servers whose answered revision is unknown get their own bucket rather than being folded in.
+    "Not known" is not a revision.
+    """
     servers = {c.server_id for c in run.calls} | {f.server_id for f in run.flows}
     propagating = {f.server_id for f in run.flows if f.our_traceparent_present}
+    revisions = dict(run.manifest.server_protocol_versions or {})
+
+    by_rev: dict[str, dict] = {}
+    for sid in sorted(servers):
+        rev = revisions.get(sid) or "unknown"
+        bucket = by_rev.setdefault(rev, {"servers_total": 0, "servers_propagating": 0})
+        bucket["servers_total"] += 1
+        if sid in propagating:
+            bucket["servers_propagating"] += 1
+    for bucket in by_rev.values():
+        bucket["fraction"] = round(bucket["servers_propagating"] / bucket["servers_total"], 4)
+
     total = len(servers)
-    frac = (len(propagating) / total) if total else 0.0
     return {"number": 3, "name": "servers_propagating_traceparent",
-            "fraction": round(frac, 4), "servers_total": total,
-            "servers_propagating": len(propagating), "command": "make n3"}
+            "by_protocol_revision": by_rev,
+            "pooled_fraction": round((len(propagating) / total) if total else 0.0, 4),
+            "pooled_note": "read the segments; SEP-414 is a 2026-07-28 change, so a server "
+                           "answering an earlier revision predates the convention",
+            "servers_total": total,
+            "servers_propagating": len(propagating),
+            "command": "make n3"}
 
 
 def number_4(run: Run) -> dict:

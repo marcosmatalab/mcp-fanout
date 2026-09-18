@@ -136,6 +136,11 @@ def main() -> int:
         run_id=run_id, created=datetime.now(timezone.utc).isoformat(),
         salt_fixed=(salt == DEFAULT_SALT), k=k, w=w,
         corpus_sha256=corpus_hash.hexdigest(), server_ids=server_ids,
+        # Taken from the registry, where it was MEASURED by harness/probe.py, rather than
+        # re-derived here: two places computing the same fact is how they diverge.
+        server_protocol_versions={s["id"]: s.get("protocol_version_answered", "")
+                                  for s in selected
+                                  if s.get("protocol_version_answered")},
         tool_versions={"note": "fill with pinned server digests before publishing"},
         notes=("Capture run. See docs/THE-GATE.md before publishing any number."
                + (f" SUBSET RUN: --only {sorted(set(args.only))}; the registry holds "

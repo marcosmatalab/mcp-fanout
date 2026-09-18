@@ -116,6 +116,9 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
         run_id=run_id, created="1970-01-01T00:00:00Z", salt_fixed=(salt == DEFAULT_SALT),
         k=redactor.k, w=redactor.w, corpus_sha256=corpus_sha,
         server_ids=["s1", "s2"], tool_versions={"harness": "selftest"},
+        # Two different answered revisions on purpose, so the selftest exercises number 3's
+        # segmentation rather than collapsing to a single bucket and proving nothing about it.
+        server_protocol_versions={"s1": "2025-11-25", "s2": "2024-11-05"},
         notes="Synthetic selftest run. Not a measurement.",
     )
 
