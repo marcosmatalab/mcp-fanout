@@ -1,0 +1,116 @@
+# mcp-fanout
+
+A reproducible measurement harness that answers one question about MCP (Model Context
+Protocol) servers: **when an agent makes a single tool call, how many third parties does
+that call actually touch, and can each of those outbound connections be tied causally back
+to the call that caused it?**
+
+This repository is a **measurement**, not a product. It exists to produce six numbers.
+Those numbers decide whether a runtime tracing product is worth building and, if so, which
+of two very different architectures it should have. The rationale for measuring before
+building is in [`docs/METHOD.md`](docs/METHOD.md): you cannot design the causal-union layer
+without knowing the fan-out, and choosing blind means building the wrong one.
+
+## What this is, and what it is not
+
+| It is | It is not |
+| --- | --- |
+| A harness that runs real MCP servers in a container and observes their egress | A gateway, a firewall, or anything that blocks traffic |
+| An observer at the **own edge**: it watches bytes leaving the local machine and bytes coming back | An injector: it never plants a marker, a token, or code inside a third party |
+| A producer of aggregate counts, with a command behind every number | A dataset of who-calls-whom; it names no server and no organization in aggregate output |
+| Digest-only: it stores salted hashes and references, never captured content | A DLP product, a content archive, or a monitoring service |
+
+The design follows four standing rules (the doctrine, [`docs/DOCTRINE.md`](docs/DOCTRINE.md)).
+The one that shapes everything here: **never act on what is observed, only observe.** That
+is why this is an edge observer and not a marker that travels the chain. A marker cannot be
+passive and report at the same time, and a chain deeper than the first non-self-hostable node
+is not observable by anyone without cooperation. That limit is physical, not an engineering
+gap, and it is stated as a result rather than hidden.
+
+## The six numbers
+
+Each number has exactly one command that computes it (doctrine rule 6: no published number
+without a command that measures it). Full definitions in
+[`docs/THE-SIX-NUMBERS.md`](docs/THE-SIX-NUMBERS.md).
+
+| # | Number | What it decides | Command |
+| --- | --- | --- | --- |
+| 1 | Outbound connections per tool call | Whether the causal union is trivial or is the product | `make n1` |
+| 2 | Distinct domains per tool call | The size of the publishable finding | `make n2` |
+| 3 | Fraction of servers that propagate `traceparent` | Whether the cooperative path (SEP-414) is worth anything today | `make n3` |
+| 4 | Outbound bytes that literally match context files | Whether content matching has signal at all | `make n4` |
+| 5 | Fraction of connections causally unifiable by content match | **Whether the whole product works** | `make n5` |
+| 6 | Fraction of touched third parties that are themselves self-hostable | How far the edge can advance before the chain breaks | `make n6` |
+
+Number 5 is the decisive one and the one nobody has measured. Numbers 1 to 4 are the paper;
+number 5 is the viability. Number 6 sizes the recursion described in `docs/METHOD.md`.
+
+## The three states
+
+Every outbound connection is classified into one of three resolution states. This is the same
+doctrine used across the author's other work, applied here to a network fact.
+
+| Evidence available | State | What is claimed |
+| --- | --- | --- |
+| A fragment of the call arguments appears literally in the outbound payload | `EFECTIVO` | This connection was caused by this call, with the citation |
+| Only a time window and a pid | `DECLARADO` | Correlation, stated as correlation |
+| Encrypted-by-the-server payload, argument-less call, async pool | `INDETERMINADO` | With the cause named |
+
+The harness publishes the percentage of each state. That is measurement, not a promise.
+
+## Quickstart
+
+Requirements: Python 3.11+, Docker (for the capture run only). The measurement core (matching,
+classification, aggregation) runs and is tested without Docker.
+
+```bash
+# 1. Install (editable) and dev deps
+make install
+
+# 2. Run the pure-Python core against synthetic fixtures and prove reproducibility
+make verify
+
+# 3. Run the full capture against the pinned servers (needs Docker + network)
+make run            # writes runs/<timestamp>/records.jsonl
+
+# 4. Compute all six numbers from the latest run
+make numbers        # or make n1 ... n6 individually
+```
+
+See [`docs/METHOD.md`](docs/METHOD.md) for the observation model and the capture layers,
+and [`docs/THE-GATE.md`](docs/THE-GATE.md) for the seven conditions a run must pass before
+any number is reported.
+
+## Reproducibility, privacy, disclosure
+
+- **Reproducible.** Two runs over the same corpus and the same pinned servers produce the same
+  six numbers. `make verify` proves the measurement core is deterministic byte for byte over
+  fixtures. Salt changes stored digests but never the numbers; see `docs/METHOD.md`.
+- **Digest-only.** Payloads are never stored. The harness keeps salted shingle hashes and
+  references. The sentence it can emit is: "the fragment with hash X, from reference Y, appeared
+  in the output toward domain Z." See [`src/mcpfanout/redact.py`](src/mcpfanout/redact.py).
+- **Responsible disclosure.** If a server egresses to a destination its documentation does not
+  declare, the harness stops and flags it. Nothing that locates a specific server is published
+  until authorized. See [`docs/THE-GATE.md`](docs/THE-GATE.md) rule 7.
+
+## Cost
+
+The measurement is one afternoon and roughly 10 EUR of compute. It touches nothing outside a
+container and starts no server against real credentials. The stop criteria in
+[`docs/STOP-CRITERIA.md`](docs/STOP-CRITERIA.md) say when to stop spending.
+
+## Status
+
+This is `v0.1`: the honest state of each part.
+
+| Part | State |
+| --- | --- |
+| Matching core (shingling, causal union, classification, aggregation) | Implemented and unit-tested |
+| MCP stdio driver with `traceparent` in `_meta` | Implemented, tested against a mock server |
+| mitmproxy capture addon and Docker harness | Implemented, runnable where Docker and network are available; not exercised in CI |
+| Server registry (10 servers) and per-server call corpus | Scaffolded with a starter set, meant to grow |
+| eBPF SSL uprobe capture (product-grade, catches pinned TLS) | Out of scope for the measurement, documented as the next layer |
+
+## License
+
+Apache-2.0. See [`LICENSE`](LICENSE).

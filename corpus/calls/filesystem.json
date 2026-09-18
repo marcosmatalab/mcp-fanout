@@ -1,0 +1,4 @@
+[
+  {"tool": "list_directory", "arguments": {"path": "."}},
+  {"tool": "read_file", "arguments": {"path": "README.md"}}
+]
