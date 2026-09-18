@@ -1,0 +1,6 @@
+[
+  {"tool": "puppeteer_navigate", "arguments": {"url": "https://example.com/search?q=CANARY_QRY_ab12cd34ef56"},
+   "why": "The canary rides in a URL a headless browser must fetch verbatim. url is required and no tool here has an empty 'required', so puppeteer admits no argument-less call."},
+  {"tool": "puppeteer_screenshot", "arguments": {"name": "probe", "encoded": false},
+   "why": "Exercises the second code path after a navigation. puppeteer_evaluate is deliberately absent: it takes arbitrary JavaScript, and a corpus that ships executable script is a payload, not a measurement."}
+]

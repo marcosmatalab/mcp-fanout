@@ -1,18 +1,30 @@
 # The servers under measurement.
 #
-# STARTER SET, not the final ten. Before any number is published, this file must:
-#   1. Pin each server to an exact version by digest (npm integrity or a pinned image), so the
-#      run is reproducible and a later malicious version cannot silently change the result.
-#      A pinned version is gate rule 1; the fields below carry a loose spec on purpose, to be
-#      frozen, not to be trusted as-is.
-#   2. Verify each server's real tools via tools/list and align its corpus file accordingly.
-#      A tool name that does not exist yields an error call (recorded, not fatal), but it also
-#      means that server contributed no real egress, which skews the numbers. Align first.
+# Every server below is pinned to an exact version and every field under it that describes the
+# server -- tool_count, protocol answered, whether it started with nothing -- was MEASURED by
+# harness/probe.py, not asserted. The evidence is the probe file named in probe_ref, which is
+# committed, and tests/test_corpus_matches_probes.py fails if any corpus argument stops
+# validating against the schema in it. That test is what keeps this file from drifting back into
+# plausible guesses, which is what it held before: of the four tool names guessed for
+# `everything`, three did not exist.
+#
+# Pinning style, and its limit. Versions are exact (npm `@x.y.z`, PyPI `@x.y.z`), which makes a
+# run reproducible and stops a later malicious release from silently changing a number. It is
+# NOT a digest pin: npm and PyPI immutability means a given version string cannot be
+# republished with different content, but it also does not prove the bytes we got are the bytes
+# someone else gets through a different registry mirror. Pinning by digest (npm integrity, or a
+# pinned image) is the stronger form and is still open. Stated rather than implied.
 #
 # A server that needs credentials is launched WITHOUT them on purpose (gate rule 5: no real
-# credentials). It will fail auth, but the connection attempt still reveals the destination host
-# and whether our arguments were forwarded, which is exactly what numbers 1, 2 and 5 measure.
-# The measurement is of egress behavior, not of a successful API call.
+# credentials). The measurement is of egress behavior, not of a successful API call: a call that
+# fails auth still reveals the destination host and whether our arguments were forwarded, which
+# is what numbers 1, 2 and 5 measure.
+#
+# That reasoning has one measured exception and the probe found it. brave-search does not fail
+# auth -- it never opens a connection at all, exiting before the JSON-RPC handshake with
+# "BRAVE_API_KEY environment variable is required". For that server the sentence above is simply
+# false, and "run it without credentials and watch the attempt" yields no attempt to watch. See
+# docs/THREATS.md, threat 8.
 
 k: 16
 w: 8
@@ -20,62 +32,114 @@ w: 8
 servers:
   # --- Local by design: controls. Expected fan-out ~0. If they egress, that is the finding. ---
   - id: everything
-    launch: ["npx", "-y", "@modelcontextprotocol/server-everything"]
+    launch: ["npx", "-y", "@modelcontextprotocol/server-everything@2026.8.31"]
     corpus_ref: corpus/calls/everything.json
+    probe_ref: registry/probes/everything.json
     expects_egress: false
     needs_credentials: false
+    tool_count: 13
+    started_without_credentials: true
+    protocol_version_answered: "2025-11-25"
 
   - id: filesystem
-    launch: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/app/corpus"]
+    launch: ["npx", "-y", "@modelcontextprotocol/server-filesystem@2026.8.31", "/app/corpus"]
     corpus_ref: corpus/calls/filesystem.json
+    probe_ref: registry/probes/filesystem.json
     expects_egress: false
     needs_credentials: false
+    tool_count: 14
+    started_without_credentials: true
+    protocol_version_answered: "2025-11-25"
 
   - id: memory
-    launch: ["npx", "-y", "@modelcontextprotocol/server-memory"]
+    launch: ["npx", "-y", "@modelcontextprotocol/server-memory@2026.8.31"]
     corpus_ref: corpus/calls/memory.json
+    probe_ref: registry/probes/memory.json
     expects_egress: false
     needs_credentials: false
+    tool_count: 9
+    started_without_credentials: true
+    protocol_version_answered: "2025-11-25"
 
   - id: sequential-thinking
-    launch: ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
-    corpus_ref: corpus/calls/generic.json
+    launch: ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking@2026.8.31"]
+    corpus_ref: corpus/calls/sequential-thinking.json
+    probe_ref: registry/probes/sequential-thinking.json
     expects_egress: false
     needs_credentials: false
+    tool_count: 1
+    started_without_credentials: true
+    protocol_version_answered: "2025-11-25"
 
   - id: git
-    launch: ["uvx", "mcp-server-git"]
-    corpus_ref: corpus/calls/generic.json
+    launch: ["uvx", "mcp-server-git@2026.8.18"]
+    corpus_ref: corpus/calls/git.json
+    probe_ref: registry/probes/git.json
     expects_egress: false
     needs_credentials: false
+    tool_count: 12
+    started_without_credentials: true
+    protocol_version_answered: "2025-11-25"
 
   - id: time
-    launch: ["uvx", "mcp-server-time"]
-    corpus_ref: corpus/calls/generic.json
+    launch: ["uvx", "mcp-server-time@2026.8.18"]
+    corpus_ref: corpus/calls/time.json
+    probe_ref: registry/probes/time.json
     expects_egress: false
     needs_credentials: false
+    tool_count: 2
+    started_without_credentials: true
+    protocol_version_answered: "2025-11-25"
 
   # --- Egress by design: the interesting ones. These reach a third party. ---
   - id: fetch
-    launch: ["uvx", "mcp-server-fetch"]
+    launch: ["uvx", "mcp-server-fetch@2026.8.18"]
     corpus_ref: corpus/calls/fetch.json
+    probe_ref: registry/probes/fetch.json
     expects_egress: true
     needs_credentials: false
+    tool_count: 1
+    started_without_credentials: true
+    protocol_version_answered: "2025-11-25"
 
   - id: brave-search
-    launch: ["npx", "-y", "@modelcontextprotocol/server-brave-search"]
-    corpus_ref: corpus/calls/search.json
+    launch: ["npx", "-y", "@modelcontextprotocol/server-brave-search@0.6.2"]
+    corpus_ref: corpus/calls/brave-search.json
+    # The probe that yielded these schemas ran with BRAVE_API_KEY set to the literal string
+    # "placeholder-not-a-real-key", because the server exits before the handshake without it.
+    # A placeholder is not a credential and the probe calls no tool, so nothing egressed.
+    # brave-search.without-credentials.json is the unaided attempt, kept so that "we have its
+    # schemas" cannot be mistaken for "it starts on its own".
+    probe_ref: registry/probes/brave-search.json
     expects_egress: true
-    needs_credentials: true       # BRAVE_API_KEY intentionally absent; we watch the attempt
+    needs_credentials: true
+    tool_count: 2
+    started_without_credentials: false     # measured: exits on missing BRAVE_API_KEY, no connection attempt
+    protocol_version_answered: "2024-11-05"
+    deprecated_upstream: "2024-12-04"      # last npm release; marked deprecated on the registry
 
   - id: github
-    launch: ["npx", "-y", "@modelcontextprotocol/server-github"]
-    corpus_ref: corpus/calls/generic.json
+    launch: ["npx", "-y", "@modelcontextprotocol/server-github@2025.4.8"]
+    corpus_ref: corpus/calls/github.json
+    probe_ref: registry/probes/github.json
     expects_egress: true
-    needs_credentials: true       # GITHUB_TOKEN intentionally absent
+    # Measured correction: needs_credentials is about the API, not the launch. This server starts
+    # with no GITHUB_TOKEN whatsoever and lists all 26 tools; the token is only needed for a call
+    # to succeed. The distinction matters because "could not be probed" and "could not
+    # authenticate" bias the numbers differently.
+    needs_credentials: true
+    tool_count: 26
+    started_without_credentials: true
+    protocol_version_answered: "2024-11-05"
+    deprecated_upstream: "2025-04-08"      # last npm release; superseded by GitHub's own Go server
 
   - id: puppeteer
-    launch: ["npx", "-y", "@modelcontextprotocol/server-puppeteer"]
-    corpus_ref: corpus/calls/fetch.json
+    launch: ["npx", "-y", "@modelcontextprotocol/server-puppeteer@2025.5.12"]
+    corpus_ref: corpus/calls/puppeteer.json
+    probe_ref: registry/probes/puppeteer.json
     expects_egress: true
     needs_credentials: false
+    tool_count: 7
+    started_without_credentials: true
+    protocol_version_answered: "2024-11-05"
+    deprecated_upstream: "2025-05-12"      # last npm release; removed from the reference server set

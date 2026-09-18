@@ -1,0 +1,6 @@
+[
+  {"tool": "brave_web_search", "arguments": {"query": "site reliability CANARY_QRY_ab12cd34ef56"},
+   "why": "Real tool name: the guessed corpus said 'search', which does not exist. The canary sits next to ordinary words so the outbound query is shaped like a real one. query is required on both tools, so brave-search admits no argument-less call."},
+  {"tool": "brave_local_search", "arguments": {"query": "madrid weather today", "count": 1},
+   "why": "A no-canary control on the second tool. count is bounded to 1 because response size is not what is being measured. Note this server does not start without BRAVE_API_KEY at all, so unless a key is supplied nothing here is ever driven -- see docs/THREATS.md."}
+]
