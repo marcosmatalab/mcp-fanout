@@ -4,7 +4,7 @@
 #
 # We set RECIPEPREFIX to '>' so recipe lines do not depend on literal tabs.
 .RECIPEPREFIX = >
-.PHONY: install verify test selftest run numbers n1 n2 n3 n4 n5 n6 clean
+.PHONY: install verify test selftest run numbers n1 n2 n3 n4 n5 n6 figures clean
 
 RUN ?= latest
 
@@ -44,6 +44,12 @@ n5:
 > python3 -m mcpfanout.cli aggregate --run $(RUN) --number 5
 n6:
 > python3 -m mcpfanout.cli aggregate --run $(RUN) --number 6
+
+# Write the latest run's normalized aggregate into docs/figures/ as a committed artifact.
+# This is what makes a figure quoted in a document re-derivable without committing the run
+# itself (docs/THE-GATE.md, rules 1 and 4). Counts only: no host, no server id, no digest.
+figures:
+> python3 -m mcpfanout.cli figures --run $(RUN) --out docs/figures
 
 clean:
 > rm -rf build dist src/*.egg-info .pytest_cache
