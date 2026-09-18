@@ -35,19 +35,18 @@ def _numbers_graded(tmp_path):
 def test_six_numbers_expected_values(tmp_path):
     n = _numbers_graded(tmp_path)
 
-    # 1: two calls; call A caused 3 flows, call B caused 1 -> raw mean 2.0. No demo flow goes
-    # to package infrastructure, so the excluded figure equals the raw one here; the runs where
-    # they diverge are real captures, and the divergence is the point of publishing both.
-    assert n[1]["connections_raw"]["mean"] == 2.0
-    assert n[1]["connections_raw"]["max"] == 3
-    assert n[1]["distinct_hosts"]["mean"] == 1.5
+    # 1: two calls; call A caused 3 flows, call B caused 1. No demo flow goes to package
+    # infrastructure, so the excluded figure equals the raw one here; the runs where they
+    # diverge are real captures, and that divergence is the point of publishing both.
+    assert n[1]["connections_raw"] == {"n": 2, "p50": 1, "p95": 3, "max": 3}
+    assert n[1]["distinct_hosts"] == {"n": 2, "p50": 1, "p95": 2, "max": 2}
+    assert n[1]["connections_excluding_package_infrastructure"] == n[1]["connections_raw"]
 
-    # 2: call A touched 2 distinct hosts, call B touched 1 -> mean 1.5.
-    assert n[2]["distribution"]["mean"] == 1.5
-    assert n[2]["distribution"]["max"] == 2
+    # 2: call A touched 2 distinct hosts, call B touched 1.
+    assert n[2]["distribution"] == {"n": 2, "p50": 1, "p95": 2, "max": 2}
 
-    # 3: one of two servers propagated our traceparent.
-    assert n[3]["fraction"] == 0.5
+    # 3: one of two servers propagated, and the two answered different revisions.
+    assert n[3]["pooled_fraction"] == 0.5
     assert n[3]["servers_total"] == 2
 
     # 4: provenance coverage, with occurrence alongside it because a provenance figure means
@@ -190,3 +189,62 @@ def test_the_exclusion_citation_never_publishes_an_absolute_path(tmp_path):
     assert cite["path"] == PACKAGE_INFRASTRUCTURE_PATH
     assert not cite["path"].startswith("/")
     assert "home" not in cite["path"] and "Users" not in cite["path"]
+
+
+# --- Distribution shape: percentiles, and no mean.
+
+def test_distributions_report_percentiles_and_no_mean(tmp_path):
+    """The mean misleads on these distributions, so it is not published at all.
+
+    The first real capture had one call at 89 connections and one at 2. The mean is 45.5, a
+    figure no call produced and no architecture decision can rest on. Reporting it alongside the
+    percentiles was rejected: a single number always ends up quoted alone.
+    """
+    n = _numbers_graded(tmp_path)
+    for figure in (n[1]["connections_raw"], n[1]["distinct_hosts"],
+                   n[1]["connections_excluding_package_infrastructure"], n[2]["distribution"]):
+        assert set(figure) == {"n", "p50", "p95", "max"}
+        assert "mean" not in figure and "median" not in figure
+
+
+def test_percentiles_are_nearest_rank_never_interpolated():
+    """Every published figure must be a value some call actually produced.
+
+    Linear interpolation would invent "2.4 connections", which is both fictional and unstable on
+    small integer distributions.
+    """
+    from mcpfanout.aggregate import _dist
+    d = _dist([89, 2])
+    assert d == {"n": 2, "p50": 2, "p95": 89, "max": 89}
+    for key in ("p50", "p95", "max"):
+        assert isinstance(d[key], int) and d[key] in (2, 89)
+    assert _dist([]) == {"n": 0, "p50": 0, "p95": 0, "max": 0}
+    assert _dist([7]) == {"n": 1, "p50": 7, "p95": 7, "max": 7}
+
+
+# --- Number 3 segmented by the revision the server answered.
+
+def test_traceparent_propagation_is_segmented_by_protocol_revision(tmp_path):
+    """SEP-414 is a 2026-07-28 change, so an older server predates the convention.
+
+    Pooling the answers understates uptake among servers that could have implemented it and
+    implies the older ones declined something that did not exist yet.
+    """
+    n = _numbers_graded(tmp_path)[3]
+    assert set(n["by_protocol_revision"]) == {"2025-11-25", "2024-11-05"}
+    assert n["by_protocol_revision"]["2025-11-25"]["servers_propagating"] == 1
+    assert n["by_protocol_revision"]["2024-11-05"]["servers_propagating"] == 0
+    # The pooled figure is still published, with a pointer to read the segments.
+    assert n["pooled_fraction"] == 0.5
+    assert n["pooled_note"]
+
+
+def test_unknown_protocol_revision_gets_its_own_bucket(tmp_path):
+    """"Not known" is not a revision, and must not be folded into a real one."""
+    build_demo_run(tmp_path)
+    run = Run.load(tmp_path)
+    run.manifest.server_protocol_versions = {"s1": "2025-11-25"}  # s2 unrecorded
+    from mcpfanout.aggregate import number_3
+    n = number_3(run)
+    assert "unknown" in n["by_protocol_revision"]
+    assert n["by_protocol_revision"]["unknown"]["servers_total"] == 1

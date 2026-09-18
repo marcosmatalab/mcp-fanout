@@ -101,6 +101,11 @@ class RunManifest:
     corpus_sha256: str      # digest of the exact call corpus, so a run pins its own input
     server_ids: list[str] = field(default_factory=list)
     tool_versions: dict[str, str] = field(default_factory=dict)
+    # Protocol revision each server ANSWERED with, per registry/probes. Number 3 segments by it,
+    # because SEP-414 is a 2026-07-28 change and a server answering an earlier revision predates
+    # the convention: not propagating says something about its age, not about uptake. Defaulted
+    # so a manifest written before this field existed still reads back.
+    server_protocol_versions: dict[str, str] = field(default_factory=dict)
     notes: str = ""
 
 
