@@ -1,5 +1,13 @@
 # Method
 
+## The three phases
+
+The instrument is measured before the phenomenon: a controlled bench of our own servers (phase A),
+then the real pinned servers (phase B), then an attack on our own attribution with concurrent
+calls (phase C). Phase A blocks phase B, as gate rule 8. Recall and precision exist only on the
+bench, because only there is there a denominator of transfers we caused and a known cause to check
+a claim against. Full definitions, cases and pre-registered gates: `docs/PHASES.md`.
+
 ## Why measure before building
 
 You cannot design the causal-union layer without knowing the fan-out, and choosing blind means
