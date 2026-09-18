@@ -52,26 +52,30 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
     body_declarado = b"GET /health?ts=now (no session content here, only a timing correlation)"
 
     raw_flows = [
-        # EFECTIVO via the BODY: the secret (in call A args) and an .env fragment both appear
+        # Content match via the BODY: the secret (in call A args) and an .env fragment both appear
         # literally in the payload.
         dict(server_id="s1", call_id="cA", dest_host="api.unknown-vendor.com", dest_ip="203.0.113.7",
              scheme="https", method="POST", target=b"/ingest", body=body_efectivo,
-             body_observed=True, our_traceparent_present=True, has_time_and_pid=True),
-        # EFECTIVO via the TARGET: a GET with an empty body carrying the same secret in its query
+             body_observed=True, our_traceparent_present=True, has_time_and_pid=True,
+             active_calls_in_window=1),
+        # Content match via the TARGET: a GET with an empty body carrying the same secret in its query
         # string. This flow exists because the matcher used to see only bodies, so this exact
-        # shape scored DECLARADO and number 5 was structurally zero for every GET-based server.
+        # shape recorded no provenance at all and number 5 was structurally zero for every GET server.
         # The selftest now fails if that regresses.
         dict(server_id="s1", call_id="cA", dest_host="api.unknown-vendor.com", dest_ip="203.0.113.7",
              scheme="https", method="GET", target=b"/v1/lookup?token=" + _SECRET, body=b"",
-             body_observed=True, our_traceparent_present=False, has_time_and_pid=True),
-        # DECLARADO: request seen, no content match in either channel, time+pid correlation only.
+             body_observed=True, our_traceparent_present=False, has_time_and_pid=True,
+             active_calls_in_window=1),
+        # TEMPORAL_ONLY: request seen, no content match in either channel, time+pid only.
         dict(server_id="s1", call_id="cA", dest_host="10.0.0.5", dest_ip="10.0.0.5",
              scheme="http", method="GET", target=b"/health?ts=now", body=body_declarado,
-             body_observed=True, our_traceparent_present=False, has_time_and_pid=True),
-        # INDETERMINADO: a remote leaf whose request we could not read (TLS not terminated).
+             body_observed=True, our_traceparent_present=False, has_time_and_pid=True,
+             active_calls_in_window=1),
+        # connection_only: a remote leaf whose request we could not read (TLS not terminated).
         dict(server_id="s2", call_id="cB", dest_host="api.stripe.com", dest_ip="198.51.100.9",
              scheme="tcp", method="", target=b"", body=b"", body_observed=False,
-             our_traceparent_present=False, has_time_and_pid=False),
+             our_traceparent_present=False, has_time_and_pid=False,
+             active_calls_in_window=1),
     ]
 
     flows: list[Flow] = []
@@ -86,7 +90,12 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
                 target_bytes=len(target), target_matched_bytes=0,
                 body_bytes=len(body), body_matched_bytes=0,
                 matched_refs=[], causal_channel=_match.CHANNEL_NONE)
-        state = _match.decide_state(result.causal, rf["body_observed"], rf["has_time_and_pid"])
+        occurrence = _match.decide_occurrence(rf["body_observed"])
+        provenance = _match.decide_provenance(
+            request_observed=rf["body_observed"],
+            has_context_match=bool(result.matched_refs),
+            has_argument_match=result.causal,
+        )
         flows.append(Flow(
             run_id=run_id, server_id=rf["server_id"], call_id=rf["call_id"], ts=float(1000 + i),
             dest_host=rf["dest_host"], dest_ip=rf["dest_ip"], scheme=rf["scheme"], method=rf["method"],
@@ -95,8 +104,11 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
             target_bytes=result.target_bytes, target_matched_bytes=result.target_matched_bytes,
             body_bytes=result.body_bytes, body_matched_bytes=result.body_matched_bytes,
             matched_refs=result.matched_refs, causal=result.causal,
-            causal_channel=result.causal_channel, state=state,
+            causal_channel=result.causal_channel,
             node_category=classify_host(rf["dest_host"]), has_time_and_pid=rf["has_time_and_pid"],
+            occurrence=occurrence, provenance=provenance,
+            active_calls_in_window=rf["active_calls_in_window"],
+            matching_calls_in_window=(1 if result.causal else 0),
         ))
 
     corpus_sha = hashlib.sha256(args_a + b"|list_files").hexdigest()

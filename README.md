@@ -45,18 +45,36 @@ without a command that measures it). Full definitions in
 Number 5 is the decisive one and the one nobody has measured. Numbers 1 to 4 are the paper;
 number 5 is the viability. Number 6 sizes the recursion described in `docs/METHOD.md`.
 
-## The three states
+## The evidence model: three separate claims
 
-Every outbound connection is classified into one of three resolution states. This is the same
-doctrine used across the author's other work, applied here to a network fact.
+Every outbound connection carries three claims, recorded and reported separately. They are never
+joined in one sentence, because a single word for all three is what the previous model did and it
+could not answer any of them precisely. Full text in `docs/DOCTRINE.md`.
 
-| Evidence available | State | What is claimed |
+| Claim | Question it answers | Values |
 | --- | --- | --- |
-| A fragment of the call arguments appears literally in the outbound payload | `EFECTIVO` | This connection was caused by this call, with the citation |
-| Only a time window and a pid | `DECLARADO` | Correlation, stated as correlation |
-| Encrypted-by-the-server payload, argument-less call, async pool | `INDETERMINADO` | With the cause named |
+| Occurrence | was the transfer observed, and readable | `observed`, `connection_only` |
+| Provenance | did the request carry recognisable material of ours | `none`, `context`, `arguments`, `both`, `unknown` |
+| Attribution | could it be tied to a tool call, and how strongly | six grades, below |
 
-The harness publishes the percentage of each state. That is measurement, not a promise.
+Attribution is graded, strongest first. A grade claims a QUALITY OF EVIDENCE, never certainty of
+cause.
+
+| Grade | Evidence |
+| --- | --- |
+| `TRACE_PROPAGATED` | our exact W3C `traceparent` was in the outbound request |
+| `CONTENT_UNIQUE` | several calls in flight, matched fragment present in exactly one |
+| `CONTENT_AMBIGUOUS` | several calls in flight, fragment in several: content did not discriminate |
+| `CONTENT_MATCH_UNCONTESTED` | a match with only one call in flight, so nothing was told apart |
+| `TEMPORAL_ONLY` | a time window and a pid, nothing else |
+| `UNATTRIBUTED` | no evidence, or ineligible, always with a named reason |
+
+Strong attribution counts the first two only. `CONTENT_UNIQUE` requires more than one call in
+flight, so **while the corpus is driven sequentially the harness emits none, by construction, and
+a test asserts it.** Anything else would publish the experimental setup as a result. That question
+needs concurrent calls, which is phase C in `docs/PHASES.md`.
+
+The harness publishes the full distribution. That is measurement, not a promise.
 
 ## Quickstart
 

@@ -120,9 +120,7 @@ def test_the_host_is_not_matched_only_the_request_target():
     assert res.matched_refs == [], "the host leaked into the matched channel"
 
 
-def test_decide_state_priority():
-    assert match.decide_state(causal=True, body_observed=True, has_time_and_pid=True) == match.EFECTIVO
-    assert match.decide_state(causal=False, body_observed=True, has_time_and_pid=True) == match.DECLARADO
-    assert match.decide_state(causal=False, body_observed=False, has_time_and_pid=True) == match.INDETERMINADO
-    # Content evidence beats correlation even when both are present.
-    assert match.decide_state(causal=True, body_observed=False, has_time_and_pid=False) == match.EFECTIVO
+# The old single-column decide_state test lived here. It is replaced, not deleted: the three
+# claims that took its place are tested in tests/test_evidence_model.py, which also pins the one
+# property the old test could not express, that the strongest attribution grade is unreachable
+# while the corpus is driven sequentially.

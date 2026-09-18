@@ -27,8 +27,13 @@ def _numbers(tmp_path, exclusions=None):
     return {n["number"]: n for n in out["numbers"]}
 
 
+def _numbers_graded(tmp_path):
+    """With the real exclusion list, which is what number 5 needs to grade eligibility."""
+    return _numbers(tmp_path, _exclusions())
+
+
 def test_six_numbers_expected_values(tmp_path):
-    n = _numbers(tmp_path)
+    n = _numbers_graded(tmp_path)
 
     # 1: two calls; call A caused 3 flows, call B caused 1 -> raw mean 2.0. No demo flow goes
     # to package infrastructure, so the excluded figure equals the raw one here; the runs where
@@ -45,9 +50,13 @@ def test_six_numbers_expected_values(tmp_path):
     assert n[3]["fraction"] == 0.5
     assert n[3]["servers_total"] == 2
 
-    # 4: two flows matched context, one in each channel, and the channels are reported apart.
-    # Body: 36 (secret) + 19 (DB_PASSWORD line) = 55. Target: 37, the secret plus the "="
-    # delimiter it shares with AWS_ACCESS_KEY_ID= in the .env reference.
+    # 4: provenance coverage, with occurrence alongside it because a provenance figure means
+    # nothing without knowing how many requests could be read at all. Two flows matched context,
+    # one in each channel. Body: 36 (secret) + 19 (DB_PASSWORD line) = 55. Target: 37, the secret
+    # plus the "=" delimiter it shares with AWS_ACCESS_KEY_ID= in the .env reference.
+    assert n[4]["occurrence_counts"] == {"observed": 3, "connection_only": 1}
+    assert n[4]["provenance_counts"]["both"] == 2
+    assert n[4]["provenance_counts"]["unknown"] == 1
     assert n[4]["flows_with_context_match"] == 2
     assert n[4]["flows_with_target_match"] == 1
     assert n[4]["flows_with_body_match"] == 1
@@ -55,13 +64,17 @@ def test_six_numbers_expected_values(tmp_path):
     assert n[4]["target_matched_bytes"] == 37
     assert n[4]["matched_bytes_total"] == 92
 
-    # 5: the decisive number, with the channel split that keeps it auditable. Two EFECTIVO --
-    # one via a request body, one via a query string -- one DECLARADO, one INDETERMINADO.
-    # The target one is the case the body-only matcher scored DECLARADO, which is why it is
-    # asserted by channel and not just by total.
-    assert n[5]["state_counts"] == {"EFECTIVO": 2, "DECLARADO": 1, "INDETERMINADO": 1}
-    assert n[5]["efectivo_fraction"] == 0.5
-    assert n[5]["efectivo_by_channel"] == {"target": 1, "body": 1, "both": 0}
+    # 5: the attribution grade distribution. One flow carried our traceparent (strongest), one
+    # matched content with a single call in flight (so uncontested, not unique), one has only
+    # time and pid, one was unreadable. Zero CONTENT_UNIQUE, and that is structural while the
+    # corpus is driven sequentially; see tests/test_evidence_model.py.
+    assert n[5]["attribution_grades"]["TRACE_PROPAGATED"] == 1
+    assert n[5]["attribution_grades"]["CONTENT_MATCH_UNCONTESTED"] == 1
+    assert n[5]["attribution_grades"]["TEMPORAL_ONLY"] == 1
+    assert n[5]["attribution_grades"]["UNATTRIBUTED"] == 1
+    assert n[5]["attribution_grades"]["CONTENT_UNIQUE"] == 0
+    assert n[5]["sequential_driving"] is True
+    assert n[5]["content_match_by_channel"] == {"target": 1, "body": 1, "both": 0}
 
     # 6: one local node of three distinct nodes.
     assert n[6]["category_counts"]["local"] == 1
@@ -79,13 +92,12 @@ def test_aggregate_output_leaks_no_server_names(tmp_path):
 def test_number_5_never_reports_a_pooled_channel_figure(tmp_path):
     """The channel split has to survive in the published shape, not just in the record.
 
-    An EFECTIVO share built entirely on query strings reads differently from one built on request
-    bodies. If the two are ever summed into a single causal figure, a reviewer is right to say
-    number 5 was inflated with URLs, so the breakdown is part of the output contract.
+    A content figure built entirely on query strings reads differently from one built on request
+    bodies. If the two are ever summed into a single figure, a reviewer is right to say the
+    number was inflated with URLs, so the breakdown is part of the output contract.
     """
-    n = _numbers(tmp_path)
-    assert set(n[5]["efectivo_by_channel"]) == {"target", "body", "both"}
-    assert sum(n[5]["efectivo_by_channel"].values()) == n[5]["state_counts"]["EFECTIVO"]
+    n = _numbers_graded(tmp_path)
+    assert set(n[5]["content_match_by_channel"]) == {"target", "body", "both"}
     # And number 4 keeps its two byte counts addressable, with the total clearly labelled a total.
     assert n[4]["target_matched_bytes"] + n[4]["body_matched_bytes"] == n[4]["matched_bytes_total"]
     assert "matched_bytes" not in n[4], "the pooled field is back; it hides the channel split"

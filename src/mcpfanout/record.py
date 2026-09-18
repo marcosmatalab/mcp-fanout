@@ -49,15 +49,15 @@ class Flow:
     run_id: str
     server_id: str
     call_id: str | None     # the causing call if attributable, else None
-    ts: float               # epoch seconds; used only for DECLARADO correlation, never as truth
+    ts: float               # epoch seconds; evidence for TEMPORAL_ONLY only, never as truth
     dest_host: str
     dest_ip: str
     scheme: str             # "https", "http", or "tcp" for a flow we saw but could not read
     method: str             # HTTP method, or "" for a non-HTTP flow
     body_observed: bool     # did we read the plaintext request (proxy terminated the TLS)?
                             # False means neither channel below was readable, which is what
-                            # forces INDETERMINADO. A GET has an empty body and a full target;
-                            # that is observed-and-empty, not unobserved.
+                            # makes occurrence connection_only and provenance unknown. A GET has
+                            # an empty body and a full target: observed-and-empty, not unobserved.
     our_traceparent_present: bool   # did OUR traceparent appear in this outbound request?
     # Two channels, counted apart. The request target is path + query, never the absolute URL.
     # Summing them into one figure would let number 5 be inflated with URLs, so the split is
@@ -71,9 +71,24 @@ class Flow:
     matched_refs: list[str]
     causal: bool
     causal_channel: str     # none / target / body / both -- which channel carried the match
-    state: str              # EFECTIVO / DECLARADO / INDETERMINADO
     node_category: str      # local / self_hostable / remote_leaf
     has_time_and_pid: bool  # whether temporal+pid correlation evidence exists for this flow
+    # The evidence model's first two claims, recorded as observations (match.decide_occurrence,
+    # match.decide_provenance). The THIRD claim, the attribution grade, is deliberately NOT
+    # stored: it is derived at aggregation time by match.grade_attribution. Two reasons, and the
+    # first is the stronger one. (a) The grade depends on the declared exclusion list in
+    # registry/, which is versioned and will change; a grade frozen into the record at capture
+    # time could never be recomputed against a newer list, whereas the evidence can, so the same
+    # run stays answerable as the list improves. (b) It keeps the capture addon minimal, which
+    # matters because it runs inside mitmdump. Cost, stated: reading a flows.jsonl line does not
+    # tell the local operator the grade; `aggregate --number 5` does.
+    occurrence: str = ""    # observed / connection_only
+    provenance: str = ""    # none / context / arguments / both / unknown
+    # How many driven calls were in flight when this flow was seen, and in how many of them the
+    # matched fragment was present. These two are what make CONTENT_UNIQUE a measurement rather
+    # than a restatement of sequential driving: see match.grade_attribution.
+    active_calls_in_window: int = 0
+    matching_calls_in_window: int = 0
 
 
 @dataclass

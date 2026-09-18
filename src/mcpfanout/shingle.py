@@ -16,7 +16,7 @@ Design decisions, each with its why and trade-off
   match is inference. We therefore hash raw bytes, never lowercased or whitespace-stripped.
   Cost: if a server re-encodes a value (base64, gzip) before sending, we will not match it.
   That is a false negative, and a false negative is the safe direction: we under-claim
-  EFECTIVO rather than over-claim it.
+  a content match rather than over-claim one.
 
 - Rolling hash: polynomial, base 257, modulus 2**61 - 1 (a Mersenne prime). Reason for the
   prime: uniform distribution of hash values and a collision probability we can bound. For a

@@ -56,7 +56,8 @@ def _cmd_aggregate(args: argparse.Namespace) -> int:
     exclusions = ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH)
     single = {
         "1": lambda: number_1(run, exclusions), "2": lambda: number_2(run),
-        "3": lambda: number_3(run), "4": lambda: number_4(run), "5": lambda: number_5(run),
+        "3": lambda: number_3(run), "4": lambda: number_4(run),
+        "5": lambda: number_5(run, exclusions),
         "6": lambda: number_6(run, registry),
     }
     if args.number == "all":

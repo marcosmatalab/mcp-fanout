@@ -56,7 +56,7 @@ def _recorder(tmp_path, control_payload=None):
     control = tmp_path / "control"
     control.mkdir(parents=True, exist_ok=True)
     if control_payload is not None:
-        (control / "current_call.json").write_text(json.dumps(control_payload), encoding="utf-8")
+        (control / "active_calls.json").write_text(json.dumps(control_payload), encoding="utf-8")
 
     fullname = "__mitmproxy_script__.capture_addon_hooks"
     saved_path, saved_env = list(sys.path), dict(os.environ)
@@ -78,9 +78,17 @@ def _recorder(tmp_path, control_payload=None):
         sys.modules.pop(fullname, None)
 
 
-def _active_call():
-    return {"run_id": "t", "server_id": "fetch", "call_id": "fetch-c000",
-            "traceparent": TRACEPARENT, "args_present": True, "args_digests": []}
+def _active_call(args_digests=None):
+    """One in-flight call, in the list shape the driver publishes.
+
+    A list even with one entry: the count of in-flight calls is what separates a content match
+    that discriminated from one that had nothing to discriminate against, so the addon has to
+    read it rather than assume it.
+    """
+    return {"run_id": "t", "server_id": "fetch",
+            "active_calls": [{"call_id": "fetch-c000", "traceparent": TRACEPARENT,
+                              "args_present": True,
+                              "args_digests": list(args_digests or [])}]}
 
 
 def test_empty_body_with_an_active_call_still_serialises(tmp_path):
@@ -121,6 +129,8 @@ def test_attribution_comes_from_the_active_call(tmp_path):
     assert row["server_id"] == "fetch"
     assert row["call_id"] == "fetch-c000"
     assert row["body_observed"] is True
+    assert row["occurrence"] == "observed"
+    assert row["active_calls_in_window"] == 1
 
 
 def test_no_active_call_attributes_nothing_rather_than_guessing(tmp_path):
@@ -187,14 +197,17 @@ def test_the_request_target_is_matched_not_only_the_body(tmp_path):
     from mcpfanout.redact import Redactor
     digests = sorted(Redactor(salt=b"test-salt").kgram_digest_set(
         ('{"token": "%s"}' % secret).encode()))
-    call = dict(_active_call(), args_digests=digests)
 
-    rec = _recorder(tmp_path, call)
+    rec = _recorder(tmp_path, _active_call(digests))
     rec.request(_FakeFlow(_FakeRequest(path=f"/v1/lookup?token={secret}", body=b"")))
     rec.done()
     row = json.loads((tmp_path / "flows.jsonl").read_text().splitlines()[0])
-    assert row["state"] == "EFECTIVO", row
+    assert row["causal"] is True, row
     assert row["causal_channel"] == "target"
+    assert row["provenance"] == "arguments"
+    # One call in flight, so the match discriminated nothing and the window count says so.
+    assert row["active_calls_in_window"] == 1
+    assert row["matching_calls_in_window"] == 1
     assert row["target_matched_bytes"] == 0, "no context index here, so only the causal key hit"
     assert row["body_bytes"] == 0
 
