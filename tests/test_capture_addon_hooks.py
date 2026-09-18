@@ -29,12 +29,15 @@ TRACEPARENT = "00-0af7651916cd43dd8448eb211c80319c-00f067aa0ba902b7-01"
 
 class _FakeRequest:
     def __init__(self, body=b"", headers=None, host="api.example.net",
-                 scheme="https", method="GET"):
+                 scheme="https", method="GET", path="/v1/ping"):
         self.raw_content = body
         self.headers = headers or {}
         self.pretty_host = host
         self.scheme = scheme
         self.method = method
+        # mitmproxy's request.path is the request target: path plus query, not the absolute URL.
+        # The addon must read this and not req.url, or the host ends up in the matched channel.
+        self.path = path
 
 
 class _FakeConn:
@@ -172,3 +175,37 @@ def test_done_appends_across_calls(tmp_path):
     hosts = [json.loads(l)["dest_host"]
              for l in (tmp_path / "flows.jsonl").read_text().splitlines() if l.strip()]
     assert hosts == ["first.example.net", "second.example.net"]
+
+
+def test_the_request_target_is_matched_not_only_the_body(tmp_path):
+    """A GET carrying the canary in its query string must come out EFECTIVO, via the target.
+
+    This is the whole reason the matcher was changed: with body-only matching this flow scored
+    DECLARADO, and number 5 was structurally zero for every GET-based server.
+    """
+    secret = "AKIA_EXAMPLE_SECRET_TOKEN_0123456789"
+    from mcpfanout.redact import Redactor
+    digests = sorted(Redactor(salt=b"test-salt").kgram_digest_set(
+        ('{"token": "%s"}' % secret).encode()))
+    call = dict(_active_call(), args_digests=digests)
+
+    rec = _recorder(tmp_path, call)
+    rec.request(_FakeFlow(_FakeRequest(path=f"/v1/lookup?token={secret}", body=b"")))
+    rec.done()
+    row = json.loads((tmp_path / "flows.jsonl").read_text().splitlines()[0])
+    assert row["state"] == "EFECTIVO", row
+    assert row["causal_channel"] == "target"
+    assert row["target_matched_bytes"] == 0, "no context index here, so only the causal key hit"
+    assert row["body_bytes"] == 0
+
+
+def test_the_addon_reads_the_target_not_the_absolute_url(tmp_path):
+    """Including scheme and host would manufacture self-matches and measure nothing real."""
+    rec = _recorder(tmp_path, _active_call())
+    req = _FakeRequest(host="api.example.net", path="/v1/ping")
+    req.url = "https://api.example.net/v1/ping"  # present, and must be ignored
+    rec.request(_FakeFlow(req))
+    rec.done()
+    row = json.loads((tmp_path / "flows.jsonl").read_text().splitlines()[0])
+    assert row["target_bytes"] == len("/v1/ping"), (
+        "target_bytes covers more than path+query; the absolute URL leaked in")

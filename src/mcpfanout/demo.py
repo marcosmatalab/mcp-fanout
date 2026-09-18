@@ -52,35 +52,50 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
     body_declarado = b"GET /health?ts=now (no session content here, only a timing correlation)"
 
     raw_flows = [
-        # EFECTIVO: the secret (in call A args) and an .env fragment both appear literally.
+        # EFECTIVO via the BODY: the secret (in call A args) and an .env fragment both appear
+        # literally in the payload.
         dict(server_id="s1", call_id="cA", dest_host="api.unknown-vendor.com", dest_ip="203.0.113.7",
-             scheme="https", method="POST", body=body_efectivo, body_observed=True,
-             our_traceparent_present=True, has_time_and_pid=True),
-        # DECLARADO: body seen, no content match, but time+pid correlation exists.
+             scheme="https", method="POST", target=b"/ingest", body=body_efectivo,
+             body_observed=True, our_traceparent_present=True, has_time_and_pid=True),
+        # EFECTIVO via the TARGET: a GET with an empty body carrying the same secret in its query
+        # string. This flow exists because the matcher used to see only bodies, so this exact
+        # shape scored DECLARADO and number 5 was structurally zero for every GET-based server.
+        # The selftest now fails if that regresses.
+        dict(server_id="s1", call_id="cA", dest_host="api.unknown-vendor.com", dest_ip="203.0.113.7",
+             scheme="https", method="GET", target=b"/v1/lookup?token=" + _SECRET, body=b"",
+             body_observed=True, our_traceparent_present=False, has_time_and_pid=True),
+        # DECLARADO: request seen, no content match in either channel, time+pid correlation only.
         dict(server_id="s1", call_id="cA", dest_host="10.0.0.5", dest_ip="10.0.0.5",
-             scheme="http", method="GET", body=body_declarado, body_observed=True,
-             our_traceparent_present=False, has_time_and_pid=True),
-        # INDETERMINADO: a remote leaf whose body we could not read (TLS not terminated).
+             scheme="http", method="GET", target=b"/health?ts=now", body=body_declarado,
+             body_observed=True, our_traceparent_present=False, has_time_and_pid=True),
+        # INDETERMINADO: a remote leaf whose request we could not read (TLS not terminated).
         dict(server_id="s2", call_id="cB", dest_host="api.stripe.com", dest_ip="198.51.100.9",
-             scheme="tcp", method="", body=b"", body_observed=False,
+             scheme="tcp", method="", target=b"", body=b"", body_observed=False,
              our_traceparent_present=False, has_time_and_pid=False),
     ]
 
     flows: list[Flow] = []
     for i, rf in enumerate(raw_flows):
-        body = rf["body"]
-        if rf["body_observed"] and body:
-            result = _match.match_body(body, context_index, args_digests[rf["call_id"]], redactor)
+        target, body = rf["target"], rf["body"]
+        if rf["body_observed"]:
+            result = _match.match_request(target, body, context_index,
+                                          args_digests[rf["call_id"]], redactor)
         else:
-            result = _match.MatchResult(total_bytes=len(body), matched_bytes=0, matched_refs=[], causal=False)
+            # Unreadable request: no channel was seen, so nothing is claimed about either.
+            result = _match.MatchResult(
+                target_bytes=len(target), target_matched_bytes=0,
+                body_bytes=len(body), body_matched_bytes=0,
+                matched_refs=[], causal_channel=_match.CHANNEL_NONE)
         state = _match.decide_state(result.causal, rf["body_observed"], rf["has_time_and_pid"])
         flows.append(Flow(
             run_id=run_id, server_id=rf["server_id"], call_id=rf["call_id"], ts=float(1000 + i),
             dest_host=rf["dest_host"], dest_ip=rf["dest_ip"], scheme=rf["scheme"], method=rf["method"],
-            request_size=len(body), body_observed=rf["body_observed"],
+            body_observed=rf["body_observed"],
             our_traceparent_present=rf["our_traceparent_present"],
-            total_bytes=result.total_bytes, matched_bytes=result.matched_bytes,
-            matched_refs=result.matched_refs, causal=result.causal, state=state,
+            target_bytes=result.target_bytes, target_matched_bytes=result.target_matched_bytes,
+            body_bytes=result.body_bytes, body_matched_bytes=result.body_matched_bytes,
+            matched_refs=result.matched_refs, causal=result.causal,
+            causal_channel=result.causal_channel, state=state,
             node_category=classify_host(rf["dest_host"]), has_time_and_pid=rf["has_time_and_pid"],
         ))
 

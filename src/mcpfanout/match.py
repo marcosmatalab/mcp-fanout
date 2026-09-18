@@ -3,8 +3,12 @@
 This is the load-bearing novelty of the project. Number 5 (the fraction of outbound
 connections that can be tied to their causing call by a literal content match) is the number
 nobody has measured, and it is the key of union that Half A lacks: if a fragment of the call
-arguments appears literally in the outbound payload, that is causal evidence, not a temporal
+arguments appears literally in the outbound request, that is causal evidence, not a temporal
 correlation. See docs/METHOD.md, "Half B is the join key of Half A".
+
+Two channels are matched, separately: the REQUEST TARGET (path + query) and the BODY. Both are
+bytes leaving the machine toward a third party. They are counted apart and never summed into one
+headline, so that number 5 cannot be inflated with URLs -- see MatchResult.
 
 Everything here is deterministic. There are no statistical variables: a substring either is or
 is not present. The only probabilistic quantity in the whole matching stack is the hash
@@ -26,19 +30,44 @@ EFECTIVO = "EFECTIVO"
 DECLARADO = "DECLARADO"
 INDETERMINADO = "INDETERMINADO"
 
+# Which channel of the request carried the causal fragment. Reported alongside the state, never
+# folded into it: a match in the query string and a match in the body are both causal evidence,
+# but a reviewer must be able to see which one produced the number rather than take it on trust.
+CHANNEL_NONE = "none"
+CHANNEL_TARGET = "target"
+CHANNEL_BODY = "body"
+CHANNEL_BOTH = "both"
+
 
 @dataclass
 class MatchResult:
-    total_bytes: int              # size of the outbound body examined
-    matched_bytes: int            # bytes of the body covered by any context reference (exact)
-    matched_refs: list[str]       # which references contributed at least one k-gram
-    causal: bool                  # a fragment of the CALL ARGUMENTS appears literally in body
-    coverage: float = field(init=False)
+    """Per-channel match evidence for one outbound request.
+
+    Two channels, counted separately and never summed into a single headline. The request target
+    (path + query) and the body are both bytes on the wire toward a third party, so excluding the
+    target blinds the harness to the entire GET channel -- which is the channel most third-party
+    APIs use and the one the incidents this project cites travel on. But a target match and a body
+    match are not interchangeable evidence, and reporting one figure would let number 5 be
+    inflated by URLs. Hence four byte counts, not two.
+    """
+    target_bytes: int             # size of the request target examined (path + query)
+    target_matched_bytes: int     # bytes of the target covered by any context reference (exact)
+    body_bytes: int               # size of the outbound body examined
+    body_matched_bytes: int       # bytes of the body covered by any context reference (exact)
+    matched_refs: list[str]       # references contributing at least one k-gram, either channel
+    causal_channel: str           # CHANNEL_NONE / _TARGET / _BODY / _BOTH
+    causal: bool = field(init=False)
+    target_coverage: float = field(init=False)
+    body_coverage: float = field(init=False)
 
     def __post_init__(self) -> None:
-        # Coverage is matched over total. A zero-length body has zero coverage by definition,
-        # not a division error: an empty body can match nothing.
-        self.coverage = (self.matched_bytes / self.total_bytes) if self.total_bytes else 0.0
+        self.causal = self.causal_channel != CHANNEL_NONE
+        # Coverage per channel, matched over that channel's own total. Deliberately NOT a
+        # combined ratio: pooling a 40-byte target with a 40kB body produces a figure that
+        # describes neither, and there is no question either channel's coverage cannot answer.
+        # A zero-length channel has zero coverage by definition, not a division error.
+        self.target_coverage = (self.target_matched_bytes / self.target_bytes) if self.target_bytes else 0.0
+        self.body_coverage = (self.body_matched_bytes / self.body_bytes) if self.body_bytes else 0.0
 
 
 def _covered_bytes(positional_digests: list[str], member_set: frozenset[str], k: int) -> int:
@@ -72,41 +101,81 @@ def build_reference_index(references: dict[str, bytes], redactor: Redactor) -> d
     return {ref_id: redactor.kgram_digest_set(data) for ref_id, data in references.items()}
 
 
-def match_body(
+def _match_channel(
+    data: bytes,
+    context_index: dict[str, frozenset[str]],
+    args_digests: frozenset[str],
+    redactor: Redactor,
+) -> tuple[int, list[str], bool]:
+    """Match one channel's bytes. Returns (matched context bytes, matching refs, args hit)."""
+    positional = redactor.kgram_digests(data)
+    present = frozenset(positional)
+
+    # Number 4: which context references appear, and how many bytes they cover (exact).
+    refs = [ref_id for ref_id, digs in context_index.items() if digs & present]
+    if refs:
+        union: frozenset[str] = frozenset().union(*(context_index[r] for r in refs))
+        matched = _covered_bytes(positional, union, redactor.k)
+    else:
+        matched = 0
+
+    # Number 5: causal union. Non-empty intersection with the call's own arguments.
+    # A match shorter than k bytes is not detected; that is a false negative and the safe
+    # direction (we say DECLARADO instead of falsely EFECTIVO).
+    return matched, refs, bool(args_digests & present)
+
+
+def match_request(
+    target: bytes,
     body: bytes,
     context_index: dict[str, frozenset[str]],
     args_digests: frozenset[str],
     redactor: Redactor,
 ) -> MatchResult:
-    """Match one outbound body against the context files and against the call's arguments.
+    """Match one outbound request against the context files and against the call's arguments.
+
+    Renamed from ``match_body``, which had come to lie about what it does: it only ever saw the
+    body, so an argument travelling in a query string was invisible and numbers 4 and 5 were
+    structurally zero for every GET-based server. A secret in a query string has already left
+    the machine -- it is bytes on the wire toward a third party -- so excluding it was not the
+    digest-only policy, it was a blind spot covering the channel most third-party APIs use.
+
+    ``target`` is the REQUEST TARGET: path plus query, exactly as it goes on the wire. Not the
+    absolute URL. The host and scheme are not content drawn from our context, and including them
+    would manufacture self-matches (a context file mentioning a hostname would "match" every
+    request to it) while telling us nothing about what leaked.
 
     ``context_index`` maps reference id -> digest set for the session context files (number 4).
     ``args_digests`` is the digest set of the causing call's arguments (number 5, the causal
     key). Passing args separately, rather than as one more reference, is deliberate: a match
     against args is a causal claim (EFECTIVO), a match against a context file is a leak claim.
     They answer different questions and must not be conflated.
+
+    Caveat, and it is a real one: matching is byte-literal, so a value the client
+    percent-encodes, base64s, or splits across parameters is not detected in the target. That is
+    a false negative in the safe direction and it is the same limit the body channel always had.
     """
-    positional = redactor.kgram_digests(body)
-    body_set = frozenset(positional)
+    t_matched, t_refs, t_causal = _match_channel(target, context_index, args_digests, redactor)
+    b_matched, b_refs, b_causal = _match_channel(body, context_index, args_digests, redactor)
 
-    # Number 4: which context references appear, and how many body bytes they cover (exact).
-    matched_refs = [ref_id for ref_id, digs in context_index.items() if digs & body_set]
-    if matched_refs:
-        context_union: frozenset[str] = frozenset().union(*(context_index[r] for r in matched_refs))
-        matched_bytes = _covered_bytes(positional, context_union, redactor.k)
+    if t_causal and b_causal:
+        channel = CHANNEL_BOTH
+    elif t_causal:
+        channel = CHANNEL_TARGET
+    elif b_causal:
+        channel = CHANNEL_BODY
     else:
-        matched_bytes = 0
-
-    # Number 5: causal union. Non-empty intersection with the call's own arguments.
-    # A match shorter than k bytes is not detected; that is a false negative and the safe
-    # direction (we say DECLARADO instead of falsely EFECTIVO).
-    causal = bool(args_digests & body_set)
+        channel = CHANNEL_NONE
 
     return MatchResult(
-        total_bytes=len(body),
-        matched_bytes=matched_bytes,
-        matched_refs=matched_refs,
-        causal=causal,
+        target_bytes=len(target),
+        target_matched_bytes=t_matched,
+        body_bytes=len(body),
+        body_matched_bytes=b_matched,
+        # Union across channels, sorted so two runs over the same input produce the same bytes
+        # (gate rule 1); a set's iteration order would break byte-identical artifacts.
+        matched_refs=sorted(set(t_refs) | set(b_refs)),
+        causal_channel=channel,
     )
 
 

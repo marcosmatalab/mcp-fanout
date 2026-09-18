@@ -44,25 +44,67 @@ server is rare and the observational approach is the only one that works against
 
 **Command.** `make n3`.
 
+## The two matched channels (numbers 4 and 5)
+
+Numbers 4 and 5 both rest on literal matching, and both match **two channels, counted
+separately**:
+
+- the **request target**: the path plus query string, exactly as it goes on the wire;
+- the **body**: the request payload.
+
+This is a change of definition, made deliberately and recorded here rather than slipped in.
+Until it was made, only the body was matched. A secret in a query string has already left the
+machine -- it is bytes on the wire toward a third party -- so excluding it was not the
+digest-only policy, it was a blind spot covering the entire GET channel, which is the channel
+most third-party APIs use and the one the incidents this project cites travel on. With body-only
+matching, numbers 4 and 5 were structurally zero for every GET-based server, and the first real
+capture of `fetch` demonstrated exactly that: the canary rode in the URL, was on the wire, and
+scored `DECLARADO`.
+
+Three constraints on how it is done, each of which is a correctness requirement, not a style
+choice:
+
+1. **The target, never the absolute URL.** The scheme and host are not content drawn from our
+   context. Including them would manufacture self-matches (a context file that mentions a
+   hostname would "match" every request to that host) while telling us nothing about what left.
+2. **The two channels are never pooled into one figure.** Number 4 reports
+   `target_matched_bytes` and `body_matched_bytes`; number 5 reports `efectivo_by_channel`.
+   A causal match in a query string and one in a request body are both literal evidence, but
+   they are not the same claim, and a single combined figure is indistinguishable from one
+   inflated with URLs. Totals are given too, labelled as totals.
+3. **Matching stays byte-literal, so it stays digest-only.** The target is shingled and hashed
+   exactly like the body; only salted digests are persisted. Nothing about the privacy model
+   changes. What changed is the definition of the two numbers, which is why it is written here.
+
+Residual limit, in the same direction as before: a value the client percent-encodes, base64s, or
+splits across parameters is not detected in the target. That is a false negative, the safe side.
+
 ## Number 4: outbound bytes that literally match context files
 
-**Definition.** Across all observed outbound bodies, the number of bytes covered (exactly, by
-k-gram interval union) by any session context file, and the count of flows with at least one
-context match.
+**Definition.** Across all observed outbound requests, the number of bytes covered (exactly, by
+k-gram interval union) by any session context file, reported **per channel** (target and body)
+with the total, and the count of flows with at least one context match in each channel.
 
 **Decides.** Whether content matching has signal at all. If nothing from the context ever leaves,
 Half B has no measurable base.
 
 **Command.** `make n4`.
 
-**Method.** Exact k-gram coverage, not winnowed. See `src/mcpfanout/match.py`. A match shorter
+**Method.** Exact k-gram coverage, not winnowed. See `src/mcpfanout/match.py`
+(`match_request`, renamed from `match_body` when the name stopped being true). A match shorter
 than k = 16 bytes is not counted, which is the safe direction (under-count, never over-count).
 
 ## Number 5: fraction of connections causally unifiable by content match
 
 **Definition.** Of all outbound connections, the fraction classified `EFECTIVO`, that is, whose
-payload contains a literal fragment of the causing call's arguments. Reported with the full
-state distribution (`EFECTIVO` / `DECLARADO` / `INDETERMINADO`).
+**request target or body** contains a literal fragment of the causing call's arguments. Reported
+with the full state distribution (`EFECTIVO` / `DECLARADO` / `INDETERMINADO`) **and with
+`efectivo_by_channel`**, the split of the EFECTIVO count across `target` / `body` / `both`.
+
+The channel split is part of the definition, not decoration. An EFECTIVO share built entirely on
+query strings supports a different reading than one built on request bodies, and publishing the
+fraction without the split would invite exactly the objection that the number was inflated with
+URLs.
 
 **Decides.** Whether the whole product works. This is the number nobody has measured. Because the
 corpus is driven sequentially, we have ground-truth attribution for every flow; number 5 measures

@@ -72,10 +72,15 @@ class FanoutRecorder:
     def request(self, flow) -> None:  # type: ignore[no-untyped-def]
         req = flow.request
         body = req.raw_content or b""
+        # The request target: path plus query, as it goes on the wire. mitmproxy's request.path
+        # is exactly that, and NOT the absolute URL -- req.url would drag in scheme and host,
+        # which are not content out of our context and would manufacture self-matches.
+        target = (req.path or "").encode("utf-8", "surrogateescape")
         current = self._current_call()
         args_digests = frozenset(current.get("args_digests", []))
 
-        result = _match.match_body(body, self.context_index, args_digests, self.redactor)
+        result = _match.match_request(target, body, self.context_index, args_digests,
+                                      self.redactor)
 
         tp = current.get("traceparent", "")
         header_tp = req.headers.get("traceparent", "")
@@ -102,9 +107,11 @@ class FanoutRecorder:
             run_id=self.run_id, server_id=current.get("server_id", ""),
             call_id=current.get("call_id"), ts=time.time(),
             dest_host=req.pretty_host, dest_ip=dest_ip, scheme=req.scheme, method=req.method,
-            request_size=len(body), body_observed=True, our_traceparent_present=our_tp_present,
-            total_bytes=result.total_bytes, matched_bytes=result.matched_bytes,
-            matched_refs=result.matched_refs, causal=result.causal, state=state,
+            body_observed=True, our_traceparent_present=our_tp_present,
+            target_bytes=result.target_bytes, target_matched_bytes=result.target_matched_bytes,
+            body_bytes=result.body_bytes, body_matched_bytes=result.body_matched_bytes,
+            matched_refs=result.matched_refs, causal=result.causal,
+            causal_channel=result.causal_channel, state=state,
             node_category=classify_host(req.pretty_host), has_time_and_pid=True,
         ))
 

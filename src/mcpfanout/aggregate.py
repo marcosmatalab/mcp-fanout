@@ -95,17 +95,36 @@ def number_3(run: Run) -> dict:
 
 
 def number_4(run: Run) -> dict:
-    """Outbound bytes that literally match context files. Decides whether Half B has signal."""
-    flows_with_match = [f for f in run.flows if f.matched_refs]
-    total_matched_bytes = sum(f.matched_bytes for f in flows_with_match)
-    total_out_bytes = sum(f.total_bytes for f in run.flows if f.body_observed)
-    frac_flows = (len(flows_with_match) / len(run.flows)) if run.flows else 0.0
+    """Outbound bytes that literally match context files. Decides whether Half B has signal.
+
+    Reported per channel, always both. The request target (path + query) and the body are both
+    bytes leaving for a third party, but they are different evidence: a 40-byte query string and
+    a 40kB JSON payload pooled into one "matched bytes" figure describes neither, and a single
+    number here is how a reviewer gets told the URL channel was quietly folded in. The totals are
+    still given, because withholding them would be its own sleight of hand; they are labelled as
+    sums of the two, never as the headline.
+    """
+    target_hits = [f for f in run.flows if f.target_matched_bytes]
+    body_hits = [f for f in run.flows if f.body_matched_bytes]
+    any_hits = [f for f in run.flows if f.matched_refs]
+    observed = [f for f in run.flows if f.body_observed]
+    frac_flows = (len(any_hits) / len(run.flows)) if run.flows else 0.0
+    t_matched = sum(f.target_matched_bytes for f in run.flows)
+    b_matched = sum(f.body_matched_bytes for f in run.flows)
+    t_obs = sum(f.target_bytes for f in observed)
+    b_obs = sum(f.body_bytes for f in observed)
     return {"number": 4, "name": "outbound_bytes_matching_context",
-            "flows_with_context_match": len(flows_with_match),
             "flows_total": len(run.flows),
+            "flows_with_context_match": len(any_hits),
+            "flows_with_target_match": len(target_hits),
+            "flows_with_body_match": len(body_hits),
             "fraction_flows_with_match": round(frac_flows, 4),
-            "matched_bytes": total_matched_bytes,
-            "observed_outbound_bytes": total_out_bytes,
+            "target_matched_bytes": t_matched,
+            "body_matched_bytes": b_matched,
+            "matched_bytes_total": t_matched + b_matched,
+            "observed_target_bytes": t_obs,
+            "observed_body_bytes": b_obs,
+            "observed_outbound_bytes_total": t_obs + b_obs,
             "command": "make n4"}
 
 
@@ -114,14 +133,25 @@ def number_5(run: Run) -> dict:
 
     Reports the full state distribution, because the doctrine publishes the percentage of each
     state, not a single headline. The headline is the EFECTIVO share.
+
+    And it reports WHICH CHANNEL carried each match, because the headline is only auditable with
+    that split. A match in a query string and a match in a request body are both literal causal
+    evidence, but they are not the same claim, and an EFECTIVO share that turned out to be all
+    target matches would deserve a different reading than one built on bodies. Publishing the
+    breakdown next to the fraction is what stops the fraction being taken on trust.
     """
     counts = {_match.EFECTIVO: 0, _match.DECLARADO: 0, _match.INDETERMINADO: 0}
     for f in run.flows:
         counts[f.state] = counts.get(f.state, 0) + 1
+    by_channel = {_match.CHANNEL_TARGET: 0, _match.CHANNEL_BODY: 0, _match.CHANNEL_BOTH: 0}
+    for f in run.flows:
+        if f.state == _match.EFECTIVO and f.causal_channel in by_channel:
+            by_channel[f.causal_channel] += 1
     total = len(run.flows)
     efectivo = counts[_match.EFECTIVO]
     return {"number": 5, "name": "connections_causally_unifiable",
             "efectivo_fraction": round((efectivo / total) if total else 0.0, 4),
+            "efectivo_by_channel": by_channel,
             "state_counts": counts,
             "flows_total": total,
             "command": "make n5"}
