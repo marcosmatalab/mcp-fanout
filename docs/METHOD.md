@@ -124,6 +124,17 @@ what is stored but never what is reported. Reproducibility uses a fixed default 
 Indexed Document Matching: rolling hashes over overlapping fragments, fifteen years old in DLP
 production. We reimplement it in the standard library (`src/mcpfanout/shingle.py`).
 
+**What is matched: two channels, counted apart.** Every outbound request is matched on its
+request target (path + query) and on its body, separately. Both are bytes leaving the machine
+toward a third party. The target is matched, and the absolute URL is not: scheme and host are not
+content drawn from our context, and including them would manufacture self-matches. The two are
+never summed into one figure, because a causal match in a query string and one in a body are
+different claims and a combined number cannot be told apart from one padded with URLs. See
+`docs/THE-SIX-NUMBERS.md`, "The two matched channels", for the definition and for why it changed:
+matching only bodies made numbers 4 and 5 structurally zero for every GET-based server, which the
+first real capture demonstrated rather than predicted. The privacy model is untouched -- the
+target is shingled and hashed exactly like the body, and only salted digests are persisted.
+
 - k-gram size k = 16 bytes: long enough that a shared run is not coincidental, short enough to
   catch real secrets.
 - Rolling hash: polynomial, base 257, modulus 2**61 - 1. Collision probability is bounded and
