@@ -55,11 +55,18 @@ schemas (`registry/probes/`, gated by `tests/test_corpus_matches_probes.py` and
 propagation, provenance coverage, attribution grades, self-hostable fraction. It measures nothing
 about the instrument.
 
-Phase A passed the sensor gate, which is what gate rule 8 required. **Phase B is still blocked, by
-gate rule 9**: the matcher's false-positive rate on structured language has to be measured and
-published before any volume figure is, because phase A measured that rate over keyed digests and
-real arguments are natural language and URLs that share structure. See `docs/CALIBRATION.md`, which
-also carries the three pieces of that work and which of them are done.
+Phase A passed the sensor gate (gate rule 8) and the matcher is now calibrated on structured
+language (gate rule 9): `docs/CALIBRATION.md` carries all three pieces, the figures and the
+commands. What that changed for this phase, in one line: the false-positive rate on concurrent pairs
+that share structure and no information is **0 of 224 reserved pairs at the k the sweep chose**,
+against 66 of 224 at the k that was chosen by judgement, so the grade distribution phase B is about
+to produce rests on a matcher whose error in that direction has a measured bound instead of an
+adjective.
+
+**What phase B is still waiting on is not a gate rule, it is a finding.** The sequential pass has
+run, and its destinations include ones no server's documentation declares, so gate rule 7 says stop
+and flag before publishing anything from it. Nothing from those runs is committed and the concurrent
+pass has not been driven.
 
 ### Why two passes and not one
 
