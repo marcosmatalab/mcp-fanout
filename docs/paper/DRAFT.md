@@ -17,22 +17,30 @@ An HTTP proxy selected by the `HTTP_PROXY` and `HTTPS_PROXY` environment variabl
 observe an autonomous agent's outbound traffic. It observes the subset of the agent's clients that
 chose to honour two environment variables, and that subset is not knowable in advance: in the
 system measured here it silently excluded one of the three components that reached a third party
-at all, because Node.js ignores those variables in its global `fetch` unless a flag introduced in
-2025 is explicitly enabled.
+at all, because Node.js ignores those variables in its global `fetch` unless a flag that is off by
+default is explicitly enabled.
 
 We measure whether an agent's outbound requests can be attributed to the tool call that caused
-them, using byte-literal matching over structural tokens with no content retained and no
-inference. Against a threshold of 0.80 fixed and cryptographically sealed before any measurement
-existed, the attributable share of call-caused, content-eligible flows is **0.6579**. The
-instrument does not meet its own bar, and we report that rather than the two higher figures the
-same question yielded while the instrument was blind: 0.8947 and 0.8095. Every fix to the
-instrument's observability lowered the headline.
+them, across **ten of the most-installed Model Context Protocol servers, driven under packet and
+proxy capture with 130 tool calls in concurrent waves of 2, 5 and 10, plus a 26-call sequential
+pass**. Ten curated servers are the head of a distribution whose tail is where small,
+unaudited implementations live, and every figure below describes that head. Matching is
+byte-literal over structural tokens, with no content retained and no inference. Against a
+threshold of 0.80 fixed and cryptographically sealed before any measurement existed, the
+attributable share of call-caused, content-eligible flows is **0.6579**. The instrument does not
+meet its own bar, and we report that rather than the two higher figures the same question yielded
+while the instrument was blind: 0.8947 and 0.8095. Every fix to the instrument's observability
+lowered the headline.
+
+Separately and with the same matcher, **no fragment of any planted context file ever appeared in
+a request toward a third party**: zero matched bytes across every flow of every run. The servers
+we measured forward what a call gives them and not what is sitting in the session around it.
 
 The corrected instrument then found two behaviours in the measured environment, both disclosed to
-their maintainers before publication: a tool call that downloads and executes roughly forty
-third-party packages while it runs, from unpinned version ranges with no lockfile, resolving
-differently on different days; and a server whose embedded browser reaches destinations the
-server's own documentation does not declare.
+their maintainers before publication: a tool call that downloads and executes **41 third-party
+packages** while it runs, from unpinned version ranges with no lockfile, in **82 registry requests
+one day and 87 the day before**, which is the instability rather than a stale figure; and a server
+whose embedded browser reaches destinations the server's own documentation does not declare.
 
 **Contributions.**
 
@@ -112,6 +120,13 @@ straight to the API. After it, the loopback count rises by exactly ten and the c
 unchanged, because those ten connections are now the proxy's own, re-originated after terminating
 the client's TLS. The traffic did not appear; it became visible.
 
+The total is the second, independent check, and it rules out the obvious alternative reading. It
+rises from 140 to 150: also exactly ten. One hop became two, client-to-API replaced by
+client-to-proxy plus proxy-to-API, so the connection count grows by exactly the number of
+connections that changed shape. Had the fix instead provoked new traffic, retries, a different
+code path, a second client waking up, the total would have moved by some other amount. It did
+not.
+
 Across the whole run, the count of components that completed calls and produced no observable
 egress despite being expected to reach a third party fell from seven to zero.
 
@@ -173,3 +188,266 @@ The cheapest way to find out how large your subset is does not require changing 
 all: run a packet capture alongside it and count outbound SYNs by destination. Every connection to
 somewhere that is not your proxy is traffic your instrument is not reading. We found ours by doing
 this, after the measurement had already produced two publishable-looking figures.
+
+---
+
+## 4. Method
+
+### 4.1 Four constraints, and what each one costs
+
+The design is fixed by four prohibitions, adopted before any code and never relaxed. Each is
+stated with the capability it gives up, because a constraint whose cost is not named is a
+limitation discovered late and presented as a principle.
+
+**Never inject.** Nothing is planted inside a third party: no marker, no token, no identifier
+smuggled into a call toward someone else's system. The observer lives at our own edge. *Cost:* we
+cannot follow a value once a third party re-emits it. A marker that travelled the chain would
+answer questions we cannot, and it would be an attack surface, a terms-of-service problem, and a
+data-minimisation problem at once.
+
+**Never store content.** Only salted digests and references survive memory. The single sentence
+the collector may emit is "the fragment with hash X, from reference Y, appeared in output toward
+domain Z." *Cost:* a match cannot be inspected after the fact, only recomputed, and that cost is
+load-bearing later in this paper.
+
+**Never infer.** Byte-literal matching only: no paraphrase detection, no semantic propagation, no
+model in the loop guessing what a server forwarded. *Cost:* a server that re-encodes a value
+before sending it is a miss. We take the miss. A false negative understates our own result, which
+is the safe direction; a false positive would manufacture evidence, which is not.
+
+**Never act.** Observe and record. Do not block, redact in flight, alter, or intervene. *Cost:*
+nothing this system produces prevents anything. It is evidence, not enforcement, and the
+distinction shapes everything above it.
+
+A boundary is needed between the third constraint and ordinary parsing, because our matcher
+decomposes structure. Splitting a URL per RFC 3986, percent-decoding, and walking a JSON document
+to its scalar leaves are permitted: each recovers a structure the sender put there, by a published
+algorithm. Case folding, stemming, edit distance, synonym expansion and embeddings are not. The
+test is not whether a step improves recall. It is whether two independent implementations of the
+written rule must agree on every input. Percent-decoding must. Stemming need not.
+
+### 4.2 Two instruments, because there are two questions
+
+We report two quantities that had shared one matcher, and separating them is the central design
+change of this work.
+
+**Did a request carry material from the session's context?** The material is prose: documents,
+notes, configuration sitting in the agent's working set. A literal k-gram is the right instrument,
+and its false-positive rate on our negative control is zero.
+
+**Was a request caused by a specific tool call?** The material is not prose. It is JSON fields
+whose values reappear on the wire as path segments and query parameters. The correspondence is
+structural, and a k-gram cannot see it.
+
+The diagnosis is one line of data. At k = 22 bytes, a request for `/docs/deploy/runbook` (20
+bytes) is invisible and `/docs/deploy/checklist` (22 bytes) is not. Sensitivity that depends on
+how a documentation site happened to name a page is measuring the site. On realistic argument
+material the k-gram matcher found only 0.5385 of the calls that had literally caused the requests
+in front of it.
+
+So the provenance question keeps the k-gram and the attribution question moves to **structural
+containment**: decompose both the call's arguments and the request into the same vocabulary of
+tokens, and attribute when every token of the call is present in the request. Containment rather
+than intersection, because intersection fires whenever a call shares one token with a request, and
+for a hostname that is every request to that host. Containment needs no score and no threshold,
+which is why the criterion has no tunable constant.
+
+Nothing crosses in plaintext. The driver decomposes arguments in its own process and publishes a
+keyed digest per token; the capture layer decomposes the wire and digests what it finds; the
+comparison is set containment over digests.
+
+### 4.3 Discrimination, and why one token is never enough
+
+Containment alone attributes too much. In a wave of ten concurrent calls, one call was
+`{"url": "https://example.net/", "max_length": 2000}`, whose only structural token is the
+hostname. It is contained in every request of its own wave, including ten `robots.txt` fetches the
+client emits before each retrieval.
+
+We therefore require that a candidate call own at least one token that distinguishes it from the
+other calls in flight. This is a principle rather than a threshold: a call that owns nothing its
+neighbours do not own leaves the candidate set, instead of making the whole wave ambiguous.
+
+The measured justification, over one wave of twenty flows:
+
+| rule | strongest grade awarded | of which wrong |
+|---|---|---|
+| containment alone | 20 | **9** |
+| ambiguity floor over the whole wave | 9 | 0 |
+| **discrimination as a principle** | **17** | **0** |
+
+Nine of twenty confident, wrong attributions, every one of them a constant client-emitted path
+credited to whichever call happened to own a single generic token. The middle rule is safe and
+discards two thirds of what containment gained. We adopt the third, with an additional floor: a
+single structural token never earns the strongest grade, because one token identifies a class and
+not a call.
+
+The rule has a cost we report rather than discover: a call whose tokens are a proper subset of a
+concurrent call's is also excluded, and loses the attribution of its own request. Section 5.5
+returns to this, because it is a limit of the method and not of our implementation.
+
+### 4.4 Pre-registration, and a prediction of ours that was false
+
+Every figure in section 5 was predicted before the code that produces it existed. The predictions,
+their falsification conditions, and the verdict threshold live in a block whose SHA-256 is asserted
+by a test, so editing a word after the fact fails the suite. The denominator the verdict binds to
+is a committed file whose own hash is quoted inside the sealed block, so a later entry cannot
+quietly move what the threshold is measured against. Held-out corpora are retired once measured
+and replaced rather than reused.
+
+One further rule governs the instrument itself, and it earned its place by being violated four
+times: **every instrument needs a test that fails when the instrument is absent, not only when it
+is wrong.** A wrong number gets investigated; a green gets published. Our four instances were an
+addon that failed to load and produced an empty, clean-looking run; a constant that diverged and
+silently stopped matching; a self-test that serialised a field it never populated; and a published
+artifact that omitted the very denominator its verdict is measured against. The class is that an
+absent input yields a well-formed output, and well-formed output is what gets reviewed.
+
+**One of our sealed predictions was false.** We predicted the pre-registered run could be
+re-graded without re-capturing. It cannot: the stored records predate the fields the new matcher
+writes, so that run is not re-gradable from what was persisted. The prediction is still in the
+seal, unedited, with the correction beside it and the digest proving the original was not touched.
+We keep it there deliberately. A pre-registration in which every prediction held is evidence that
+the predictions were written to be safe.
+
+The failure is also a result. "Re-gradable from what was persisted" is the question an auditor
+asks first, and the general answer is that adding a field to an evidence record makes every
+earlier record un-re-gradable under the new rule. That is a property of evidence systems that
+evolve, not of this one.
+
+**What the apparatus does not establish.** We pushed the sealed block to an external host only
+after measuring. A commit's author date is local metadata, so an external clock witnesses that the
+bundle existed by a certain instant and fixes nothing about the order within it. Two disclosure
+issues filed on a third party's infrastructure carry server-set timestamps that corroborate the
+content, which is narrower than corroborating the order. The rule we derive, and state here rather
+than in a limitations section: **seal, commit, push, and only then measure.** A seal that has not
+left the machine is a draft with a hash on it.
+
+---
+
+## 5. Results
+
+### 5.1 The honesty curve
+
+We measured the same quantity three times, each time after repairing something the instrument
+could not see.
+
+| # | what the instrument could not see | components with observed egress | denominator | attributable share |
+|---|---|---|---|---|
+| 1 | its own records, and Node's global `fetch` | 2 | 19 | 0.8947 |
+| 2 | Node's global `fetch` | 2 | 21 | 0.8095 |
+| 3 | nothing we have found; see 3.6 | **3** | **38** | **0.6579** |
+
+Every repair lowered the headline. That direction is the result, not the individual points: **a
+measurement whose headline improves as its instrument improves is measuring the instrument.** Ours
+did the opposite, which is the only shape consistent with the earlier figures having been
+optimistic for reasons unrelated to the matcher.
+
+We do not claim the curve has stopped. It falls as blindness is removed, and the packet capture is
+the only thing that says whether blindness remains. A fourth point below 0.6579 is the expected
+shape if another non-cooperating client is found, not a surprise.
+
+### 5.2 The figure, and the threshold it does not meet
+
+Of 38 call-caused flows eligible for content attribution, **25 are attributed to exactly one tool
+call**: 0.6579, against a pre-registered threshold of 0.80.
+
+The instrument does not meet its bar. We publish three denominators together and never one alone:
+
+| denominator | what it counts | share |
+|---|---|---|
+| all flows (140) | everything the capture saw | 0.1786 |
+| call-caused and eligible (57) | excludes package-manager traffic and pre-launch flows | 0.4386 |
+| **content-eligible (38)** | **also excludes client-constant targets** | **0.6579** |
+
+The first is not comparable with the others and is marked as such wherever it appears. It is
+published because discarding it would hide how much of a run is machinery: 83 of 140 flows were a
+package manager, and 19 more were targets a client emits identically whatever the call asked for,
+such as `robots.txt` before every retrieval. The third is the one the verdict binds to, and the
+list defining it was frozen by hash before the measurement.
+
+**On the two figures in this paper that look contradictory, and are not.** Section 5.6 reports 16
+flows carrying recognisable argument material; this section reports 31 flows matched structurally.
+They are different instruments answering different questions by design (4.2), and the gap is the
+size of what the k-gram cannot see: a structural token shorter than 22 bytes. The k-gram figure is
+byte-identical to the one we published before this work, which is how we verify the separation
+held. Reporting a single reconciled number here would hide the only direct measurement we have of
+what changing instruments bought.
+
+### 5.3 Where the thirteen missing attributions went
+
+| cause | count |
+|---|---|
+| single-token floor | **6** |
+| contained but not discriminating | 5 |
+| never contained | 2 |
+
+Every one of the six is on the component that became visible only after the instrument was fixed.
+Its arguments are single free-text queries. This is not a coincidence, and 5.4 is the reason.
+
+### 5.4 What content attribution is for: a claim about the shape of arguments
+
+> **Content attribution works on tools whose arguments carry structure, and does not work on tools
+> whose arguments are free text. No matching rule changes this without manufacturing false
+> attributions.**
+
+`{"query": "modelcontextprotocol servers"}` is 29 bytes and **one** structural token.
+`{"query": "logs"}` is four bytes and **one** structural token. The rule treats them identically,
+because what it measures is how many independent structural commitments a call makes, and both
+make one.
+
+The evidence runs both ways. Where arguments are URLs, attribution is near-total: 15 of 17 on one
+component, the two misses being subset re-reads rather than shape (5.5), and on a second component
+both of the requests its calls actually caused, its two remaining flows being its embedded
+browser's own background traffic rather than anything a call asked for. Where arguments are free
+text, 6 of 17 could not rise above ambiguous. And the price of relaxing the
+rule is measured, not assumed: permitting a single token to earn the strongest grade produced nine
+false attributions in twenty flows (4.3).
+
+**A reader can apply this to their own deployment without running anything.** Take each tool's
+schema and ask what its arguments decompose into: a hostname, path segments, query values, JSON
+string leaves. Four or five tokens means its calls are attributable under concurrency. One token
+means they are not, and no configuration will change that. This is the opposite of what a
+demonstration on URL-shaped tools would suggest, which is why we state it as a claim rather than
+as an explanation of our own shortfall.
+
+It is a claim about the content channel alone. A propagated trace context attributes a free-text
+call exactly, which is what 5.6 measures.
+
+### 5.5 A limit in the method, not in the implementation
+
+If one call's structural tokens are a proper subset of a concurrent call's, then every request
+containing the second call's tokens also contains the first's. No implementation of containment
+can separate them: it follows from subset being transitive over one vocabulary, not from how
+candidates are scored or ties broken. A rule may lose the subset call or guess. There is no third
+option inside the method.
+
+The case is not pathological. It is an agent re-reading its own document with more precision: the
+same page with a section anchor, a line range, a filter, a page number. We measured it as
+`/docs/deploy/runbook` losing its own request to `/docs/deploy/runbook?section=rollback-steps` at
+ten concurrent calls, and attributing cleanly at two and at five, where the superset call was not
+in flight. The loss is created by concurrency, not by the call.
+
+A lost call of this kind is indistinguishable, in a grade distribution, from a request that never
+matched. We therefore publish the count of calls excluded for owning no distinguishing token as a
+figure in its own right. Without it the limit is invisible in the output and reads as a weak
+matcher.
+
+### 5.6 The other two numbers, and the one that is zero
+
+**Context leakage: zero.** Planted context files sat in the agent's working directory throughout
+every run, carrying unique tokens that exist nowhere else. Not one byte of them appeared in any
+request toward any third party: zero matched bytes, zero flows, across every run. Sixteen flows
+carried recognisable material from a call's own arguments, which is forwarding what the call
+supplied. None carried material from the session around it. This is the most reassuring result
+here and the one a reader of a paper titled *measuring tool-call provenance* is entitled to expect
+in the abstract, so it is there.
+
+**Trace-context propagation: zero of three.** No component that we could observe propagated our
+trace context into its outbound requests. The denominator is three, not ten, and the difference is
+section 3: a component whose traffic never reached the proxy did not decline to propagate
+anything. We report the all-components figure beside it, marked not comparable, because
+suppressing it would hide how much of the set was invisible.
+
+Zero of three is a small denominator and we do not dress it up. What it establishes is that the
+mechanism which would attribute free-text calls exactly, and which 5.4 identifies as the only
+thing that can, is not in use by anything we were able to watch.
