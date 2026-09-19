@@ -6,7 +6,7 @@
 .RECIPEPREFIX = >
 .PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
         bench-verify disclosure control control-publish fp fp-calibration ksweep positive rarity \
-        inventory f2 f2-reserved corpus-check backstop clean
+        inventory f2 f2-reserved corpus-check backstop honesty-curve clean
 
 RUN ?= latest
 
@@ -58,6 +58,11 @@ corpus-check:
 # a client that ignores HTTP(S)_PROXY is invisible to the proxy and visible only here.
 backstop:
 > python3 tools/pcap_syns.py --run $(RUN)
+
+# The honesty curve: the headline figure at each stage of the instrument becoming less blind.
+# Every observability fix lowered it. That shape is the write-up's argument about method.
+honesty-curve:
+> python3 tools/honesty_curve.py
 
 # All six numbers from a run (default: the latest run under runs/).
 numbers:

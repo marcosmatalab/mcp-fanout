@@ -476,7 +476,14 @@ def _cmd_figures(args: argparse.Namespace) -> int:
             "command": f"python -m mcpfanout.cli figures --run runs/{run.manifest.run_id}",
         },
     }
-    computed = compute_all(run, _load_registry(), ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH))
+    # The constant-path list travels with the exclusion list, and leaving it out was a defect:
+    # the committed figure then carried content_denominator null, which is the denominator number
+    # 5's PRE-REGISTERED verdict binds to (docs/PREREG-F2.md section 7). A published artifact that
+    # omits the quantity a published verdict is measured against is the artifact failing at the
+    # one job it has.
+    computed = compute_all(run, _load_registry(),
+                           ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH),
+                           ConstantPathList.load(CONSTANT_PATHS_PATH))
     # The pass sits in provenance because it is a property of how the run was driven, and it is
     # NOT optional: a grade distribution whose driving condition is unknown cannot be read at all
     # (docs/PHASES.md, phase B: two passes, published separately and labelled by pass).
