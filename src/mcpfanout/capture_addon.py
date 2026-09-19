@@ -155,6 +155,10 @@ class FanoutRecorder:
             occurrence=occurrence, provenance=provenance,
             active_calls_in_window=len(active),
             matching_calls_in_window=len(matching),
+            # Read from the control file, never inferred from the in-flight set being empty: the
+            # launcher phase is what makes a flow impossible to attribute to a call by construction,
+            # and an empty list alone cannot say whether the server process even exists yet.
+            phase=published.get("phase", ""),
         ))
 
     def done(self) -> None:

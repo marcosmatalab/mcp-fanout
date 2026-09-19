@@ -75,12 +75,19 @@ def test_the_in_flight_set_is_cleared_after_the_wave(tmp_path):
 
 
 def test_publish_active_calls_is_the_single_writer_of_the_control_file(tmp_path):
-    """Two writers with two notions of the payload is how the addon reads something nobody wrote."""
+    """Two writers with two notions of the payload is how the addon reads something nobody wrote.
+
+    The phase is part of that payload and therefore part of the contract: an empty in-flight set has
+    several meanings (the launcher is still downloading, the process is handshaking, a call just
+    returned) and only one of them makes a flow impossible to attribute to a call. The addon cannot
+    tell them apart from the list alone, so the driver states which it is.
+    """
     control = tmp_path / "control"
     publish_active_calls(control, "run", "srv", [{"call_id": "c0", "traceparent": "tp",
-                                                  "args_present": False, "args_digests": []}])
+                                                  "args_present": False, "args_digests": []}],
+                         phase="driving")
     d = _active(control)
-    assert d == {"run_id": "run", "server_id": "srv",
+    assert d == {"run_id": "run", "server_id": "srv", "phase": "driving",
                  "active_calls": [{"call_id": "c0", "traceparent": "tp",
                                    "args_present": False, "args_digests": []}]}
 

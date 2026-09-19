@@ -5,7 +5,7 @@
 # We set RECIPEPREFIX to '>' so recipe lines do not depend on literal tabs.
 .RECIPEPREFIX = >
 .PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
-        bench-verify disclosure fp fp-calibration ksweep positive rarity clean
+        bench-verify disclosure fp fp-calibration ksweep positive rarity inventory clean
 
 RUN ?= latest
 
@@ -85,6 +85,12 @@ ksweep:
 # changes what it sends; the k sweep reads the committed fixture, not the run.
 positive:
 > python3 -m mcpfanout.cli prep-positive --run $(RUN)
+
+# The self-match ceiling and its decomposition: how much of realistic argument material the sensor
+# can see at all, by length bucket, against both thresholds (exact k-gram match, and the winnowing
+# guarantee w + k - 1). This is the figure that makes number 5 a lower bound. Needs no Docker.
+inventory:
+> python3 -m mcpfanout.cli inventory --out docs/figures/calibration
 
 # F1.3: does weighting a k-gram by how common it is lower the false-positive rate? Exit 0 if it
 # does (keep it), 1 if it does not (revert it, document why). Needs no Docker.

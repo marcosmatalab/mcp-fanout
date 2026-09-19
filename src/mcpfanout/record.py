@@ -34,6 +34,46 @@ T = TypeVar("T")
 #               and CONTENT_AMBIGUOUS, and therefore the only one number 5 may be read from.
 #   bench       phase A, our own server and our own sink, where ground truth exists.
 #   selftest    synthetic fixtures, no capture. Never a measurement of anything.
+# WHERE IN A SERVER'S LIFECYCLE A FLOW WAS SEEN. This is not a refinement of attribution, it is a
+# precondition of it: a connection that happened before the server process existed cannot have been
+# caused by a tool call, whatever a time window says.
+#
+#   launcher    the package launcher (npx, uvx) is resolving and downloading, and the server process
+#               does not exist yet. Egress here is NPM'S or PyPI's, never the server's.
+#   handshake   the process exists and has been asked to initialize and list its tools. Egress here
+#               is the server's own startup behaviour, and no call has been made.
+#   driving     a tool call is in flight.
+#   drained     the in-flight set has been cleared: the previous call returned and the next has not
+#               been sent, or the corpus is finished. Egress here is the server's, and it is outside
+#               every call window.
+#
+# Why "drained" exists at all, and it is the fix for a measured defect: the sequential driver used to
+# leave the last call published after finishing a server, so the NEXT server's launcher traffic was
+# attributed to the PREVIOUS server's last call. Four of the ten servers in the first ten-server
+# capture showed exactly one package-registry connection each, every one of them pinned to that
+# server's final call. That is the same class of error as calling 87 package-registry flows
+# DECLARADO, and it is what this field and the clearing that goes with it remove.
+PHASE_LAUNCHER = "launcher"
+PHASE_HANDSHAKE = "handshake"
+PHASE_DRIVING = "driving"
+PHASE_DRAINED = "drained"
+PHASES_LIFECYCLE = (PHASE_LAUNCHER, PHASE_HANDSHAKE, PHASE_DRIVING, PHASE_DRAINED)
+
+# The phases in which a flow CANNOT have been caused by a tool call of ours, by construction: no
+# call had been sent yet. BOTH pre-call phases are here, and the reason is a measurement.
+#
+# `launcher` was meant to catch the package manager resolving a dependency, and it cannot: the
+# process we spawn IS npx or uvx, which resolves the package and then execs the server, so from the
+# harness's vantage point the subprocess exists while the MCP server still does not. The first
+# ten-server capture with phases recorded put all seven npx servers' package-registry connections in
+# `handshake`, not in `launcher`, and every one of them was npm's traffic.
+#
+# So the line that matters is not "did a process exist" but "had a call been sent". Nothing in either
+# phase can have been caused by a call, because there was none. What the two phases still separate is
+# WHOSE traffic it is, which is a different question and is answered in disclosure.py against the
+# declared package-infrastructure list rather than by guessing from the phase.
+PHASES_NOT_CALL_CAUSED = (PHASE_LAUNCHER, PHASE_HANDSHAKE)
+
 PASS_SEQUENTIAL = "sequential"
 PASS_CONCURRENT = "concurrent"
 PASS_BENCH = "bench"
@@ -112,6 +152,11 @@ class Flow:
     # than a restatement of sequential driving: see match.grade_attribution.
     active_calls_in_window: int = 0
     matching_calls_in_window: int = 0
+    # Which lifecycle phase the driver had published when this flow was seen (PHASES_LIFECYCLE).
+    # Defaulted to "" so a run written before the phase existed still reads back, and reported as
+    # "unrecorded" rather than guessed: "we did not record the phase" and "the phase was driving"
+    # are different claims and only one of them licenses attributing the flow to a call.
+    phase: str = ""
 
 
 @dataclass

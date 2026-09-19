@@ -244,6 +244,27 @@ def _cmd_ksweep(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_inventory(args: argparse.Namespace) -> int:
+    """The self-match ceiling and its decomposition: what the sensor can see of realistic material.
+
+    Runs on the calibration half. It is a descriptive inventory rather than a tuning step, but it is
+    read while working on the matcher, so it uses the half that is there to be read.
+    """
+    from .calibrate import (CALIBRATION, PURPOSE_CALIBRATION, detectability_inventory,
+                            load_negative, load_positive)
+    from .redact import Redactor
+    corpus = load_negative(CALIBRATION, purpose=PURPOSE_CALIBRATION)
+    out = detectability_inventory(corpus, load_positive(args.positive), Redactor(k=args.k))
+    print(json.dumps(out, indent=2, sort_keys=True))
+    if args.out:
+        dest = Path(args.out)
+        dest.mkdir(parents=True, exist_ok=True)
+        path = dest / f"inventory-k{args.k}.json"
+        path.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"wrote {path}", file=sys.stderr)
+    return 0
+
+
 def _cmd_rarity(args: argparse.Namespace) -> int:
     """F1.3: measure whether rarity weighting lowers the false-positive rate, and say what it implies.
 
@@ -278,7 +299,10 @@ def _cmd_disclosure_check(args: argparse.Namespace) -> int:
     run_dir = _resolve_run(args.run)
     run = Run.load(run_dir)
     declared = DeclaredDestinations.load(args.declared or DECLARED_DESTINATIONS_PATH)
-    report = check(run.flows, declared)
+    # The package-infrastructure list is the declared, versioned, cited answer to "is this host a
+    # package registry". Branch one of gate rule 7's procedure needs it, and inferring it from a
+    # hostname instead would be the plausible guess this repository keeps finding in its history.
+    report = check(run.flows, declared, ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH))
     report["run_id"] = run.manifest.run_id
     report["pass"] = run.manifest.pass_name or "unlabelled"
     report["command"] = f"python -m mcpfanout.cli disclosure-check --run runs/{run.manifest.run_id}"
@@ -464,6 +488,13 @@ def build_parser() -> argparse.ArgumentParser:
     ks.add_argument("--k-max", type=int, default=64)
     ks.add_argument("--out", default=None, help="directory for the committed curve")
     ks.set_defaults(func=_cmd_ksweep)
+
+    inv = sub.add_parser("inventory",
+                         help="the self-match ceiling: what the sensor can see of realistic material")
+    inv.add_argument("--k", type=int, default=_shingle_default_k())
+    inv.add_argument("--positive", default="corpus/positive/bench-transfers.json")
+    inv.add_argument("--out", default=None)
+    inv.set_defaults(func=_cmd_inventory)
 
     ra = sub.add_parser("rarity", help="F1.3: does rarity weighting lower the false-positive rate")
     ra.add_argument("--k", type=int, default=_shingle_default_k(),

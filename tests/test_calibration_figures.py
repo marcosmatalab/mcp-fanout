@@ -204,3 +204,105 @@ def test_the_document_prices_the_cost_of_the_larger_k():
     # And the claim that the bench column must be read last, because its cliff is an artefact of
     # the bench's own fragment length rather than evidence about real material.
     assert "by design" in section or "BY DESIGN" in section
+
+
+# --- The self-match ceiling, and the rule that number 5 cannot be published without it.
+
+def _inventory() -> dict:
+    from mcpfanout.shingle import DEFAULT_K
+    return json.loads((CALIB_FIGURES / f"inventory-k{DEFAULT_K}.json").read_text())
+
+
+def test_the_inventory_measures_both_floors_and_says_they_differ():
+    """Exact-k-gram matching and the winnowing guarantee are different promises.
+
+    Conflating them would overstate what is safe: between k and w + k - 1 a match enters the numbers
+    but is not guaranteed to be present in the winnowed fingerprints that get persisted, so a later
+    audit of the stored digests may not reconstruct it.
+    """
+    from mcpfanout.shingle import DEFAULT_K, DEFAULT_W
+    inv = _inventory()
+    assert inv["floor_exact_kgram_match"] == DEFAULT_K
+    assert inv["floor_winnowing_guarantee"] == DEFAULT_K + DEFAULT_W - 1
+    assert inv["floor_winnowing_guarantee"] > inv["floor_exact_kgram_match"]
+
+
+def test_the_inventory_defines_self_match_before_reporting_it():
+    """A number this load-bearing cannot travel without its definition attached."""
+    inv = _inventory()
+    definition = inv["what_self_match_is"]
+    assert "args_bytes" in definition
+    assert "its own cause" in definition or "is its own cause" in definition
+    assert "never be attributed by content anywhere" in definition
+    assert inv["measured_over"].endswith("calibration.json"), inv["measured_over"]
+
+
+def test_the_inventory_covers_all_three_populations():
+    """Planted bait, realistic arguments, and the bench as contrast are not interchangeable."""
+    inv = _inventory()
+    assert inv["planted_bait_by_bucket"], "no bait measured"
+    assert inv["realistic_arguments"]["by_family"], "no realistic material measured"
+    assert inv["phase_a_transfers_for_contrast"]["transfers"] > 0
+
+
+def test_the_planted_bait_is_above_both_floors():
+    """If the bait were marginal, the ceiling would be partly our own doing and fixable.
+
+    It is not: the k + 8 rule in tests/test_corpus_matches_probes.py keeps every planted value above
+    the winnowing floor, which is what lets the ceiling be attributed to ordinary argument material.
+    """
+    buckets = _inventory()["planted_bait_by_bucket"]
+    assert buckets.get("below_k_invisible", 0) == 0, buckets
+    assert buckets.get("matched_but_below_winnowing_floor", 0) == 0, buckets
+
+
+def test_the_document_quotes_the_inventory_per_family():
+    """The decomposition is the point: "0.5" alone reads as a defect rather than as a limit."""
+    inv = _inventory()
+    text = " ".join(DOC.read_text().split())
+    for family, f in inv["realistic_arguments"]["by_family"].items():
+        lcr = f["longest_common_run"]
+        row = (f"| `{family}` | {f['calls']} | {f['self_match_recall']} | "
+               f"{lcr['min']} / {lcr['median']} / {lcr['max']} |")
+        assert row in text, f"the document's row for {family} does not match the artifact: {row!r}"
+    assert f"it was already the level at k = 16" in text
+
+
+def test_number_5_carries_the_lower_bound_caveat_in_its_own_output():
+    """The caveat has to travel WITH the figure. A sentence in a document is not attached to a JSON.
+
+    This is the mechanical form of "number 5 may not be published without that sentence": the field
+    is in the aggregate, so it is in every committed artifact and in every printed run of make n5.
+    """
+    from mcpfanout.aggregate import Run, number_5
+    from mcpfanout.record import RunManifest
+    run = Run(RunManifest(run_id="r", created="1970-01-01T00:00:00Z", salt_fixed=True, k=22, w=8,
+                          corpus_sha256="0" * 64), [], [])
+    out = number_5(run)
+    assert out["published_as"] == "lower_bound"
+    reason = out["published_as_reason"]
+    assert "self-match" in reason and "floor and not an estimate" in reason
+    assert "make inventory" in reason
+
+
+def test_every_document_that_publishes_number_5_states_the_lower_bound():
+    """Three documents quote number 5. All three have to carry the reason, or one of them is a trap."""
+    for name, marker in (("CALIBRATION.md", "published as a LOWER BOUND"),
+                         ("THREATS.md", "published as a LOWER BOUND"),
+                         ("THE-SIX-NUMBERS.md", "Published as a lower bound")):
+        text = " ".join((REPO / "docs" / name).read_text().split())
+        assert marker in text, f"docs/{name} does not state that number 5 is a lower bound"
+        assert "self-match" in text, f"docs/{name} states the bound without its reason"
+
+
+def test_the_committed_aggregates_carry_the_caveat_too():
+    """An artifact published before the caveat existed would be quotable without it."""
+    figures = sorted(p for p in (REPO / "docs" / "figures").glob("*.json")
+                     if not p.name.endswith("-instrument.json"))
+    stale = []
+    for path in figures:
+        n5 = {n["number"]: n for n in json.loads(path.read_text())["numbers"]}[5]
+        if n5.get("published_as") != "lower_bound":
+            stale.append(path.name)
+    assert not stale, (f"these committed aggregates predate the lower-bound caveat and must be "
+                       f"regenerated with `make figures RUN=...`: {stale}")

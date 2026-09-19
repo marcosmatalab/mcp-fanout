@@ -90,6 +90,27 @@ screen on purpose: it is where credibility is won or lost.
    Its report names servers and hosts, so it stays in the run directory, which is gitignored, and
    never under `docs/`.
 
+   **THE DECISION PROCEDURE, in three branches.** The rule used to say "if a server egresses
+   somewhere its documentation does not declare", and that sentence does not decide the commonest
+   case, which is a package manager downloading a dependency. So:
+
+   1. **Contacted by the launcher before the server process starts.** Not the server's egress. It is
+      recorded apart and triggers no disclosure. Mechanically: the flow was seen in a pre-first-call
+      phase (`record.PHASES_NOT_CALL_CAUSED`), the launch command is a package launcher
+      (`disclosure.PACKAGE_LAUNCHERS`, from the declaration's `launch_tool`), and the destination is
+      on the declared list in `registry/package-infrastructure.json`. **All three**, each from
+      declared data: none of them is inferred from how a hostname looks.
+   2. **A direct consequence of a corpus call, to a destination the server's documentation names.**
+      Declared behaviour. Published as such, no disclosure.
+   3. **Anything else.** Gate rule 7 fires. Stop, and say so before publishing anything from that
+      run. This includes pre-first-call egress that is NOT a package registry, which is a launched
+      process reaching somewhere on its own at startup, and it includes a call-caused destination the
+      documentation does not name.
+
+   The branches are applied by `make disclosure`, and the third one is the only one that produces
+   `review_required`. What the command still does not do is decide branch 2 for you: whether the
+   documentation names a destination is read by a person, once, for the hosts the check lists.
+
 8. **The instrument passes before the phenomenon is measured.** No figure from a real-server run
    (phase B) may be published until the controlled bench (phase A) has passed the sensor gate in
    `docs/PHASES.md`: capture recall at or above 95%, zero false strong attributions, false

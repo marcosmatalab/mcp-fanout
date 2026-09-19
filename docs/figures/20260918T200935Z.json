@@ -145,6 +145,8 @@
       "name": "attribution_grade_distribution",
       "number": 5,
       "pass": "unlabelled",
+      "published_as": "lower_bound",
+      "published_as_reason": "the sensor's self-match recall on realistic argument material is below 1, so an attributable share measured with it is a floor and not an estimate. Measured by `make inventory`; decomposed per family in docs/CALIBRATION.md, 'The self-match ceiling', and stated as threat 12 in docs/THREATS.md",
       "sequential_driving": true,
       "sequential_driving_note": "every flow was seen with at most one call in flight, so CONTENT_UNIQUE is unreachable by construction and content matches grade as CONTENT_MATCH_UNCONTESTED. This is the expected outcome of the sequential pass and is reported as such, never as a finding about content matching. The distribution that answers whether content matching discriminates comes from the concurrent pass; see docs/PHASES.md, phase B",
       "strong_attribution_count": 0,

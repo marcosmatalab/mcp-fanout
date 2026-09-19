@@ -18,6 +18,7 @@ from pathlib import Path
 from . import match as _match
 from . import classify as _classify
 from .classify import ExclusionList, Registry, selfhostable_fraction
+from . import record as _record
 from .record import Flow, RunManifest, ToolCall, read_jsonl, read_manifest
 
 
@@ -36,6 +37,20 @@ class Run:
         calls = list(read_jsonl(run_dir / "calls.jsonl", ToolCall))
         flows = list(read_jsonl(run_dir / "flows.jsonl", Flow))
         return cls(manifest, calls, flows)
+
+
+def _call_caused_possible(flow: Flow) -> bool:
+    """False when the flow was seen before the server process existed, so no call could cause it.
+
+    Unrecorded phases ("" on a run written before the field existed) count as POSSIBLE, because the
+    alternative is to silently drop flows from a figure on the strength of a field nobody wrote. The
+    aggregate reports the unrecorded share instead, where a reader can see it.
+    """
+    return flow.phase not in _record.PHASES_NOT_CALL_CAUSED
+
+
+def _launcher_flows(run: Run) -> list[Flow]:
+    return [f for f in run.flows if not _call_caused_possible(f)]
 
 
 def _flows_by_call(run: Run) -> dict[str, list[Flow]]:
@@ -108,7 +123,16 @@ def number_1(run: Run, exclusions: ExclusionList | None = None) -> dict:
     silently computed against an empty list: "no list" and "no package traffic" would otherwise
     produce identical output, and only one of those is a finding.
     """
-    grouped = {cid: fs for cid, fs in _flows_by_call(run).items() if cid != "<unattributed>"}
+    # The launcher's egress is excluded from every per-call figure BEFORE anything is counted. It is
+    # not the server's traffic: `npx -y pkg@ver` resolves and downloads before the server process
+    # exists, so a connection seen in that phase cannot be per-call at any rate. It is reported on
+    # its own below, never discarded. Measured reason for the exclusion: in the first ten-server
+    # capture four servers each showed one package-registry connection pinned to their LAST call,
+    # which was the next server's launcher landing in a window nobody had cleared.
+    launcher = _launcher_flows(run)
+    grouped = {cid: [f for f in fs if _call_caused_possible(f)]
+               for cid, fs in _flows_by_call(run).items() if cid != "<unattributed>"}
+    grouped = {cid: fs for cid, fs in grouped.items() if fs}
     # Calls that produced zero egress are real, informative data points (the union is trivially
     # empty for them), so they enter every distribution as a zero.
     driven = {c.call_id for c in run.calls}
@@ -120,6 +144,14 @@ def number_1(run: Run, exclusions: ExclusionList | None = None) -> dict:
 
     out = {"number": 1, "name": "outbound_connections_per_tool_call",
            "connections_raw": _dist(raw),
+           # Counts, apart from every distribution above. A launcher connection is a fact about the
+           # package manager, and pooling it with per-call fan-out is how a server gets credited with
+           # traffic it never made.
+           "launcher_connections": len(launcher),
+           "launcher_connections_note": (
+               "seen while the launcher was resolving the package, before the server process "
+               "existed. Excluded from every per-call figure by construction, never discarded"),
+           "flows_with_unrecorded_phase": sum(1 for f in run.flows if not f.phase),
            "distinct_hosts": _dist(hosts),
            "distinct_hosts_note": "same quantity as number 2; published here so the raw "
                                   "connection count is never read on its own",
@@ -149,7 +181,11 @@ def number_2(run: Run) -> dict:
     for cid, fs in _flows_by_call(run).items():
         if cid == "<unattributed>":
             continue
-        per_call.append(len({f.dest_host for f in fs}))
+        # Same exclusion as number 1, for the same reason: the launcher's destination is not a
+        # domain the call touched (see number_1's launcher_connections).
+        hosts = {f.dest_host for f in fs if _call_caused_possible(f)}
+        if hosts:
+            per_call.append(len(hosts))
     driven = {c.call_id for c in run.calls}
     seen = {f.call_id for f in run.flows if f.call_id}
     per_call += [0] * len(driven - seen)
@@ -294,6 +330,7 @@ def number_5(run: Run, exclusions: ExclusionList | None = None) -> dict:
             matching_calls_in_window=f.matching_calls_in_window,
             eligible=eligible,
             has_time_and_pid=f.has_time_and_pid,
+            call_caused_possible=_call_caused_possible(f),
         )
         grades[grade] = grades.get(grade, 0) + 1
         reasons[reason] = reasons.get(reason, 0) + 1
@@ -317,6 +354,7 @@ def number_5(run: Run, exclusions: ExclusionList | None = None) -> dict:
             matching_calls_in_window=f.matching_calls_in_window,
             eligible=eligible,
             has_time_and_pid=f.has_time_and_pid,
+            call_caused_possible=_call_caused_possible(f),
         )
         bucket = by_window.setdefault(str(f.active_calls_in_window), {})
         bucket[grade] = bucket.get(grade, 0) + 1
@@ -327,6 +365,20 @@ def number_5(run: Run, exclusions: ExclusionList | None = None) -> dict:
     pass_name = run.manifest.pass_name or "unlabelled"
     out = {"number": 5, "name": "attribution_grade_distribution",
            "pass": pass_name,
+           # THE CAVEAT TRAVELS WITH THE FIGURE, not beside it in a document. The sensor's
+           # self-match recall on realistic argument material is below 1 (measured: 0.5 over the
+           # negative corpus's four families, docs/CALIBRATION.md "The self-match ceiling"), so
+           # half the material it is shown does not match itself even when the call is its own
+           # cause and nothing is concurrent. An attributable share measured by such a sensor is at
+           # most that fraction of the true share. The value is deliberately NOT copied here: a
+           # number duplicated in two places is a number that goes stale in one of them, so this
+           # names the command that measures it instead.
+           "published_as": "lower_bound",
+           "published_as_reason": (
+               "the sensor's self-match recall on realistic argument material is below 1, so an "
+               "attributable share measured with it is a floor and not an estimate. Measured by "
+               "`make inventory`; decomposed per family in docs/CALIBRATION.md, 'The self-match "
+               "ceiling', and stated as threat 12 in docs/THREATS.md"),
            "flows_total": total,
            "attribution_grades": grades,
            "attribution_reasons": reasons,
@@ -407,9 +459,16 @@ def driving_summary(run: Run) -> dict:
         bucket["ok" if c.ok else "errored"] += 1
         bucket["with_arguments"] += 1 if c.args_present else 0
         bucket["stdout_noise_lines"] += c.stdout_noise_lines
+    by_phase: dict[str, int] = {}
+    for f in run.flows:
+        by_phase[f.phase or "unrecorded"] = by_phase.get(f.phase or "unrecorded", 0) + 1
     total = len(run.calls)
     errored = sum(1 for c in run.calls if not c.ok)
     return {"name": "driving_summary",
+            # Where in each server's lifecycle the observed connections landed. The launcher bucket
+            # is the package manager's traffic and is excluded from every per-call figure; the
+            # drained bucket is the server's own egress outside any call window.
+            "flows_by_lifecycle_phase": by_phase,
             "not_one_of_the_six": ("a denominator, not a finding: the six are ratios over what "
                                    "servers did in response to these calls"),
             "calls_total": total,
