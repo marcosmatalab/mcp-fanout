@@ -29,6 +29,7 @@ manifest.json. Flows are written by the addon.
 from __future__ import annotations
 
 import argparse
+import os
 import hashlib
 import json
 from datetime import datetime, timezone
@@ -111,14 +112,50 @@ def concurrency_levels(cap: int, corpus_len: int) -> list[int]:
 
 
 def server_env(srv: dict, proxy_env: dict) -> dict:
-    """The proxy environment plus this server's declared, non-secret configuration.
+    """The proxy environment, this server's declared configuration, and its declared secrets.
 
     Per-server keys come from the registry's `env` field, which may hold nothing secret (gate rule
     5). They are values cast to strings because YAML will happily give a bool and the environment
     only carries text.
+
+    SECRETS ARE DECLARED BY NAME AND NEVER BY VALUE. `secret_env` in the registry is a list of
+    variable NAMES; the values are read from this process's environment, which the operator fills
+    from a credential file kept outside the repository. So the registry stays committable and gate
+    rule 5 holds: a lab credential exists in the environment and nowhere in the repository.
+
+    An absent secret is passed over in silence HERE and reported loudly elsewhere. Raising would
+    make one missing token stop a ten-server run, and defaulting to empty string would hand the
+    server a credential-shaped nothing. What must not happen is the third option, which is that
+    the run looks credentialed afterwards: `credential_presence` records, per server and per
+    declared name, whether the value was there, and the manifest carries it (gate rule 10, an
+    absent instrument must not pass quietly).
     """
     extra = {str(k): str(v) for k, v in (srv.get("env") or {}).items()}
-    return {**proxy_env, **extra}
+    secrets = {}
+    for name in (srv.get("secret_env") or []):
+        value = os.environ.get(str(name))
+        if value:
+            secrets[str(name)] = value
+    return {**proxy_env, **extra, **secrets}
+
+
+def credential_presence(selected: list[dict]) -> dict:
+    """Per server, which declared secrets were actually available. NAMES AND BOOLEANS ONLY.
+
+    This is what stops an uncredentialed run reading as a credentialed one afterwards, which is
+    gate rule 10 applied to a credential: the failure is silent by nature, because a server
+    missing its token still starts, still handshakes, and still produces flows. github does
+    exactly that and fails only its four search_code calls.
+
+    No value, no prefix, no length: a boolean cannot leak a token, and this dict goes into the
+    manifest, which is committed as a figure.
+    """
+    out = {}
+    for srv in selected:
+        names = [str(n) for n in (srv.get("secret_env") or [])]
+        if names:
+            out[srv["id"]] = {n: bool(os.environ.get(n)) for n in names}
+    return out
 
 
 def drive_server_concurrent(srv: dict, *, run_id: str, control_dir: Path, redactor: Redactor,
@@ -347,6 +384,7 @@ def main() -> int:
                                   for s in selected
                                   if s.get("protocol_version_answered")},
         tool_versions={"note": "fill with pinned server digests before publishing"},
+        credential_presence=credential_presence(selected),
         pass_name=args.mode,
         notes=(f"Capture run, {args.mode} pass. See docs/THE-GATE.md before publishing any number."
                + (" Numbers 1 to 4 are read from this pass; its attribution grades are "

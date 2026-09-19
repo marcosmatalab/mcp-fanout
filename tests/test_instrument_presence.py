@@ -153,3 +153,69 @@ def test_the_addon_discriminates_rather_than_matching_everything(tmp_path, path,
     """An instrument that matches everything is as absent as one that matches nothing."""
     row = _drive(tmp_path, RUNBOOK, ROLLBACK, path=path)
     assert row["structural_match"] is expected, path
+
+
+# ---------------------------------------------------------------------------------------------
+# Gate rule 10 applied to the CREDENTIAL. An uncredentialed run is silent by nature: the server
+# still starts, still handshakes and still produces flows, so nothing goes red and the run looks
+# like every other run afterwards. github does exactly that and fails only its four search_code
+# calls, which is four lines in a log nobody reads.
+# ---------------------------------------------------------------------------------------------
+
+def _drive_all():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("drive_all_credentials",
+                                                  REPO / "harness" / "drive_all.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+SRV = {"id": "github", "secret_env": ["GITHUB_PERSONAL_ACCESS_TOKEN"],
+       "env": {"DECLARED": "yes"}}
+
+
+def test_a_declared_secret_reaches_the_server_environment(monkeypatch):
+    monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "planted-value-for-this-test")
+    env = _drive_all().server_env(SRV, {"HTTPS_PROXY": "http://127.0.0.1:8080"})
+    assert env["GITHUB_PERSONAL_ACCESS_TOKEN"] == "planted-value-for-this-test"
+    assert env["DECLARED"] == "yes" and env["HTTPS_PROXY"].endswith("8080")
+
+
+def test_an_absent_secret_is_omitted_rather_than_passed_as_empty(monkeypatch):
+    """An empty string is a credential-shaped nothing, which some clients send as a real header."""
+    monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
+    assert "GITHUB_PERSONAL_ACCESS_TOKEN" not in _drive_all().server_env(SRV, {})
+
+
+def test_the_run_records_whether_it_was_credentialed(monkeypatch):
+    mod = _drive_all()
+    monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "planted-value-for-this-test")
+    assert mod.credential_presence([SRV]) == {"github": {"GITHUB_PERSONAL_ACCESS_TOKEN": True}}
+    monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN")
+    assert mod.credential_presence([SRV]) == {"github": {"GITHUB_PERSONAL_ACCESS_TOKEN": False}}
+
+
+def test_the_presence_record_carries_no_value_not_even_a_length(monkeypatch):
+    """It goes into the manifest, which is committed as part of a figure."""
+    monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "planted-value-for-this-test")
+    blob = json.dumps(_drive_all().credential_presence([SRV]))
+    assert "planted-value" not in blob
+    assert all(isinstance(v, bool) for s in json.loads(blob).values() for v in s.values())
+
+
+def test_a_server_declaring_no_secret_is_absent_from_the_record():
+    assert _drive_all().credential_presence([{"id": "fetch"}]) == {}
+
+
+def test_the_registry_declares_the_credential_by_name_and_never_by_value():
+    """Gate rule 5: the registry is committed, so a value here would be a committed secret."""
+    import yaml
+    reg = yaml.safe_load((REPO / "registry" / "servers.yaml").read_text(encoding="utf-8"))
+    github = next(s for s in reg["servers"] if s["id"] == "github")
+    assert github["secret_env"] == ["GITHUB_PERSONAL_ACCESS_TOKEN"]
+    for srv in reg["servers"]:
+        for name in (srv.get("secret_env") or []):
+            assert name.isupper(), f"{name} does not look like a variable name"
+        for value in (srv.get("env") or {}).values():
+            assert len(str(value)) < 40, "an env VALUE in the registry long enough to be a secret"

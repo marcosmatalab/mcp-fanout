@@ -6,7 +6,7 @@
 .RECIPEPREFIX = >
 .PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
         bench-verify disclosure control control-publish fp fp-calibration ksweep positive rarity \
-        inventory f2 f2-reserved corpus-check clean
+        inventory f2 f2-reserved corpus-check backstop clean
 
 RUN ?= latest
 
@@ -53,6 +53,11 @@ f2-reserved:
 # The negative corpus's generated halves, re-derived. Fails if either was edited by hand.
 corpus-check:
 > python3 tools/build_negative_extras.py --check
+
+# Outbound TCP SYNs per destination from a run's pcap backstop. The evidence behind threat 6:
+# a client that ignores HTTP(S)_PROXY is invisible to the proxy and visible only here.
+backstop:
+> python3 tools/pcap_syns.py --run $(RUN)
 
 # All six numbers from a run (default: the latest run under runs/).
 numbers:

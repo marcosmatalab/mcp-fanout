@@ -56,6 +56,30 @@ a wave of 10 is a meaningful fraction of the hour's budget.
 
 **Cost: 0 euros, about 10 minutes.**
 
+**MEASURED AFTERWARDS, 2026-09-19, and it reverses the value of this account without reversing the
+reasoning.** The token was minted, the capture was run (`20260919T193121Z-concurrent`), and it
+worked: the four `search_code` authentication failures are gone and the only remaining error is a
+query-syntax validation on `search_issues`, which is a corpus bug and not a credential one. And it
+changed **nothing in any published number**, because this server's client is Node's global `fetch`
+(undici), which ignores `HTTP(S)_PROXY`. `make backstop` on that run shows 10 outbound SYNs
+straight to `140.82.121.5:443`, which is `api.github.com`, while `flows.jsonl` holds zero flows
+for the server. See `docs/THREATS.md` threat 6.
+
+So the honest accounting for this account: **the reasoning in this section was right and the
+benefit was zero**, because the limit was never the credential. It was the instrument. Nothing was
+wasted that mattered (0 euros, 10 minutes, and the token is scoped to nothing), and the run is
+more informative for having been done, because it converted threat 6 from "one SYN, one server,
+probably small" into a measured ten-connection hole with a working credential behind it.
+
+**What would actually unlock this server**, and neither option is free: transparent interception
+(a netfilter redirect inside the container, so a client that ignores the proxy is intercepted
+anyway) or eBPF uprobes on the TLS library, which is the product-grade path `docs/METHOD.md`
+already names. The first is a container-networking change of perhaps half a day and it makes the
+capture layer differ from the one every published figure so far was measured with, which is a
+reproducibility cost that has to be paid deliberately. **Do not credential another server whose
+client ignores the proxy until one of those exists**: the result is a token in a lab and no
+change in any number.
+
 ## 2. Brave Search
 
 **What breaks without it is total.** The server exits before the handshake:

@@ -60,6 +60,23 @@ gate rule 6. Each names the threat and what it does to the numbers.
    numbers 1, 2, 4 and 5 are not a floor with a small gap, they are **zero for a reason that has
    nothing to do with the server**, and no figure about it may be read from this capture layer.
 
+   **Re-measured 2026-09-19 WITH a working credential, run `20260919T193121Z-concurrent`, and the
+   blind spot is now the dominant fact about that server rather than a footnote.** `make backstop`
+   on that run's pcap: 140 outbound SYNs, 66 to the proxy on loopback, and **10 straight to
+   140.82.121.5:443, which is `api.github.com`**. The server made 17 driven calls, 16 of them
+   succeeded and returned the API's own answers, and `flows.jsonl` contains **zero flows for it**.
+
+   Why the credential makes this worse rather than better, which is the part worth keeping. Before,
+   the server was failing its authenticated calls, so there was little traffic to miss and the gap
+   was plausibly small. With a token the calls work, the server really does reach GitHub ten times,
+   and every byte of it is invisible to the instrument. **Crediting that server changed nothing in
+   any published number**, and a reader comparing the two runs would see no difference and conclude
+   the credential did not matter. It mattered; the capture layer cannot see it.
+
+   What this costs the lab-accounts decision is written in `docs/LAB-ACCOUNTS.md` section 1: for
+   any server whose client ignores the proxy environment, an account buys nothing measurable until
+   the capture layer changes, and that is a fact about our instrument, not about the server.
+
    How it is handled, and what it costs. It is reported, not silently patched, because the two
    available fixes are not equivalent. Injecting a proxy agent into each server's runtime would mean
    modifying third-party code inside our own harness, which is the wrong side of negative 1 in

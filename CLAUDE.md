@@ -58,7 +58,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 551
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 563
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
@@ -137,7 +137,7 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 551 tests, no Docker, no network
+make verify      # 563 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
@@ -234,7 +234,23 @@ Two results from it that are NOT matcher work and outrank it:
 
 ## Pending work, in order
 
-0. **The next capture is blocked on a decision, not on code.** `docs/LAB-ACCOUNTS.md` is the plan:
+0. **DEVELOPMENT IS STOPPED. The next thing is the write-up.** Decided 2026-09-19 after run
+   `20260919T193121Z-concurrent`. Do not open the per-flow candidate variant (declared as
+   amendment A1 and predicted to fail), the response channel, or the recursion. Anything added
+   from here competes with writing, and the instrument has passed its pre-registered threshold on
+   persisted data: 0.8095 against 0.80, `docs/PREREG-F2.md` section 15.
+
+   What the write-up must carry is listed in `docs/PREREG-F2.md` section 13, including the
+   pre-registered claim that turned out false and is still inside the seal.
+
+1. **Lab accounts: decided, github only, and the result was instructive.** `docs/LAB-ACCOUNTS.md`.
+   Brave was rejected for the same reason as Google Maps: its free tier requires a credit card
+   (checked 2026-09-19). The github token worked and changed no published number, because that
+   server's client ignores the proxy (threat 6, re-measured with 10 direct SYNs). Do not
+   credential another server whose client ignores the proxy until transparent interception or
+   eBPF exists.
+
+2. **Superseded, kept for the record: the next capture was blocked on a decision, not on code.** `docs/LAB-ACCOUNTS.md` is the plan:
    which accounts the credentialed servers need, the minimum permission each one is, what the
    terms of use questions are (asked, not answered, by the same rule that governs
    `declared-destinations.json`), and what each costs in euros and hours. Recommendation there is

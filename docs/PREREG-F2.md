@@ -493,3 +493,48 @@ because it is the counterfactual.** Without credentials:
 2026-09-19), which is the same reason Google Maps was rejected, and consistency beat convenience.
 So the next capture still contains one server that fails at launch, and that is a recorded
 condition of the run rather than a defect in it (`docs/LAB-ACCOUNTS.md` section 2).
+
+## 15. Number 5 from persisted data. Run `20260919T193121Z-concurrent`, 2026-09-19.
+
+This is what section 11 said was still missing: the figure derived from the corpus is now produced
+by the instrument, out of fields the capture layer wrote.
+
+| figure | value |
+|---|---|
+| `structural_instrument.state` | **present** |
+| flows where a call's tokens were considered | 39 |
+| flows attributed structurally | 17 |
+| flows total | 129 |
+| strong / raw (not comparable) | 17 / 129 = 0.1318 |
+| strong / call-caused eligible | 17 / 40 = 0.4250 |
+| **strong / content denominator** | **17 / 21 = 0.8095** |
+| credential presence, from the manifest | `{"github": {"GITHUB_PERSONAL_ACCESS_TOKEN": true}}` |
+| gate rule 7 | clear, no undeclared destination |
+
+**0.8095 against the threshold of 0.80 frozen in section 7. It passes, on persisted data.**
+
+Threat 16 is closed the right way for runs from here on: a match that enters number 5 is
+re-derivable from what was stored, because the tokens that were compared, the containment result,
+the candidate count and the discrimination outcome are all in the record. It stays open for every
+run captured before this one, which is the general property section 13 asks the write-up to carry.
+
+This is a SECOND measurement, not a re-grade of the pre-registered run. The denominator moved from
+19 to 21 because this run captured two more content-eligible flows, so the figure is not the
+0.8947 predicted in P4 and is not meant to be. P4 described what the pre-registered run would
+yield and `make f2` still reproduces 0.8947 there. Both are reported, neither replaces the other.
+
+### The credentialed server contributed nothing, and that is the finding
+
+github was credentialed for this run and its four authentication failures disappeared. It
+produced **zero flows**. `make backstop` on the run's pcap shows 10 outbound SYNs straight to
+`140.82.121.5:443`, `api.github.com`, bypassing the proxy entirely: the server's client is Node's
+global `fetch`, which ignores `HTTP(S)_PROXY` (`docs/THREATS.md` threat 6). So the 17 attributions
+above come from fetch and puppeteer exactly as before, the credential changed no published number,
+and a reader comparing this run with the previous one would wrongly conclude the credential was
+irrelevant.
+
+It was not irrelevant; the instrument cannot see it. That distinction is the whole reason this
+paragraph exists, and it is the strongest argument in the repository for why threats 5 and 8 alone
+never explained the gap: **threat 6 does, and it is an instrument limit rather than a sampling
+one.** `docs/LAB-ACCOUNTS.md` section 1 carries the consequence: no more credentials for servers
+whose clients ignore the proxy until transparent interception or eBPF exists.
