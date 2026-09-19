@@ -12,6 +12,15 @@ REGISTRY="registry/servers.yaml"
 OUT_ROOT="runs"
 ONLY=()
 BENCH=0
+# The browser control (src/mcpfanout/control.py): drive a bare headless browser through the same
+# proxy with NO MCP server, so that "the destination is the embedded browser's, not the server's"
+# becomes a measured attribution instead of a plausible reading of a hostname.
+CONTROL=0
+CONTROL_AGAINST="latest-sequential"
+CONTROL_REPETITIONS=3
+CONTROL_DWELL=12
+CONTROL_AUTHORISATION=""
+CONTROL_SERVER="puppeteer"
 # Which phase B pass to drive. One run holds one pass and the run id says which, because the two
 # are separate experimental conditions whose figures are published separately (docs/PHASES.md,
 # phase B). drive_all.py refuses to write a second pass into a run that already holds one.
@@ -23,9 +32,18 @@ while [[ $# -gt 0 ]]; do
     --only) ONLY+=(--only "$2"); shift 2 ;;
     --pass) PASS="$2"; shift 2 ;;
     --bench) BENCH=1; shift ;;
+    --control) CONTROL=1; shift ;;
+    --against) CONTROL_AGAINST="$2"; shift 2 ;;
+    --repetitions) CONTROL_REPETITIONS="$2"; shift 2 ;;
+    --dwell) CONTROL_DWELL="$2"; shift 2 ;;
+    --authorisation) CONTROL_AUTHORISATION="$2"; shift 2 ;;
+    --control-server) CONTROL_SERVER="$2"; shift 2 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
+if [[ "${BENCH}" == "1" && "${CONTROL}" == "1" ]]; then
+  echo "[run] --bench and --control are different experiments; pick one" >&2; exit 2
+fi
 case "${PASS}" in
   sequential|concurrent) ;;
   *) echo "[run] --pass must be sequential or concurrent, got: ${PASS}" >&2; exit 2 ;;
@@ -47,7 +65,9 @@ fi
 # The pass is in the RUN ID, not only in the manifest. The committed figure is named after the
 # run, so a directory listing of docs/figures/ says which condition produced each artifact without
 # opening any of them; a timestamp alone would leave two incomparable figures looking like a pair.
-if [[ "${BENCH}" == "1" ]]; then LABEL="bench"; else LABEL="${PASS}"; fi
+if [[ "${BENCH}" == "1" ]]; then LABEL="bench"
+elif [[ "${CONTROL}" == "1" ]]; then LABEL="control"
+else LABEL="${PASS}"; fi
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)-${LABEL}"
 RUN_DIR="${OUT_ROOT%/}/${RUN_ID}"
 mkdir -p "${RUN_DIR}/control"
@@ -94,6 +114,15 @@ fi
 #     trade-off (this launch is unobserved) and docs/THREATS.md threat 10.
 if [[ "${BENCH}" == "1" ]]; then
   echo "[run] bench mode: no package caches to warm, the bench server is ours"
+elif [[ "${CONTROL}" == "1" ]]; then
+  # The control drives no MCP server, and it still warms one, on purpose. The browser binary the
+  # control launches is the one THAT PACKAGE downloads into its cache on install, and the control
+  # finds it rather than installing its own: a control that fetched a different build would be a
+  # different browser, which is the one thing it may not be. Warming here also keeps the download
+  # off camera, exactly as it is in the pass being explained.
+  echo "[run] control mode: warming ${CONTROL_SERVER} unproxied, for its browser binary only"
+  python harness/drive_all.py --registry "${REGISTRY}" --run-dir "${RUN_DIR}" --warm \
+         --only "${CONTROL_SERVER}"
 else
   echo "[run] warming package caches (unproxied, before capture starts)"
   python harness/drive_all.py --registry "${REGISTRY}" --run-dir "${RUN_DIR}" --warm \
@@ -147,6 +176,10 @@ if [[ "${BENCH}" == "1" ]]; then
   python bench/drive_bench.py --run-dir "${RUN_DIR}" \
          --truth "${RUN_DIR}/bench_truth.jsonl" \
          --proxy "http://127.0.0.1:8080" --salt "${MCPFANOUT_SALT}" --sink-port 8099
+elif [[ "${CONTROL}" == "1" ]]; then
+  python harness/control_browser.py --run-dir "${RUN_DIR}" \
+         --proxy "http://127.0.0.1:8080" --salt "${MCPFANOUT_SALT}" \
+         --repetitions "${CONTROL_REPETITIONS}" --dwell "${CONTROL_DWELL}"
 else
   python harness/drive_all.py --registry "${REGISTRY}" --run-dir "${RUN_DIR}" \
          --mode "${PASS}" \
@@ -157,6 +190,39 @@ fi
 kill -TERM "${MITM_PID}" 2>/dev/null || true
 wait "${MITM_PID}" 2>/dev/null || true
 [[ -n "${TCPDUMP_PID:-}" ]] && kill "${TCPDUMP_PID}" 2>/dev/null || true
+
+# 7-control. A control run has no tool calls, so the six numbers are not defined over it and the
+#            aggregate refuses to compute them (cli._refuse_a_control_run). Its one product is the
+#            destination-set comparison against the pass it is explaining. A non-zero exit here is
+#            the RESULT, not a failure: it says the bare browser did not reach what the server was
+#            flagged for, which leaves the finding pointed at the server.
+if [[ "${CONTROL}" == "1" ]]; then
+  # No --publish here, and the reason is the container boundary rather than a policy: only runs/,
+  # registry/ and corpus/ are bind-mounted (harness/docker-compose.yml), so an artifact written to
+  # docs/figures/ from inside would land in the image layer and vanish with the container. The
+  # comparison is recomputed on the host, from the run this writes into the mounted runs/, by
+  # `make control-publish`. That also puts the authorisation step where a human is, which is where
+  # gate rule 7 wants it.
+  if [[ -n "${CONTROL_AUTHORISATION}" ]]; then
+    echo "[run] note: --authorisation is recorded for the operator; publishing happens on the" >&2
+    echo "[run] host with 'make control-publish AUTH=...', because docs/ is not mounted here." >&2
+  fi
+  set +e
+  python -m mcpfanout.cli control-compare --run "${RUN_DIR}" --against "${CONTROL_AGAINST}" \
+         --server "${CONTROL_SERVER}" --dwell "${CONTROL_DWELL}"
+  CC_STATUS=$?
+  set -e
+  if [[ "${CC_STATUS}" != "0" ]]; then
+    echo "[run] ============================================================" >&2
+    echo "[run] THE CONTROL DID NOT EXPLAIN THE FINDING. At least one host" >&2
+    echo "[run] the server was flagged for was NOT reached by the bare" >&2
+    echo "[run] browser. Read ${RUN_DIR}/control-compare.json before" >&2
+    echo "[run] publishing anything that attributes it to the browser." >&2
+    echo "[run] ============================================================" >&2
+  fi
+  echo "[run] done: ${RUN_DIR}/control-compare.json"
+  exit 0
+fi
 
 # 7. Compute the numbers. Rule 6: these are the commands behind the published figures.
 python -m mcpfanout.cli aggregate --run "${RUN_DIR}" --number all | tee "${RUN_DIR}/numbers.json"

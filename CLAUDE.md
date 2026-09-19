@@ -47,11 +47,11 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 439
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 467
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
-  `record`, `aggregate`, `disclosure`, `calibrate`, `rarity`, `demo`, `cli` must not gain
+  `record`, `aggregate`, `disclosure`, `control`, `calibrate`, `rarity`, `demo`, `cli` must not gain
   third-party dependencies. This is
   why every registry file the core reads is JSON and not YAML. The capture layer
   (`driver`, `capture_addon`, `harness/`) may use the `capture` extra (mitmproxy, PyYAML). This is
@@ -108,7 +108,11 @@ registry/        servers.yaml (what to measure, with max_concurrency per server)
                  (number 1 exclusion list), declared-destinations.json (gate rule 7),
                  probes/ (real tool schemas)
 docs/            doctrine, method, the six numbers, the gate, phases, threats, stop criteria
-docs/figures/    committed normalized aggregates: the re-derivable half of a run
+docs/figures/    committed normalized aggregates: the re-derivable half of a run.
+                 figures/control/ is the ONE family allowed to name a server, and only under an
+                 authorisation recorded in docs/DISCLOSURE-LOG.md (gate rule 7, not an exception
+                 to gate rule 3 but the path rule 7 describes)
+docs/disclosure/ the text of what was actually sent to a maintainer, kept so it is recoverable
 tests/           the core test suite plus a mock MCP server
 ```
 
@@ -116,13 +120,18 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 439 tests, no Docker, no network
+make verify      # 467 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
 make run         # phase B SEQUENTIAL pass: real capture, one call in flight. Docker + network
 make run-concurrent  # phase B CONCURRENT pass: waves of N = 2, 5, 10. A separate run, separate figure
 make disclosure  # gate rule 7: destinations nobody declared. Non-zero exit means stop
+make control     # gate rule 7's second half: launch a bare browser through the same proxy with no
+                 # MCP server and compare destinations. Non-zero exit IS the result: it means the
+                 # control did NOT explain the finding. Docker + network
+make control-publish AUTH="..."  # commit the comparison as a figure that NAMES the instance.
+                 # Refuses without the authorisation record (docs/DISCLOSURE-LOG.md)
 make fp          # gate rule 9: the matcher's false-positive rate on the RESERVED half (published)
 make fp-calibration  # the same rate on the calibration half: this is the one to look at while working
 make ksweep      # F1.2: the false-positive and recall curves against k, and the k the rule picks
@@ -203,12 +212,25 @@ strong attributions over 33 strong claims, false provenance 0.0, normalized resu
 across two runs. Content matching discriminates between concurrent calls at N up to 10. Measured
 figures and the cells in `docs/PHASES.md`; committed artifact under `docs/figures/`.
 
-1. **The ten-server phase B capture.** Now unblocked: gate rule 8 is satisfied. Use `make run`;
-   a subset run for a smoke test is `--only <id>`.
+**The sequential phase B pass is done, published and clear of gate rule 7.** Run
+`20260919T115452Z-sequential`, artifact `docs/figures/20260919T115452Z-sequential.json`, cells in
+`docs/PHASES.md`, "Observed, sequential pass". Its two undeclared destinations were attributed to
+the browser one server embeds, by a control run rather than by reading a hostname (`make control`,
+threat 15), carried nothing on either channel, and were disclosed (`docs/DISCLOSURE-LOG.md`).
+
+1. **The concurrent phase B pass.** `make run-concurrent`. It is the only pass number 5 may be read
+   from, and the pre-registered predictions B1 and B2 in `docs/PHASES.md` are frozen by digest:
+   fill the "Observed, concurrent pass" section from the committed artifact and do NOT edit the
+   prediction block when you do.
 2. **Then** phase C, attacking attribution adversarially: the same fragment across concurrent
    calls on a real server, pooled connections, delayed egress. Phase A shows the sensor can
    discriminate when the pattern is ours to design; phase C is where it is not.
-3. Standing items, neither blocking: the `redact.py` PENDING gaps (a per-installation key with
+3. **Decide threat 16 after the concurrent pass**, not before and not by whoever hits it first: a
+   match between 22 and 28 bytes enters the numbers and may not be re-derivable from the persisted
+   digests, which is the property an external auditor presses first. Two options with their costs
+   are written in `docs/THREATS.md` threat 16; the input the decision is waiting on is the band's
+   measured share of real matches.
+4. Standing items, none blocking: the `redact.py` PENDING gaps (a per-installation key with
    rotation, and a minimum-fragment-length policy) before any real deployment, and the bench's
    HTTP-only limit if a TLS-specific capture defect ever needs ruling out.
 

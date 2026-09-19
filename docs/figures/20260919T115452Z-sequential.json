@@ -1,0 +1,198 @@
+{
+  "driving": {
+    "by_wave_size": {
+      "1": {
+        "calls": 26,
+        "errored": 3,
+        "ok": 23,
+        "stdout_noise_lines": 7,
+        "with_arguments": 23
+      }
+    },
+    "calls_errored": 3,
+    "calls_total": 26,
+    "command": "make numbers",
+    "error_fraction": 0.1154,
+    "flows_by_lifecycle_phase": {
+      "driving": 89,
+      "handshake": 7
+    },
+    "name": "driving_summary",
+    "not_one_of_the_six": "a denominator, not a finding: the six are ratios over what servers did in response to these calls"
+  },
+  "normalized": true,
+  "numbers": [
+    {
+      "command": "make n1",
+      "connections_excluding_package_infrastructure": {
+        "max": 3,
+        "n": 26,
+        "p50": 0,
+        "p95": 2
+      },
+      "connections_raw": {
+        "max": 84,
+        "n": 26,
+        "p50": 0,
+        "p95": 3
+      },
+      "distinct_hosts": {
+        "max": 3,
+        "n": 26,
+        "p50": 0,
+        "p95": 2
+      },
+      "distinct_hosts_note": "same quantity as number 2; published here so the raw connection count is never read on its own",
+      "exclusion_list": {
+        "list_name": "package-infrastructure",
+        "loaded": true,
+        "path": "registry/package-infrastructure.json",
+        "sha256": "3137eb3defc936d9ef5a06485242589a9adfb233d9573fae3489318157f9ceb0",
+        "suffix_count": 20,
+        "version": "2026-09-18"
+      },
+      "flows_with_unrecorded_phase": 0,
+      "launcher_connections": 7,
+      "launcher_connections_note": "seen while the launcher was resolving the package, before the server process existed. Excluded from every per-call figure by construction, never discarded",
+      "name": "outbound_connections_per_tool_call",
+      "number": 1,
+      "package_infrastructure_connections": 89
+    },
+    {
+      "command": "make n2",
+      "distribution": {
+        "max": 3,
+        "n": 26,
+        "p50": 0,
+        "p95": 2
+      },
+      "name": "distinct_domains_per_tool_call",
+      "number": 2
+    },
+    {
+      "by_protocol_revision": {
+        "2024-11-05": {
+          "fraction": 0.0,
+          "servers_propagating": 0,
+          "servers_total": 3
+        },
+        "2025-11-25": {
+          "fraction": 0.0,
+          "servers_propagating": 0,
+          "servers_total": 7
+        }
+      },
+      "command": "make n3",
+      "name": "servers_propagating_traceparent",
+      "number": 3,
+      "pooled_fraction": 0.0,
+      "pooled_note": "read the segments; SEP-414 is a 2026-07-28 change, so a server answering an earlier revision predates the convention",
+      "servers_propagating": 0,
+      "servers_total": 10
+    },
+    {
+      "body_matched_bytes": 0,
+      "command": "make n4",
+      "flows_total": 96,
+      "flows_with_body_match": 0,
+      "flows_with_context_match": 0,
+      "flows_with_target_match": 0,
+      "fraction_flows_with_match": 0.0,
+      "matched_bytes_total": 0,
+      "name": "provenance_coverage",
+      "number": 4,
+      "observed_body_bytes": 546,
+      "observed_outbound_bytes_total": 3494,
+      "observed_target_bytes": 2948,
+      "occurrence_counts": {
+        "connection_only": 0,
+        "observed": 96
+      },
+      "provenance_counts": {
+        "arguments": 2,
+        "both": 0,
+        "context": 0,
+        "none": 94,
+        "unknown": 0
+      },
+      "target_matched_bytes": 0
+    },
+    {
+      "attribution_grades": {
+        "CONTENT_AMBIGUOUS": 0,
+        "CONTENT_MATCH_UNCONTESTED": 2,
+        "CONTENT_UNIQUE": 0,
+        "TEMPORAL_ONLY": 5,
+        "TRACE_PROPAGATED": 0,
+        "UNATTRIBUTED": 89
+      },
+      "attribution_reasons": {
+        "fragment matched with only one call active: no competing candidate existed, so nothing was discriminated": 2,
+        "ineligible: package infrastructure traffic, carries no tool-call arguments": 82,
+        "pre-launch: seen while the launcher was resolving the package, before the server process existed, so no tool call could have caused it": 7,
+        "time window and pid, with exactly one call in flight": 5
+      },
+      "command": "make n5",
+      "content_match_by_channel": {
+        "body": 0,
+        "both": 0,
+        "target": 2
+      },
+      "exclusion_list": {
+        "list_name": "package-infrastructure",
+        "loaded": true,
+        "path": "registry/package-infrastructure.json",
+        "sha256": "3137eb3defc936d9ef5a06485242589a9adfb233d9573fae3489318157f9ceb0",
+        "suffix_count": 20,
+        "version": "2026-09-18"
+      },
+      "flows_total": 96,
+      "grades_by_window_size": {
+        "0": {
+          "UNATTRIBUTED": 7
+        },
+        "1": {
+          "CONTENT_MATCH_UNCONTESTED": 2,
+          "TEMPORAL_ONLY": 5,
+          "UNATTRIBUTED": 82
+        }
+      },
+      "max_active_calls_in_window": 1,
+      "name": "attribution_grade_distribution",
+      "number": 5,
+      "pass": "sequential",
+      "published_as": "lower_bound",
+      "published_as_reason": "the sensor's self-match recall on realistic argument material is below 1, so an attributable share measured with it is a floor and not an estimate. Measured by `make inventory`; decomposed per family in docs/CALIBRATION.md, 'The self-match ceiling', and stated as threat 12 in docs/THREATS.md",
+      "sequential_driving": true,
+      "sequential_driving_note": "every flow was seen with at most one call in flight, so CONTENT_UNIQUE is unreachable by construction and content matches grade as CONTENT_MATCH_UNCONTESTED. This is the expected outcome of the sequential pass and is reported as such, never as a finding about content matching. The distribution that answers whether content matching discriminates comes from the concurrent pass; see docs/PHASES.md, phase B",
+      "strong_attribution_count": 0,
+      "strong_attribution_fraction": 0.0,
+      "strong_attribution_grades": [
+        "TRACE_PROPAGATED",
+        "CONTENT_UNIQUE"
+      ]
+    },
+    {
+      "category_counts": {
+        "local": 0,
+        "remote_leaf": 4,
+        "self_hostable": 0
+      },
+      "command": "make n6",
+      "distinct_nodes": 4,
+      "name": "selfhostable_third_parties",
+      "number": 6,
+      "selfhostable_fraction": 0.0
+    }
+  ],
+  "provenance": {
+    "command": "python -m mcpfanout.cli figures --run runs/20260919T115452Z-sequential",
+    "corpus_sha256": "e1125f2b1ed7a2d50e668a14c2210a6ac6f9579f6a7a036e54952993c33d9733",
+    "created": "2026-09-19T11:55:41.003490+00:00",
+    "notes": "Capture run, sequential pass. See docs/THE-GATE.md before publishing any number. Numbers 1 to 4 are read from this pass; its attribution grades are CONTENT_MATCH_UNCONTESTED by construction.",
+    "pass": "sequential",
+    "run_id": "20260919T115452Z-sequential",
+    "salt_fixed": true,
+    "server_count": 10
+  }
+}

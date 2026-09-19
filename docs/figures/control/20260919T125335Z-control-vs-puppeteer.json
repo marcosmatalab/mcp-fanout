@@ -1,0 +1,142 @@
+{
+  "authorisation": "Marcos Mata, 2026-09-19, docs/DISCLOSURE-LOG.md#2026-09-19-browser-embedded-background-egress",
+  "control": {
+    "hosts": {
+      "accounts.google.com": 3,
+      "clients2.google.com": 3,
+      "example.net": 3,
+      "r2---sn-8vq54voxn25po-h5qel.gvt1.com": 3,
+      "redirector.gvt1.com": 3
+    },
+    "matching": {
+      "argument_channel": {
+        "causal_flows": 3,
+        "is_the_sensor_alive": true,
+        "means": "flows carrying a k-gram of the driving call's own arguments. Zero across a whole run means the matcher saw nothing, which is not the same as there being nothing to see"
+      },
+      "context_channel": {
+        "body_matched_bytes": 0,
+        "flows_with_a_match": 0,
+        "target_matched_bytes": 0
+      },
+      "flows": 15
+    },
+    "server_id": "control-chromium"
+  },
+  "control_driving": {
+    "browser": "/root/.cache/puppeteer/chrome/linux-131.0.6778.204/chrome-linux64/chrome",
+    "cold_profile_per_launch": true,
+    "dwell_seconds": 12.0,
+    "flags": [
+      "--no-sandbox",
+      "--single-process",
+      "--no-zygote"
+    ],
+    "headless": "--headless=new",
+    "mcp_server_in_process_tree": false,
+    "navigation_url_source": "corpus/calls/puppeteer.json",
+    "proxy_via": "HTTP(S)_PROXY environment, as the server's browser receives it",
+    "repetitions": 3
+  },
+  "did_the_reviewed_hosts_carry_our_material": {
+    "accounts.google.com": {
+      "in_the_control": {
+        "argument_channel": {
+          "causal_flows": 0,
+          "means": "flows carrying a k-gram of the driving call's own arguments"
+        },
+        "context_channel": {
+          "body_matched_bytes": 0,
+          "flows_with_a_match": 0,
+          "target_matched_bytes": 0
+        },
+        "flows": 3
+      },
+      "under_the_server": {
+        "argument_channel": {
+          "causal_flows": 0,
+          "means": "flows carrying a k-gram of the driving call's own arguments"
+        },
+        "context_channel": {
+          "body_matched_bytes": 0,
+          "flows_with_a_match": 0,
+          "target_matched_bytes": 0
+        },
+        "flows": 1
+      }
+    },
+    "clients2.google.com": {
+      "in_the_control": {
+        "argument_channel": {
+          "causal_flows": 0,
+          "means": "flows carrying a k-gram of the driving call's own arguments"
+        },
+        "context_channel": {
+          "body_matched_bytes": 0,
+          "flows_with_a_match": 0,
+          "target_matched_bytes": 0
+        },
+        "flows": 3
+      },
+      "under_the_server": {
+        "argument_channel": {
+          "causal_flows": 0,
+          "means": "flows carrying a k-gram of the driving call's own arguments"
+        },
+        "context_channel": {
+          "body_matched_bytes": 0,
+          "flows_with_a_match": 0,
+          "target_matched_bytes": 0
+        },
+        "flows": 1
+      }
+    }
+  },
+  "names_an_instance": true,
+  "normalized": true,
+  "not_reproduced_by_the_bare_browser": [],
+  "only_in_the_control": [
+    "r2---sn-8vq54voxn25po-h5qel.gvt1.com",
+    "redirector.gvt1.com"
+  ],
+  "only_under_the_server": [],
+  "provenance": {
+    "command": "python -m mcpfanout.cli control-compare --run runs/20260919T125335Z-control --against runs/20260919T115452Z-sequential --server puppeteer --publish docs/figures/control",
+    "control_run_id": "20260919T125335Z-control",
+    "dwell_seconds": 12.0,
+    "navigation_url_source": "corpus/calls/puppeteer.json",
+    "repetitions": 3,
+    "subject_run_id": "20260919T115452Z-sequential"
+  },
+  "reproduced_by_the_bare_browser": [
+    "accounts.google.com",
+    "clients2.google.com"
+  ],
+  "subject": {
+    "hosts": {
+      "accounts.google.com": 1,
+      "clients2.google.com": 1,
+      "example.net": 1
+    },
+    "matching": {
+      "argument_channel": {
+        "causal_flows": 1,
+        "is_the_sensor_alive": true,
+        "means": "flows carrying a k-gram of the driving call's own arguments. Zero across a whole run means the matcher saw nothing, which is not the same as there being nothing to see"
+      },
+      "context_channel": {
+        "body_matched_bytes": 0,
+        "flows_with_a_match": 0,
+        "target_matched_bytes": 0
+      },
+      "flows": 4
+    },
+    "server_id": "puppeteer"
+  },
+  "under_review": [
+    "accounts.google.com",
+    "clients2.google.com"
+  ],
+  "verdict": "cause_reproduced",
+  "verdict_means": "every destination under review was also reached by the bare browser, so the MCP server is not a necessary condition for any of them"
+}
