@@ -1,0 +1,524 @@
+{
+  "_what_this_is": "Negative control: concurrent call pairs that share LANGUAGE STRUCTURE and NO INFORMATION. Every match the matcher claims between two calls of one family is a false positive, because neither call's arguments caused the other's request. See docs/CALIBRATION.md.",
+  "families": [
+    {
+      "api": "a search endpoint: JSON {query} in, GET /api/search?q=<plus-encoded> out",
+      "calls": [
+        {
+          "arguments": {
+            "query": "how to renew a tls certificate"
+          },
+          "id": "hel-search-01",
+          "information": [
+            "renew a tls certificate",
+            "renew+a+tls+certificate"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+renew+a+tls+certificate"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to merge two audio tracks"
+          },
+          "id": "hel-search-02",
+          "information": [
+            "merge two audio tracks",
+            "merge+two+audio+tracks"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+merge+two+audio+tracks"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to schedule a nightly backup"
+          },
+          "id": "hel-search-03",
+          "information": [
+            "schedule a nightly backup",
+            "schedule+a+nightly+backup"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+schedule+a+nightly+backup"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to install a printer driver"
+          },
+          "id": "hel-search-04",
+          "information": [
+            "install a printer driver",
+            "install+a+printer+driver"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+install+a+printer+driver"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to convert markdown to pdf"
+          },
+          "id": "hel-search-05",
+          "information": [
+            "convert markdown to pdf",
+            "convert+markdown+to+pdf"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+convert+markdown+to+pdf"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to reset a forgotten passphrase"
+          },
+          "id": "hel-search-06",
+          "information": [
+            "reset a forgotten passphrase",
+            "reset+a+forgotten+passphrase"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+reset+a+forgotten+passphrase"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to archive an inactive project"
+          },
+          "id": "hel-search-07",
+          "information": [
+            "archive an inactive project",
+            "archive+an+inactive+project"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+archive+an+inactive+project"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to throttle a noisy webhook"
+          },
+          "id": "hel-search-08",
+          "information": [
+            "throttle a noisy webhook",
+            "throttle+a+noisy+webhook"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+throttle+a+noisy+webhook"
+          }
+        }
+      ],
+      "family": "search_query",
+      "shared_literals": [
+        "{\"query\": \"",
+        "/api/search?q=",
+        "how to "
+      ],
+      "shared_structure_note": "the JSON envelope, the path prefix, the opening phrase, and plus-encoding of every space",
+      "why": "Free-text search is the most common shape an agent sends and the one where shared English carries the most bytes. Every call here begins with the same four words, which is not a trick: an agent asking a documentation search engine phrases its questions the same way every time."
+    },
+    {
+      "api": "a REST read: JSON {owner, repo, path} in, GET /repos/<owner>/<repo>/contents/<path> out",
+      "calls": [
+        {
+          "arguments": {
+            "owner": "copper-lane",
+            "path": "docs/webhooks.md",
+            "repo": "billing-proxy"
+          },
+          "id": "hel-rest-01",
+          "information": [
+            "copper-lane",
+            "billing-proxy",
+            "docs/webhooks.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/copper-lane/billing-proxy/contents/docs/webhooks.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "silver-mill",
+            "path": "docs/caching.md",
+            "repo": "asset-packer"
+          },
+          "id": "hel-rest-02",
+          "information": [
+            "silver-mill",
+            "asset-packer",
+            "docs/caching.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/silver-mill/asset-packer/contents/docs/caching.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "timber-row",
+            "path": "docs/ranking.md",
+            "repo": "search-indexer"
+          },
+          "id": "hel-rest-03",
+          "information": [
+            "timber-row",
+            "search-indexer",
+            "docs/ranking.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/timber-row/search-indexer/contents/docs/ranking.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "marble-court",
+            "path": "docs/audit.md",
+            "repo": "consent-store"
+          },
+          "id": "hel-rest-04",
+          "information": [
+            "marble-court",
+            "consent-store",
+            "docs/audit.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/marble-court/consent-store/contents/docs/audit.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "amber-field",
+            "path": "docs/rosters.md",
+            "repo": "shift-planner"
+          },
+          "id": "hel-rest-05",
+          "information": [
+            "amber-field",
+            "shift-planner",
+            "docs/rosters.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/amber-field/shift-planner/contents/docs/rosters.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "cedar-point",
+            "path": "docs/topics.md",
+            "repo": "signal-relay"
+          },
+          "id": "hel-rest-06",
+          "information": [
+            "cedar-point",
+            "signal-relay",
+            "docs/topics.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/cedar-point/signal-relay/contents/docs/topics.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "harbour-end",
+            "path": "docs/layouts.md",
+            "repo": "receipt-printer"
+          },
+          "id": "hel-rest-07",
+          "information": [
+            "harbour-end",
+            "receipt-printer",
+            "docs/layouts.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/harbour-end/receipt-printer/contents/docs/layouts.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "willow-park",
+            "path": "docs/scoring.md",
+            "repo": "survey-runner"
+          },
+          "id": "hel-rest-08",
+          "information": [
+            "willow-park",
+            "survey-runner",
+            "docs/scoring.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/willow-park/survey-runner/contents/docs/scoring.md"
+          }
+        }
+      ],
+      "family": "rest_path",
+      "shared_literals": [
+        "{\"owner\": \"",
+        "\"path\": \"docs/",
+        "/repos/",
+        "/contents/docs/",
+        ".md"
+      ],
+      "shared_structure_note": "the JSON keys, both path prefixes, the docs/ directory, the .md extension and kebab-case naming throughout",
+      "why": "Structured arguments reassembled into a path. Included precisely because it is expected to behave BETTER than free text: the JSON envelope never reaches the wire, so the only shared runs are path segments. A negative corpus of only the hard shapes would overstate the rate."
+    },
+    {
+      "api": "a fetch: JSON {url} in, GET <path of that url> out, same host throughout",
+      "calls": [
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/network/egress-rules"
+          },
+          "id": "hel-doc-01",
+          "information": [
+            "egress-rules"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/network/egress-rules"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/network/edge-caching"
+          },
+          "id": "hel-doc-02",
+          "information": [
+            "edge-caching"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/network/edge-caching"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/network/dns-failover"
+          },
+          "id": "hel-doc-03",
+          "information": [
+            "dns-failover"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/network/dns-failover"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/billing/invoices"
+          },
+          "id": "hel-doc-04",
+          "information": [
+            "invoices"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/billing/invoices"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/billing/usage-limits"
+          },
+          "id": "hel-doc-05",
+          "information": [
+            "usage-limits"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/billing/usage-limits"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/identity/session-cookies"
+          },
+          "id": "hel-doc-06",
+          "information": [
+            "session-cookies"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/identity/session-cookies"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/identity/scim-groups"
+          },
+          "id": "hel-doc-07",
+          "information": [
+            "scim-groups"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/identity/scim-groups"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/runtime/cold-starts"
+          },
+          "id": "hel-doc-08",
+          "information": [
+            "cold-starts"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/runtime/cold-starts"
+          }
+        }
+      ],
+      "family": "doc_url",
+      "shared_literals": [
+        "https://docs.example.net/guides/",
+        "/guides/"
+      ],
+      "shared_structure_note": "one host, one /guides/ prefix, a section segment shared by groups of calls, and kebab-case leaf names",
+      "why": "Sibling documents on one site. The section prefix is shared because that is what a site taxonomy is, and several leaves start with the same letters, which is what sibling pages look like. This family is where the rate should depend on k most sharply, since the shared run is the prefix plus however many leaf characters happen to agree."
+    },
+    {
+      "api": "a POST: JSON {text, locale} in, a JSON body out that wraps the same fields",
+      "calls": [
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "the release note should credit the external contributor"
+          },
+          "id": "hel-post-01",
+          "information": [
+            "the release note should credit the external contributor"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0001\", \"text\": \"the release note should credit the external contributor\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "please shorten the subject line of the weekly digest"
+          },
+          "id": "hel-post-02",
+          "information": [
+            "please shorten the subject line of the weekly digest"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0002\", \"text\": \"please shorten the subject line of the weekly digest\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "the password hint must not reveal the character count"
+          },
+          "id": "hel-post-03",
+          "information": [
+            "the password hint must not reveal the character count"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0003\", \"text\": \"the password hint must not reveal the character count\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "rewrite the empty state so it suggests the next action"
+          },
+          "id": "hel-post-04",
+          "information": [
+            "rewrite the empty state so it suggests the next action"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0004\", \"text\": \"rewrite the empty state so it suggests the next action\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "the export dialog needs a warning about large downloads"
+          },
+          "id": "hel-post-05",
+          "information": [
+            "the export dialog needs a warning about large downloads"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0005\", \"text\": \"the export dialog needs a warning about large downloads\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "clarify that the trial ends at the start of the period"
+          },
+          "id": "hel-post-06",
+          "information": [
+            "clarify that the trial ends at the start of the period"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0006\", \"text\": \"clarify that the trial ends at the start of the period\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "the banner copy should avoid naming a specific browser"
+          },
+          "id": "hel-post-07",
+          "information": [
+            "the banner copy should avoid naming a specific browser"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0007\", \"text\": \"the banner copy should avoid naming a specific browser\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "explain in the caption why the chart excludes refunds"
+          },
+          "id": "hel-post-08",
+          "information": [
+            "explain in the caption why the chart excludes refunds"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0008\", \"text\": \"explain in the caption why the chart excludes refunds\"}",
+            "target": "/v1/rewrite"
+          }
+        }
+      ],
+      "family": "json_post",
+      "shared_literals": [
+        "\"locale\": \"en-US\"",
+        "\"text\": \"",
+        "the "
+      ],
+      "shared_structure_note": "the JSON keys, the locale enum, the wrapper keys the server adds, and ordinary English sentences",
+      "why": "The worst case, and the most ordinary one. Every call carries the same locale enum and the same key names, and the server's body repeats them verbatim, so a 16-byte run of shared field structure exists in every pair before a single word of the payload is compared. This is the family that makes the case for weighting a k-gram by how common it is."
+    }
+  ],
+  "half": "held_out",
+  "pair_rule": "ordered pairs WITHIN a family only: (A, B) asks whether a k-gram of B's arguments appears in A's request. Cross-family pairs share no structure, so counting them would deflate the rate with cases nobody finds hard."
+}

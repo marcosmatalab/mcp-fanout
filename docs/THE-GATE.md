@@ -1,6 +1,6 @@
 # The gate
 
-Eight conditions a run must pass before any number from it is reported. The gate is on the first
+Nine conditions a run must pass before any number from it is reported. The gate is on the first
 screen on purpose: it is where credibility is won or lost.
 
 1. **Reproducible, at two levels.** The levels are different because the things being reproduced
@@ -101,3 +101,25 @@ screen on purpose: it is where credibility is won or lost.
    caused on purpose, precision needs a known cause to check against. A phase B run therefore
    cannot tell you whether the sensor worked. Measuring the phenomenon first means finding out
    afterwards, if ever, and every figure published in between is unfalsifiable.
+
+9. **The matcher is calibrated on real language before volume is measured.** No figure from a
+   real-server run may be published until the matcher's false-positive rate on structured language
+   has been measured and published, with its interval, over at least 200 concurrent call pairs that
+   share language structure and no information. See `docs/CALIBRATION.md`; the command is
+   `make fp`.
+
+   Why this is a separate rule from rule 8, when both are about the instrument. Rule 8 asks whether
+   the sensor SEES what it should and whether it CLAIMS only what it can support, and it was
+   satisfied against keyed digests: forty bytes of material that exists nowhere else. That is the
+   most favourable input the matcher will ever get. Rule 9 asks a question those fragments cannot
+   answer at all: on natural language and URLs that share a JSON envelope, a path prefix, a host
+   and ordinary English words, how often does the matcher affirm a coincidence that does not exist?
+   Without that figure, the error bar on every volume number is unknown in the one direction that
+   inflates it, and "the margin is tiny" is an adjective.
+
+   The rule includes its own anti-tuning clause, because the corpus that produces the number is
+   also the corpus any improvement is developed against. The corpus is split in two halves before
+   any measurement exists: one for calibration, one reserved and measured once at the end, which is
+   the half the published figure comes from. `calibrate.load_negative` refuses the reserved half to
+   a calibration purpose, and tests fail if that refusal is bypassed or if the halves stop being
+   independent.

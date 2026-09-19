@@ -5,7 +5,7 @@
 # We set RECIPEPREFIX to '>' so recipe lines do not depend on literal tabs.
 .RECIPEPREFIX = >
 .PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
-        bench-verify disclosure clean
+        bench-verify disclosure fp fp-calibration clean
 
 RUN ?= latest
 
@@ -62,6 +62,18 @@ bench:
 # The instrument block from a bench run: capture recall, attribution precision, false provenance.
 bench-verify:
 > python3 -m mcpfanout.cli bench-verify --run $(RUN)
+
+# F1.1, the published figure: how often the matcher claims a coincidence that does not exist, over
+# concurrent call pairs that share language structure and no information. Measured on the HELD-OUT
+# half, which is touched once, at the end, and never used to tune anything. Needs no Docker.
+fp:
+> python3 -m mcpfanout.cli calibrate --half held_out --out docs/figures/calibration
+
+# The same measurement on the CALIBRATION half. This is the one to look at while working: choosing
+# k or a threshold against the held-out half would publish the corpus's own opinion of the matcher,
+# and the loader refuses it (docs/CALIBRATION.md).
+fp-calibration:
+> python3 -m mcpfanout.cli calibrate --half calibration --out docs/figures/calibration
 
 # Gate rule 7: which of a run's destinations nobody declared. Exits non-zero if any server needs
 # reviewing, or if the declaration file is missing (unevaluated is not the same as satisfied).

@@ -137,7 +137,7 @@ make disclosure
 
 See [`docs/METHOD.md`](docs/METHOD.md) for the observation model and the capture layers,
 [`docs/PHASES.md`](docs/PHASES.md) for the three phases and the two phase B passes, and
-[`docs/THE-GATE.md`](docs/THE-GATE.md) for the eight conditions a run must pass before any number
+[`docs/THE-GATE.md`](docs/THE-GATE.md) for the nine conditions a run must pass before any number
 is reported.
 
 ## Reproducibility, privacy, disclosure
@@ -175,6 +175,7 @@ This is `v0.1`: the honest state of each part.
 | Server registry (10 servers), pinned and probed | Every server's tool schemas measured and committed under `registry/probes/` |
 | Per-server call corpora, sequential and concurrent | Both aligned against the real schemas and gated by tests |
 | Phase A bench (the instrument) | Built, run, and passing its pre-registered sensor gate |
+| Matcher calibration on structured language (`make fp`) | False-positive rate measured and published over 224 held-out pairs; the k sweep and rarity weighting are the open pieces |
 | eBPF SSL uprobe capture (product-grade, catches pinned TLS) | Out of scope for the measurement, documented as the next layer |
 
 ## License

@@ -55,7 +55,11 @@ schemas (`registry/probes/`, gated by `tests/test_corpus_matches_probes.py` and
 propagation, provenance coverage, attribution grades, self-hostable fraction. It measures nothing
 about the instrument.
 
-Unblocked: phase A passed the sensor gate, which is what gate rule 8 required.
+Phase A passed the sensor gate, which is what gate rule 8 required. **Phase B is still blocked, by
+gate rule 9**: the matcher's false-positive rate on structured language has to be measured and
+published before any volume figure is, because phase A measured that rate over keyed digests and
+real arguments are natural language and URLs that share structure. See `docs/CALIBRATION.md`, which
+also carries the three pieces of that work and which of them are done.
 
 ### Why two passes and not one
 
