@@ -375,3 +375,42 @@ labelled that way wherever it appears.
 
 Number 4 is byte-identical to the committed figure. The split is real: two problems, two
 instruments, and changing one did not disturb the other.
+
+## 12. The timeline, anchored to a clock we do not control
+
+A pre-registration certified only by its own repository is certified by the author's machine. A
+commit's author date is local metadata: `--amend --date` or a rebase rewrites it and leaves no
+trace. So the ordering claimed in this document is worth exactly as much as the external record
+behind it, and the external record is set out here in full, including where it runs out.
+
+**What GitHub's own clock witnesses.** None of these timestamps is written by us.
+
+| GitHub server time (UTC) | event | what it fixes |
+|---|---|---|
+| 2026-09-19T13:16:41Z | push of `e9d7ea9` to `main` | the repository contained **no F2 material at all** at this instant |
+| 2026-09-19T17:56:24Z | issue `ReadabiliPy#122` created | the threat 17 causal chain existed, in writing, by now |
+| 2026-09-19T17:56:40Z | issue `modelcontextprotocol/servers#4830` created | it links #122, so GitHub fixes their order too |
+| 2026-09-19T18:23:55Z | push of `e5c1892`, carrying `68889d8` and three more | the four commits existed by now |
+
+The sealed block lives in `68889d8`, whose author date is 2026-09-19T17:54:12Z, two minutes
+before the first issue. The issue text quotes the same causal chain that section 0 and threat 17
+carry, so the CONTENT of that work is externally timestamped by a party with no interest in it.
+
+**What this does not witness, stated plainly because overclaiming here would be worse than not
+claiming.** All four commits reached GitHub in one push at 18:23:55Z, which is after the
+measurement. GitHub therefore witnesses that the whole bundle existed by 18:23:55Z; it does not
+witness the ORDER of the four commits, nor that the sealed block predates the results in section
+11. That ordering still rests on local metadata plus the corroboration above. A determined
+skeptic is entitled to say so, and this paragraph exists so they do not have to.
+
+**The process defect, and the rule that follows from it.** The pre-registration should have been
+pushed the moment it was sealed, before anything was measured, so that GitHub's clock separated
+the seal from the result instead of bundling them. It was not: all four commits were pushed
+together at the end. That is a real weakness in this instance, it cannot be repaired after the
+fact, and repairing it by rewriting dates is precisely the fraud the whole apparatus exists to
+prevent.
+
+**So the rule, for every pre-registration after this one: seal, commit, PUSH, and only then
+measure.** A seal that has not left the machine is a draft with a hash on it. Commits from
+`e5c1892` onward are GPG-signed, which binds authorship but not time; it is the push that binds
+time, and only a push that happens before the measurement binds the right thing.
