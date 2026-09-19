@@ -54,3 +54,47 @@ unverifiable, and naming only the package accuses a maintainer of something the 
 write.
 
 **Status.** Raised 2026-09-19 as issue 4829. No response yet.
+
+---
+
+## 2026-09-19, a tool call that installs and executes third-party code while it runs
+
+**Observed.** Driving `mcp-server-fetch@2026.8.18` under capture, the server opened 82
+connections to `registry.npmjs.org` while serving tool calls that named a single reserved domain,
+against 4 to the host the calls actually asked for. Package caches are warmed before the proxy
+starts, so these are not the harness's. Runs `20260919T115452Z-sequential` and
+`20260919T130847Z-concurrent`.
+
+**Measured, not reasoned.** The chain was read out of the installed package, not inferred from a
+hostname: `mcp-server-fetch` depends on `readabilipy`, whose `simple_json.py` calls `have_node()`
+during HTML conversion, which calls `run_npm_install()` in `utils.py`, which runs
+`subprocess.run(["npm", "install"], check=True)` against a shipped `package.json` with no lockfile
+and three unpinned ranges. Full chain and the command to reproduce it: `docs/THREATS.md`
+threat 17.
+
+**Why it was raised.** Gate rule 7: `registry.npmjs.org` is a destination the tool's own
+documentation does not declare. Beyond that, the code executed is resolved at call time, so the
+same pinned server runs different JavaScript on different days. The measured drift is the
+evidence: 87 connections on 2026-09-18, 82 on each of two runs on 2026-09-19.
+
+**Raised 2026-09-19**, as two issues rather than one, because there are two different asks and a
+single text would let each maintainer read it as the other's problem:
+
+| addressee | ask | issue |
+|---|---|---|
+| `alan-turing-institute/ReadabiliPy` | ship a lockfile and use `npm ci`, capture the subprocess output so npm does not write to the parent's stdout, offer an opt-out | https://github.com/alan-turing-institute/ReadabiliPy/issues/122 |
+| `modelcontextprotocol/servers` | document that HTML conversion may install npm packages on first use, and what that means for an egress allowlist | https://github.com/modelcontextprotocol/servers/issues/4830 |
+
+Not a vulnerability report. No severity, no identifier, no security framing. The behaviour is
+deliberate on ReadabiliPy's part and documented as a fallback in its own code; what the report
+adds is that the caller is now often an autonomous agent, where the same behaviour has different
+consequences. Text as sent:
+`docs/disclosure/2026-09-19-readabilipy-npm-install-at-call-time.md`.
+
+**This entry carries a publication window and previous entries do not.** About 30 days, around
+2026-10-19, stated in both texts as a note about our own timing and explicitly not as a deadline
+for anyone to fix anything. The reason for the departure: the write-up names the mechanism in
+full, and giving maintainers a date in advance is better than letting them find out from the
+paper. It does not make this a vulnerability process and nothing is embargoed.
+
+**Not yet answered.** Responses are recorded in the draft file as they arrive.

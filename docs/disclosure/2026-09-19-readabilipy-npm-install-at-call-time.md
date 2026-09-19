@@ -19,6 +19,13 @@ both would make each read as the other's problem.
 **Send before publishing.** Gate rule 7. Both projects are active and reachable, unlike the
 archived server in the other disclosure.
 
+**On the 30-day window.** Both texts state that the measurement will be written up in about 30
+days. That is a courtesy notice of when publication happens, not a deadline for anyone to fix
+anything, and the texts say so in those words. It is deliberately generous for something that is
+not a vulnerability. This is the first entry in this project to carry a window at all, and the
+reason is that the write-up names the mechanism in full: giving maintainers advance notice of a
+publication date is better than letting them find out from the paper.
+
 ---
 
 ## 1. To `alan-turing-institute/ReadabiliPy`
@@ -79,6 +86,11 @@ Three things that would each help, roughly in order of how much:
 Happy to open a PR for any of these if that is useful, and happy to share the measurement method
 if it is of interest.
 
+I am writing this measurement up and expect to publish in about 30 days, around 2026-10-19. That
+is a note about my own timing and not a deadline for you: nothing here is a vulnerability and
+there is nothing to embargo. I would simply rather you heard it from me first, and if you would
+like the write-up to reflect a fix or a correction, tell me and I will wait.
+
 ---
 
 ## 2. To the `mcp-server-fetch` maintainers
@@ -126,9 +138,22 @@ I am writing up the measurement and would rather you saw this before it is publi
 Nothing in the write-up frames either project as vulnerable; the finding is about tool calls that
 install code while they run, of which this is the clearest example I found.
 
+I expect to publish in about 30 days, around 2026-10-19. That is my own timing rather than a
+deadline for you, and there is nothing to embargo. If a correction or a fix should be reflected,
+say so and I will wait.
+
 ---
 
 ## What was actually sent
 
-Not yet sent. Fill in the date, the URL and the response here when it is, and add the row to
-`docs/DISCLOSURE-LOG.md`, which is what gate rule 7 checks.
+**Sent 2026-09-19**, both as GitHub issues from the account `marcosmatalab`, with the text above
+plus one cross-reference added to the second so each maintainer can see the other half.
+
+| addressee | issue | text |
+|---|---|---|
+| `alan-turing-institute/ReadabiliPy` | https://github.com/alan-turing-institute/ReadabiliPy/issues/122 | section 1 above, verbatim |
+| `modelcontextprotocol/servers` | https://github.com/modelcontextprotocol/servers/issues/4830 | section 2 above, plus a closing line linking issue 122 |
+
+Publication window stated in both: about 30 days, around 2026-10-19.
+
+No response yet. Record replies here.
