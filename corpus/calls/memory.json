@@ -1,7 +1,7 @@
 [
-  {"tool": "create_entities", "arguments": {"entities": [{"name": "probe", "entityType": "test", "observations": ["CANARY_QRY_ab12cd34ef56"]}]},
+  {"tool": "create_entities", "arguments": {"entities": [{"name": "probe", "entityType": "test", "observations": ["CANARY_QRY_ab12cd34ef56789a0b1c2d"]}]},
    "why": "The item schema requires name, entityType and observations, and observations is an array of strings. Canary inside an observation: a knowledge-graph server that syncs anywhere would carry it."},
-  {"tool": "search_nodes", "arguments": {"query": "CANARY_QRY_ab12cd34ef56"},
+  {"tool": "search_nodes", "arguments": {"query": "CANARY_QRY_ab12cd34ef56789a0b1c2d"},
    "why": "Second canary carrier, on the read side, in case writes stay local and reads do not."},
   {"tool": "read_graph", "arguments": {},
    "why": "The argument-less call for this server."}

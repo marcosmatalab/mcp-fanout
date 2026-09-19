@@ -14,8 +14,19 @@ and it is cheap at the price.
 
 THE TRUTH LEDGER. From inside the handler, for every outbound connection it makes, this server
 appends one line to BENCH_TRUTH: which call_id caused it, where it went, which fragment it
-carried and in which channel. That file is written only here, read only by the comparator
-(mcpfanout.bench_metrics), and never read by the capture addon.
+carried and in which channel, AND the exact bytes it sent (request target and body) together with
+the arguments the call arrived with. That file is written only here, read only by the comparator
+(mcpfanout.bench_metrics) and by the k sweep (mcpfanout.calibrate), and never read by the capture
+addon.
+
+Why the ledger holds payload bytes when the rest of the harness stores only digests. Negative 2
+(docs/DOCTRINE.md) constrains what the OBSERVER stores about traffic it did not create. This file
+is the opposite: it is the sender's own account of material the sender generated, all of it
+synthetic and keyed from a published constant, in a run directory that is never committed. It has
+always carried the fragment verbatim for exactly that reason. The bytes are needed because a
+content-match recall curve over k cannot be recomputed from digests taken at one k, and the
+alternative, re-running the bench once per value of k, would take an hour to answer a question the
+sender already knows the answer to.
 
 Threaded on purpose. Concurrency is not one bench case among eleven, it is the whole question:
 CONTENT_UNIQUE cannot exist unless several calls are genuinely in flight at once. Each tools/call
@@ -27,6 +38,7 @@ the way mcp-server-fetch corrupts its own with npm output.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import socket
@@ -95,7 +107,8 @@ def _sink_url(slot: int, path: str) -> str:
     return f"http://{_sink_host(slot)}:{port}{path}"
 
 
-def _egress(call_id: str, slot: int, fragment: str, channel: str) -> dict:
+def _egress(call_id: str, slot: int, fragment: str, channel: str,
+            arguments: dict | None = None) -> dict:
     """Make ONE outbound request carrying ``fragment`` in ``channel``, and record the truth.
 
     Channels are the three a real server can leak through, and the sensor currently reads two of
@@ -130,7 +143,15 @@ def _egress(call_id: str, slot: int, fragment: str, channel: str) -> dict:
         error = f"{type(exc).__name__}: {exc}"
 
     row = {"call_id": call_id, "dest_host": host, "path": path, "method": method,
-           "channel": channel, "fragment": fragment, "ts": time.time(), "error": error}
+           "channel": channel, "fragment": fragment, "ts": time.time(), "error": error,
+           # The exact bytes on the wire, so a matcher question can be re-asked at any k without
+           # re-running the bench. base64 because one cell sends gzip, and a ledger line has to
+           # stay one line of valid JSON whatever the payload is.
+           "request_target": path,
+           "request_body_b64": base64.b64encode(body or b"").decode(),
+           # What the call arrived with. The server's OWN knowledge (it came in on stdin), not
+           # anything read from the harness, so the isolation property is untouched.
+           "call_arguments": arguments or {}}
     _truth(row)
     return row
 
@@ -220,10 +241,10 @@ def _handle_call(mid, params: dict) -> None:
 
     try:
         if name == "bench_emit":
-            _egress(call_id, slot, fragment, channel)
+            _egress(call_id, slot, fragment, channel, args)
         elif name == "bench_emit_many":
             for i in range(int(args.get("count", 1))):
-                _egress(call_id, slot, fragment, channel)
+                _egress(call_id, slot, fragment, channel, args)
         elif name == "bench_emit_late":
             delay = int(args.get("delay_ms", 1500)) / 1000.0
             _send({"jsonrpc": "2.0", "id": mid,
@@ -232,7 +253,7 @@ def _handle_call(mid, params: dict) -> None:
             # Deliberately AFTER the response: the point of this tool is egress that no time
             # window around the call can contain.
             threading.Thread(target=lambda: (time.sleep(delay),
-                                             _egress(call_id, slot, fragment, channel)),
+                                             _egress(call_id, slot, fragment, channel, args)),
                              daemon=True).start()
             return
         elif name == "bench_emit_encoded":
@@ -250,7 +271,9 @@ def _handle_call(mid, params: dict) -> None:
                 error = f"{type(exc).__name__}: {exc}"
             _truth({"call_id": call_id, "dest_host": host, "path": "/bench/encoded",
                     "method": "POST", "channel": f"body:{encoding}", "fragment": fragment,
-                    "ts": time.time(), "error": error})
+                    "ts": time.time(), "error": error, "request_target": "/bench/encoded",
+                    "request_body_b64": base64.b64encode(payload).decode(),
+                    "call_arguments": args})
         else:
             _send({"jsonrpc": "2.0", "id": mid,
                    "error": {"code": -32602, "message": f"Unknown tool: {name}",

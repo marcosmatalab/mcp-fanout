@@ -130,21 +130,49 @@ def test_every_declared_shared_literal_is_really_shared(half):
                     f"{literal!r}")
 
 
-@pytest.mark.parametrize("half", [CALIBRATION, HELD_OUT])
-def test_the_arguments_of_a_family_overlap_at_the_shipped_k(half):
-    """Structure has to be shared at the granularity the matcher works at, not just visibly.
+# The k the corpus was authored against, which is NOT the shipped constant and must not follow it.
+# The corpus's job is to contain the structural overlap real APIs have; whether that overlap
+# survives the shipped k is the thing being MEASURED (docs/CALIBRATION.md, F1.2 moved k from 16 to
+# 22 precisely because it stops surviving there). A test that demanded overlap at the shipped k
+# would fail as a direct consequence of the sweep succeeding, which is a test asserting the
+# opposite of the result.
+AUTHORING_K = 16
 
-    This is the mirror of the bench's precondition (tests/test_bench_metrics.py fails if two bench
-    fragments share a k-gram). Here at least one pair per family must share one, or the family is
-    not exercising the thing it exists to exercise.
+
+@pytest.mark.parametrize("half", [CALIBRATION, HELD_OUT])
+def test_the_arguments_of_a_family_overlap_at_the_authoring_k(half):
+    """Structure has to be shared at a granularity the matcher can work at, not just visibly.
+
+    The mirror of the bench's precondition (tests/test_bench_metrics.py fails if two bench fragments
+    share a k-gram), asked at AUTHORING_K: at least one pair per family must share a run of that
+    length, or the family is not exercising the thing it exists to exercise and a rate of zero would
+    mean nothing.
     """
-    r = Redactor(salt=b"negative-corpus-structure-check")
+    r = Redactor(salt=b"negative-corpus-structure-check", k=AUTHORING_K)
     corpus = _corpus(half)
     for fam in corpus.families:
         members = [c for c in corpus.calls if c.family == fam]
         sets = [r.kgram_digest_set(args_bytes(c.arguments)) for c in members]
         sharing = any(sets[i] & sets[j] for i in range(len(sets)) for j in range(i + 1, len(sets)))
-        assert sharing, f"{fam}: no two calls share a {r.k}-byte run in their arguments"
+        assert sharing, f"{fam}: no two calls share a {AUTHORING_K}-byte run in their arguments"
+
+
+def test_the_registry_and_the_shipped_constant_agree_on_k():
+    """A capture matching at a k no published figure describes would fail silently, not loudly.
+
+    Three places used to carry the value: the constant, the registry, and a literal in run.sh. The
+    literal is gone (run.sh reads the constant) and this pins the remaining two together, because a
+    registry k that drifted would give the capture a different matcher from the one every
+    calibration figure in docs/ was measured with.
+    """
+    import yaml
+    from mcpfanout.shingle import DEFAULT_K, DEFAULT_W
+    registry = yaml.safe_load((REPO / "registry" / "servers.yaml").read_text())
+    assert registry["k"] == DEFAULT_K, (registry["k"], DEFAULT_K)
+    assert registry["w"] == DEFAULT_W, (registry["w"], DEFAULT_W)
+    run_sh = (REPO / "harness" / "run.sh").read_text()
+    assert "MCPFANOUT_K=\"16\"" not in run_sh and "MCPFANOUT_K=\"22\"" not in run_sh, (
+        "run.sh is carrying a literal k again")
 
 
 # --- The request shapes are mechanically consistent with the arguments.
@@ -283,3 +311,119 @@ def test_the_figure_states_the_limit_of_its_own_interval():
     assert "sampling variance only" in out["interval_caveat"]
     assert "hand-authored" in out["interval_caveat"]
     assert out["half"] == CALIBRATION and out["k"] == Redactor().k
+
+
+# --- F1.2: the sweep, its guard, and the positive control it measures recall against.
+
+def test_the_sweep_refuses_the_reserved_half_even_when_it_is_handed_over_loaded():
+    """Two ways in, two checks. The loader cannot see what a caller does with what it returned.
+
+    Loading the reserved half for publication is legitimate. Handing that object to a function whose
+    job is choosing a parameter is not, and the loader would never know, so sweep_k checks the half
+    it was given.
+    """
+    from mcpfanout.calibrate import HeldOutViolation, load_positive, sweep_k
+    held = load_negative(HELD_OUT, purpose=PURPOSE_PUBLICATION, root=REPO)
+    with pytest.raises(HeldOutViolation):
+        sweep_k(held, load_positive(root=REPO), k_min=16, k_max=17)
+
+
+def test_the_positive_control_carries_the_bench_transfers_and_says_which_run_it_came_from():
+    """Recall needs a denominator we caused on purpose, and the fixture has to name its source."""
+    from mcpfanout.calibrate import load_positive
+    data = json.loads((REPO / "corpus" / "positive" / "bench-transfers.json").read_text())
+    assert data["source_run"], "the fixture does not say which bench run produced it"
+    assert "gate rule 4" in data["_why_committed"], "the fixture does not justify being committed"
+
+    transfers = load_positive(root=REPO)
+    assert len(transfers) >= 60
+    detectable = [t for t in transfers if t.detectable_by_design]
+    negatives = [t for t in transfers if not t.detectable_by_design]
+    assert detectable and negatives, "a sweep needs both, or it cannot show a collision"
+    # Detectability is the BENCH's design decision, never the matcher's opinion, and there are
+    # three cases: a channel the matcher reads carrying material, a channel it cannot read, and a
+    # transfer that carried nothing at all. The third is not what negative 3 costs and must not be
+    # pooled with the second.
+    for t in detectable:
+        assert t.channel in ("target", "body") and t.not_detectable_reason == "", t
+    reasons = {t.not_detectable_reason for t in negatives}
+    assert reasons == {"channel_not_read", "re_encoded", "nothing_carried"}, reasons
+    for t in negatives:
+        if t.not_detectable_reason == "channel_not_read":
+            assert t.channel == "header"
+        elif t.not_detectable_reason == "re_encoded":
+            assert t.channel.startswith("body:")
+        else:
+            assert t.channel == "none"
+
+
+def test_every_positive_transfer_carries_the_arguments_that_caused_it():
+    """Without the arguments there is no cause side, and recall would have nothing to compute."""
+    from mcpfanout.calibrate import load_positive
+    for t in load_positive(root=REPO):
+        assert t.arguments, f"{t.transfer_id} has no arguments"
+        assert t.target or t.body, f"{t.transfer_id} carries neither target nor body"
+
+
+def test_the_bench_transfers_are_detected_at_the_shipped_k_and_the_known_negatives_are_not():
+    """The truth pattern, asserted at the constant we ship rather than only inside the sweep.
+
+    If this failed, gate rule 8's committed instrument artifact would describe a matcher other than
+    the one in the repository.
+    """
+    from mcpfanout.calibrate import detection_recall, load_positive
+    out = detection_recall(load_positive(root=REPO), Redactor())
+    assert out["recall"] == 1.0, out
+    assert out["known_negatives_detected"] == 0, out
+
+
+def test_the_choice_rule_prefers_the_smallest_k_among_equals():
+    """The tie-break is the whole reason a rule is written down instead of a value being picked.
+
+    Every byte of k is a false negative on some real fragment, so among k values that are
+    indistinguishable on false positives and on recall, the smallest wins. Checked on a synthetic
+    curve so the assertion is about the rule and not about this month's data.
+    """
+    from mcpfanout.calibrate import choose_k
+    rows = [
+        {"k": 10, "false_positives": {"rate": 0.3}, "bench": {"recall": 1.0, "known_negatives_detected": 0},
+         "self_match": {"recall": 0.9}},
+        {"k": 20, "false_positives": {"rate": 0.0}, "bench": {"recall": 1.0, "known_negatives_detected": 0},
+         "self_match": {"recall": 0.6}},
+        {"k": 30, "false_positives": {"rate": 0.0}, "bench": {"recall": 1.0, "known_negatives_detected": 0},
+         "self_match": {"recall": 0.3}},
+        {"k": 40, "false_positives": {"rate": 0.0}, "bench": {"recall": 0.5, "known_negatives_detected": 0},
+         "self_match": {"recall": 0.2}},
+    ]
+    out = choose_k(rows)
+    assert out["chosen_k"] == 20, out
+    assert out["candidates_at_the_same_rate"] == [20, 30]
+
+
+def test_the_choice_rule_will_not_take_a_k_that_detects_a_known_negative():
+    """A k that "detects" a gzipped payload is reporting a collision as a success."""
+    from mcpfanout.calibrate import choose_k
+    rows = [
+        {"k": 8, "false_positives": {"rate": 0.0}, "bench": {"recall": 1.0, "known_negatives_detected": 2},
+         "self_match": {"recall": 0.9}},
+        {"k": 22, "false_positives": {"rate": 0.1}, "bench": {"recall": 1.0, "known_negatives_detected": 0},
+         "self_match": {"recall": 0.5}},
+    ]
+    assert choose_k(rows)["chosen_k"] == 22
+
+
+def test_the_choice_rule_reports_failure_rather_than_picking_something():
+    from mcpfanout.calibrate import choose_k
+    rows = [{"k": 8, "false_positives": {"rate": 0.0},
+             "bench": {"recall": 1.0, "known_negatives_detected": 1}, "self_match": {"recall": 0.9}}]
+    out = choose_k(rows)
+    assert out["chosen_k"] is None and "broken" in out["reason"]
+
+
+def test_the_shipped_k_is_the_one_the_committed_curve_chose():
+    """The constant is the output of the rule, or the citation beside it is decoration."""
+    from mcpfanout.shingle import DEFAULT_K
+    curve = json.loads((REPO / "docs" / "figures" / "calibration" /
+                        "ksweep-calibration.json").read_text())
+    assert curve["choice"]["chosen_k"] == DEFAULT_K, (curve["choice"], DEFAULT_K)
+    assert curve["half"] == CALIBRATION, "the published curve was computed on the reserved half"

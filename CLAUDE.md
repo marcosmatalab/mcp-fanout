@@ -47,7 +47,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 369
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 400
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
@@ -112,7 +112,7 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 369 tests, no Docker, no network
+make verify      # 400 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
@@ -165,8 +165,13 @@ measurement over those at all. Three pieces, in `docs/CALIBRATION.md`:
   0.2946, Wilson 95% [0.2388, 0.3574], at k = 16 with no weighting. The spread across families is
   the result, not the pooled figure: one family fails every pair (the server echoes the argument
   envelope), two fail none.
-- **F1.2, open.** Sweep k from 8 to 64 and choose it with the curve, not with a judgement. The
-  constant cites the curve beside it in code.
+- **F1.2, done. k is 22, not 16, and it was chosen by the curve.** `make ksweep`. False positives
+  fall to 0.0 from k = 22 while the phase A bench recall stays at 1.0, and the reserved half agrees:
+  0 of 224 pairs, Wilson 95% [0.0, 0.0169]. The cost is priced: self-match recall on realistic
+  material 0.5312 to 0.5, and every miss pushes the attributable share down, which is the safe
+  direction. The constant in `shingle.py` cites the curve beside it. **Do not re-tune k by hand**:
+  it is the output of `calibrate.choose_k`, and the registry, the addon and run.sh all read it now
+  instead of keeping copies.
 - **F1.3, open.** Weight each k-gram by its frequency in a background corpus and require a minimum
   rarity mass. Frequency counting, not semantics, so negative 3 holds. It stays only if the F1.1
   rate falls; if it does not, it is reverted and why is written down.
