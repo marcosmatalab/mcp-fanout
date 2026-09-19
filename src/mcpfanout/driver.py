@@ -48,6 +48,8 @@ import threading
 import time
 from dataclasses import dataclass
 
+from .record import PHASE_DRAINED, PHASE_DRIVING, PHASE_HANDSHAKE, PHASE_LAUNCHER
+
 # The revision whose wire format this module actually speaks. Claim 1 of the module docstring.
 # Rejected: "2026-07-28", the current revision. It is the newest and it is where SEP-414 went
 # Final, which is why it was picked, but it deleted the initialize handshake this driver is built
@@ -318,15 +320,22 @@ def args_digests_for(spec: CallSpec, redactor) -> list[str]:
 
 
 def publish_active_calls(control_dir, run_id: str, server_id: str,
-                         entries: list[dict]) -> None:
+                         entries: list[dict], phase: str = "") -> None:
     """Publish the in-flight set the capture addon reads. Pass [] to declare none in flight.
 
     Exposed so the phase A bench driver publishes through the same function the sequential
     driver uses. Two writers of the same file with two notions of its shape is how the addon
     ends up reading a payload nobody wrote.
+
+    ``phase`` says where in the server's lifecycle we are (record.PHASES_LIFECYCLE). It is
+    published alongside the in-flight set rather than derived from it, because "no call is in
+    flight" has several meanings and they are not equivalent: the launcher is still downloading the
+    package and the server does not exist; the process exists and is handshaking; a call just
+    returned and the next has not been sent. Only the first makes a flow impossible to attribute to
+    a call BY CONSTRUCTION, and the addon cannot tell them apart from an empty list.
     """
     _write_active_calls(control_dir, {"run_id": run_id, "server_id": server_id,
-                                      "active_calls": entries})
+                                      "active_calls": entries, "phase": phase})
 
 
 def drive_wave(client: "StdioMCPClient", specs: list[CallSpec], run_id: str, server_id: str,
@@ -352,7 +361,7 @@ def drive_wave(client: "StdioMCPClient", specs: list[CallSpec], run_id: str, ser
             "args_present": bool(spec.arguments),
             "args_digests": args_digests_for(spec, redactor),
         })
-    publish_active_calls(control_dir, run_id, server_id, entries)
+    publish_active_calls(control_dir, run_id, server_id, entries, phase=PHASE_DRIVING)
 
     rids = []
     for spec, entry in zip(specs, entries):
@@ -373,7 +382,7 @@ def drive_wave(client: "StdioMCPClient", specs: list[CallSpec], run_id: str, ser
             args_present=entry["args_present"], traceparent=entry["traceparent"],
             ok=ok, error=err, stdout_noise_lines=0))
 
-    publish_active_calls(control_dir, run_id, server_id, [])
+    publish_active_calls(control_dir, run_id, server_id, [], phase=PHASE_DRAINED)
     return results
 
 
@@ -432,7 +441,17 @@ def _drive_corpus(command, corpus, run_id, server_id, env, *, redactor, control_
     """
     from .record import ToolCall
 
+    published = control_dir is not None and redactor is not None
+    if published:
+        # BEFORE the subprocess exists. `npx -y pkg@ver` and `uvx pkg@ver` resolve and may download
+        # the package before the server's first instruction runs, and that egress is the launcher's,
+        # not the server's. Publishing this phase first is what makes it impossible to attribute to
+        # a call of ours, whatever a time window would have said.
+        publish_active_calls(control_dir, run_id, server_id, [], phase=PHASE_LAUNCHER)
+
     with StdioMCPClient(command, env) as client:
+        if published:
+            publish_active_calls(control_dir, run_id, server_id, [], phase=PHASE_HANDSHAKE)
         client.initialize()
         client.list_tools()  # listed for realism and to let servers lazily wire up tools
         for i, spec in enumerate(corpus):
@@ -440,12 +459,12 @@ def _drive_corpus(command, corpus, run_id, server_id, env, *, redactor, control_
             call_id = f"{server_id}-c{i:03d}"
             args_present = bool(spec.arguments)
 
-            if control_dir is not None and redactor is not None:
+            if published:
                 # One entry, because this path is sequential. drive_wave publishes several.
                 publish_active_calls(control_dir, run_id, server_id, [{
                     "call_id": call_id, "traceparent": tp, "args_present": args_present,
                     "args_digests": args_digests_for(spec, redactor),
-                }])
+                }], phase=PHASE_DRIVING)
 
             noise_before = client.stdout_noise_lines
             try:
@@ -461,3 +480,14 @@ def _drive_corpus(command, corpus, run_id, server_id, env, *, redactor, control_
             tool_calls.append(ToolCall(run_id, server_id, call_id, spec.tool_name, args_present,
                                        tp, ok=ok, error=err, stdout_noise_lines=noise,
                                        wave_size=1))
+
+            if published:
+                # DRAIN AFTER EVERY CALL, not only at the end of the corpus. Leaving the call
+                # published until the next one is sent credits whatever arrives in between to a call
+                # that has already returned, which is how the next server's launcher traffic ended
+                # up pinned to the previous server's last call in the first ten-server capture.
+                # drive_wave has always drained; this path had not, and the asymmetry WAS the
+                # defect. The cost is deliberate and is the one the bench's late_egress cell
+                # demonstrates: egress a server makes just after its response now comes out
+                # unattributed, which is the honest answer rather than the flattering one.
+                publish_active_calls(control_dir, run_id, server_id, [], phase=PHASE_DRAINED)

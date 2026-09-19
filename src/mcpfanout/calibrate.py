@@ -439,3 +439,150 @@ def sweep_k(corpus: NegativeCorpus, transfers: list[PositiveTransfer],
         },
         "command": "make ksweep",
     }
+
+
+# =================================================================================================
+# The self-match ceiling, and the inventory that explains it.
+#
+# The self-match figure is the number that bounds everything phase B publishes, and it was buried in
+# a column of the k sweep. It deserves its own definition and its own decomposition, because a
+# reader who sees 0.5 needs to know three things that the number alone does not say: what exactly was
+# measured, over which corpus, and WHY the other half fails. Without the third, "half the material
+# does not self-match" reads as a defect to fix rather than as the limit it is.
+#
+# WHAT SELF-MATCH IS, exactly. For one call, take the bytes the matcher would index on the cause side
+# (driver.args_bytes of its arguments, which is what the driver publishes) and the bytes of the
+# request that same call caused (its declared target and body). Ask the shipped matcher whether any
+# k-gram of the first appears in the second. It is the true-positive question in its easiest possible
+# form: the call is its own cause, there are no competing candidates, and nothing is concurrent. A
+# call that fails HERE can never be attributed by content anywhere.
+#
+# WHAT IT IS NOT. It is not recall against real servers: the requests are the negative corpus's
+# declared ones (docs/CALIBRATION.md says how they are re-derived in tests), so this measures the
+# matcher against realistic ARGUMENT SHAPES, not against the wire behaviour of ten real servers. A
+# real server that percent-encodes differently, reorders fields or wraps the payload moves it.
+# =================================================================================================
+
+
+def longest_common_run(a: bytes, b: bytes) -> int:
+    """Length of the longest byte run present in both. Exact, no heuristics.
+
+    Quadratic in the inputs, which is fine at these sizes (arguments and request lines are hundreds
+    of bytes) and it is the honest way to answer "how close did this get to the threshold": a k-gram
+    check only ever answers yes or no, and the interesting fact about a miss is by how much it
+    missed. Rolling two rows so the memory stays linear.
+    """
+    if not a or not b:
+        return 0
+    prev = [0] * (len(b) + 1)
+    best = 0
+    for i in range(1, len(a) + 1):
+        cur = [0] * (len(b) + 1)
+        ai = a[i - 1]
+        for j in range(1, len(b) + 1):
+            if ai == b[j - 1]:
+                cur[j] = prev[j - 1] + 1
+                if cur[j] > best:
+                    best = cur[j]
+        prev = cur
+    return best
+
+
+def detectability_inventory(corpus: NegativeCorpus, transfers: list[PositiveTransfer],
+                            redactor: Redactor, bait_dir: str | Path = "corpus/context",
+                            root: str | Path = ".") -> dict:
+    """Why the self-match figure is what it is, over three populations and two thresholds.
+
+    The two thresholds are different guarantees and conflating them would overstate what is safe:
+
+      k                 a run this long IS found, because numbers 4 and 5 match exact k-grams.
+      w + k - 1         a run this long is ALSO guaranteed to survive winnowing, which is what the
+                        persisted, digest-only fingerprints use (shingle.py). Between the two, a
+                        match enters the numbers but may not be reconstructible later from what was
+                        kept on disk.
+
+    The three populations are not interchangeable either. The planted bait is material we control and
+    sized on purpose; the realistic arguments are the population the self-match figure is measured
+    over; the phase A transfers are the keyed digests, present as the contrast that shows how far
+    from realistic the bench's own material is.
+    """
+    import re
+
+    floor_exact = redactor.k
+    floor_winnowed = redactor.k + redactor.w - 1
+
+    def bucket(run: int) -> str:
+        if run >= floor_winnowed:
+            return "at_or_above_winnowing_floor"
+        if run >= floor_exact:
+            return "matched_but_below_winnowing_floor"
+        return "below_k_invisible"
+
+    # 1. The planted bait: every CANARY_ token in the context files, by length.
+    bait: dict[str, list[int]] = {}
+    for path in sorted((Path(root) / bait_dir).rglob("*")):
+        if not path.is_file():
+            continue
+        for tok in re.findall(r"CANARY_[A-Za-z0-9_.:@/-]+",
+                              path.read_text(errors="replace")):
+            bait.setdefault(bucket(len(tok)), []).append(len(tok))
+    bait_counts = {b: len(v) for b, v in sorted(bait.items())}
+
+    # 2. The realistic arguments: the longest run each call shares with its OWN request, which is
+    #    the quantity self-match thresholds. Per family, because the families fail for different
+    #    reasons and a pooled figure hides which.
+    families: dict[str, dict] = {}
+    for call in corpus.calls:
+        run = longest_common_run(args_bytes(call.arguments), call.target + b"\x00" + call.body)
+        fam = families.setdefault(call.family, {"calls": 0, "self_matched": 0, "runs": [],
+                                                "buckets": {}})
+        fam["calls"] += 1
+        fam["runs"].append(run)
+        fam["buckets"][bucket(run)] = fam["buckets"].get(bucket(run), 0) + 1
+        if claims_match(call, call, redactor):
+            fam["self_matched"] += 1
+    for fam in families.values():
+        runs = sorted(fam.pop("runs"))
+        fam["longest_common_run"] = {"min": runs[0], "median": runs[len(runs) // 2],
+                                     "max": runs[-1]}
+        fam["self_match_recall"] = round(fam["self_matched"] / fam["calls"], 4)
+
+    # 3. The phase A transfers, as the contrast.
+    bench_runs = sorted(longest_common_run(args_bytes(t.arguments), t.target + b"\x00" + t.body)
+                        for t in transfers if t.detectable_by_design)
+    bench_buckets: dict[str, int] = {}
+    for run in bench_runs:
+        bench_buckets[bucket(run)] = bench_buckets.get(bucket(run), 0) + 1
+
+    overall = self_match_recall(corpus, redactor)
+    return {
+        "name": "detectability_inventory",
+        "k": redactor.k,
+        "w": redactor.w,
+        "floor_exact_kgram_match": floor_exact,
+        "floor_winnowing_guarantee": floor_winnowed,
+        "what_self_match_is": (
+            "for one call, whether any k-gram of driver.args_bytes(its arguments) appears in the "
+            "request that same call caused. The true-positive question in its easiest form: the "
+            "call is its own cause, there is no competing candidate and nothing is concurrent. A "
+            "call that fails here can never be attributed by content anywhere"),
+        "measured_over": corpus.path,
+        "planted_bait_by_bucket": bait_counts,
+        "realistic_arguments": {
+            "self_match_recall": overall["recall"],
+            "calls": overall["calls"],
+            "matched": overall["matched"],
+            "by_family": families,
+        },
+        "phase_a_transfers_for_contrast": {
+            "transfers": len(bench_runs),
+            "by_bucket": bench_buckets,
+            "longest_common_run": ({"min": bench_runs[0], "median": bench_runs[len(bench_runs) // 2],
+                                    "max": bench_runs[-1]} if bench_runs else {}),
+        },
+        "why_this_is_a_ceiling": (
+            "an attributable share measured by a sensor that cannot see half of the realistic "
+            "material it is shown is at most half of the true share. Number 5 is therefore "
+            "published as a LOWER BOUND, and this figure is the reason (docs/THREATS.md)"),
+        "command": "make inventory",
+    }

@@ -10,37 +10,43 @@
       "call_supplied": false,
       "hosts": [],
       "known_undeclared": {},
-      "basis": "A reference server whose thirteen tools echo, sum, and return canned content. Nothing in the schemas takes a destination, and the registry marks it expects_egress: false. Any host at all is a finding here."
+      "basis": "A reference server whose thirteen tools echo, sum, and return canned content. Nothing in the schemas takes a destination, and the registry marks it expects_egress: false. Any host at all is a finding here.",
+      "launch_tool": "npx"
     },
     "filesystem": {
       "call_supplied": false,
       "hosts": [],
       "known_undeclared": {},
-      "basis": "Fourteen tools that read and write a sandboxed directory tree. No tool takes a URL and expects_egress is false."
+      "basis": "Fourteen tools that read and write a sandboxed directory tree. No tool takes a URL and expects_egress is false.",
+      "launch_tool": "npx"
     },
     "memory": {
       "call_supplied": false,
       "hosts": [],
       "known_undeclared": {},
-      "basis": "A knowledge graph persisted to a local JSON file. No tool takes a destination; a sync to anywhere would be the finding."
+      "basis": "A knowledge graph persisted to a local JSON file. No tool takes a destination; a sync to anywhere would be the finding.",
+      "launch_tool": "npx"
     },
     "sequential-thinking": {
       "call_supplied": false,
       "hosts": [],
       "known_undeclared": {},
-      "basis": "One tool that records a chain of thoughts and returns it. No destination in the schema."
+      "basis": "One tool that records a chain of thoughts and returns it. No destination in the schema.",
+      "launch_tool": "npx"
     },
     "git": {
       "call_supplied": false,
       "hosts": [],
       "known_undeclared": {},
-      "basis": "Twelve tools over a local repository path. The corpus drives only read-only local commands (status, log, show, diff, branch), none of which contacts a remote; a push or fetch would, and none is driven."
+      "basis": "Twelve tools over a local repository path. The corpus drives only read-only local commands (status, log, show, diff, branch), none of which contacts a remote; a push or fetch would, and none is driven.",
+      "launch_tool": "uvx"
     },
     "time": {
       "call_supplied": false,
       "hosts": [],
       "known_undeclared": {},
-      "basis": "Two tools over the IANA zone database, which the package bundles. No network is needed to answer either one."
+      "basis": "Two tools over the IANA zone database, which the package bundles. No network is needed to answer either one.",
+      "launch_tool": "uvx"
     },
     "fetch": {
       "call_supplied": true,
@@ -50,7 +56,8 @@
       "known_undeclared": {
         "registry.npmjs.org": "docs/THREATS.md threat 10: measured 2026-09-18, this server shells out to npm DURING tools/call and opened 87 connections to the npm registry while serving two calls. Already published as a finding, so it is not re-raised as new; it remains the reason this entry exists."
       },
-      "basis": "One tool, fetch(url), whose documented job is to retrieve the URL it is given. Our corpora name only example.net (RFC 2606 reserved), so that is the whole declared set for this pass."
+      "basis": "One tool, fetch(url), whose documented job is to retrieve the URL it is given. Our corpora name only example.net (RFC 2606 reserved), so that is the whole declared set for this pass.",
+      "launch_tool": "uvx"
     },
     "brave-search": {
       "call_supplied": false,
@@ -58,7 +65,8 @@
         "api.search.brave.com"
       ],
       "known_undeclared": {},
-      "basis": "Two tools that query the Brave Search API, which is the package's entire purpose. Expected to produce nothing at all in practice: it exits before the handshake without BRAVE_API_KEY."
+      "basis": "Two tools that query the Brave Search API, which is the package's entire purpose. Expected to produce nothing at all in practice: it exits before the handshake without BRAVE_API_KEY.",
+      "launch_tool": "npx"
     },
     "github": {
       "call_supplied": false,
@@ -66,7 +74,8 @@
         "api.github.com"
       ],
       "known_undeclared": {},
-      "basis": "Twenty-six tools over the GitHub REST API. The corpus drives searches and reads only. raw.githubusercontent.com is deliberately NOT declared: whether get_file_contents goes through the API or through the raw host is a behaviour to observe, not one to assume."
+      "basis": "Twenty-six tools over the GitHub REST API. The corpus drives searches and reads only. raw.githubusercontent.com is deliberately NOT declared: whether get_file_contents goes through the API or through the raw host is a behaviour to observe, not one to assume.",
+      "launch_tool": "npx"
     },
     "puppeteer": {
       "call_supplied": true,
@@ -74,7 +83,8 @@
         "example.net"
       ],
       "known_undeclared": {},
-      "basis": "Seven tools driving a headless Chromium at the URL a call names. Chromium's own background traffic (update checks, optimisation hints, certificate revocation) is deliberately NOT pre-declared: it is the most interesting thing this server could produce, and pre-excusing it would hide exactly the kind of destination gate rule 7 exists to surface."
+      "basis": "Seven tools driving a headless Chromium at the URL a call names. Chromium's own background traffic (update checks, optimisation hints, certificate revocation) is deliberately NOT pre-declared: it is the most interesting thing this server could produce, and pre-excusing it would hide exactly the kind of destination gate rule 7 exists to surface.",
+      "launch_tool": "npx"
     },
     "bench": {
       "call_supplied": false,
@@ -84,7 +94,9 @@
         "127.0.0.1"
       ],
       "known_undeclared": {},
-      "basis": "Phase A: our own server (bench/server.py) reaching our own sink (bench/sink.py) at sinkNNN.bench.invalid, all resolving to loopback via /etc/hosts.bench. Declared here so the check stays meaningful on a bench run instead of flagging destinations we built ourselves, which would train the operator to ignore the banner."
+      "basis": "Phase A: our own server (bench/server.py) reaching our own sink (bench/sink.py) at sinkNNN.bench.invalid, all resolving to loopback via /etc/hosts.bench. Declared here so the check stays meaningful on a bench run instead of flagging destinations we built ourselves, which would train the operator to ignore the banner.",
+      "launch_tool": "python"
     }
-  }
+  },
+  "_what_launch_tool_is": "the first element of the server's launch command, copied from registry/servers.yaml and pinned to it by tests/test_disclosure.py. It is here because the gate rule 7 decision procedure needs to know whether the command we spawned is a PACKAGE LAUNCHER (npx, uvx) that resolves a dependency before exec'ing the server: for those, a pre-first-call connection to declared package infrastructure is the launcher's traffic and not the server's. Read from data rather than guessed from a hostname."
 }

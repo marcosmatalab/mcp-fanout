@@ -195,6 +195,8 @@
       "name": "attribution_grade_distribution",
       "number": 5,
       "pass": "bench",
+      "published_as": "lower_bound",
+      "published_as_reason": "the sensor's self-match recall on realistic argument material is below 1, so an attributable share measured with it is a floor and not an estimate. Measured by `make inventory`; decomposed per family in docs/CALIBRATION.md, 'The self-match ceiling', and stated as threat 12 in docs/THREATS.md",
       "sequential_driving": false,
       "strong_attribution_count": 33,
       "strong_attribution_fraction": 0.3882,

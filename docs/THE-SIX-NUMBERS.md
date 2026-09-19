@@ -222,6 +222,14 @@ many calls were in flight. A pooled figure cannot show how discrimination behave
 grows, which is the shape the pre-registered prediction in `docs/PHASES.md` is about, and "strong
 attribution was X%" is unreadable without the N it was measured at.
 
+**Published as a lower bound, and it may not be published without saying so.** Number 5 is published as a LOWER BOUND, not as an estimate, because the sensor's self-match recall on realistic argument material is below 1:
+over the four realistic families of the negative corpus it is 0.5, so half the material the sensor is
+shown does not match itself even when the call is its own cause and nothing is concurrent. An
+attributable share measured that way is at most half of the true share. The measurement, its
+decomposition per family and the reasons are in `docs/CALIBRATION.md` ("The self-match ceiling",
+`make inventory`) and in `docs/THREATS.md`, threat 12. The aggregate output carries it as
+`published_as`, so the figure travels with the caveat rather than beside it.
+
 **Decides.** Whether the whole product works. This is the number nobody has measured.
 
 **Command.** `make n5`. The concurrent pass that makes it meaningful: `make run-concurrent`.
