@@ -517,6 +517,149 @@
       ],
       "shared_structure_note": "the JSON keys, the locale enum, the wrapper keys the server adds, and ordinary English sentences",
       "why": "The worst case, and the most ordinary one. Every call carries the same locale enum and the same key names, and the server's body repeats them verbatim, so a 16-byte run of shared field structure exists in every pair before a single word of the payload is compared. This is the family that makes the case for weighting a k-gram by how common it is."
+    },
+    {
+      "family": "containment_subset",
+      "api": "a repository contents API: JSON {owner, repo, path?, ref?} in, GET /repos/<owner>/<repo>/... out",
+      "shared_structure_note": "the JSON envelope, the /repos/ prefix, two organisations and two repository names shared across the family, and a path vocabulary drawn from one repository layout",
+      "shared_literals": [
+        "{\"owner\": \"",
+        "\"repo\": \"",
+        "/repos/"
+      ],
+      "why": "The other four families in this corpus were authored against a k-gram matcher and share long literal runs. Structural containment does not read runs at all, so those families cannot falsify it and a rate of zero over them means only that they were built for a different instrument. This family is built against containment itself: a call whose tokens are a proper subset of another call's request, two calls sharing an enum value and nothing else, and one repository reached through two organisations. Five of its eight calls carry no information of their own and say so in an explicit information_free field, because a call that owns no distinguishing value is precisely the call containment gets wrong, and it cannot be built with one.",
+      "calls": [
+        {
+          "id": "cal-contain-01",
+          "arguments": {
+            "owner": "northwind",
+            "repo": "billing-core",
+            "path": "playbook/oncall"
+          },
+          "request": {
+            "target": "/repos/northwind/billing-core/contents/playbook/oncall",
+            "body": ""
+          },
+          "information": [
+            "playbook/oncall",
+            "oncall"
+          ],
+          "case": "anchor",
+          "why": "The full call, and the request every subset case below is measured against."
+        },
+        {
+          "id": "cal-contain-02",
+          "arguments": {
+            "owner": "northwind",
+            "repo": "billing-core"
+          },
+          "request": {
+            "target": "/repos/northwind/billing-core",
+            "body": ""
+          },
+          "information": [],
+          "case": "subset",
+          "why": "Its two tokens are a proper subset of call 01's request tokens, so containment claims it caused call 01's request. It did not. The family's headline case.",
+          "information_free": "Carries no value of its own. That is the attack and not an omission: containment asks whether every token of a call is present in a request, so a call that owns nothing unique is contained in any request that mentions its organisation and repository. A call with a distinguishing value could not be a subset of another call's request, so this case cannot be built any other way."
+        },
+        {
+          "id": "cal-contain-03",
+          "arguments": {
+            "owner": "northwind",
+            "repo": "billing-core",
+            "path": "playbook"
+          },
+          "request": {
+            "target": "/repos/northwind/billing-core/contents/playbook",
+            "body": ""
+          },
+          "information": [],
+          "case": "subset",
+          "why": "A second subset one token longer, so the attack is visibly a property of containment and not of any particular minimum token count.",
+          "information_free": "Carries no value of its own. That is the attack and not an omission: containment asks whether every token of a call is present in a request, so a call that owns nothing unique is contained in any request that mentions its organisation and repository. A call with a distinguishing value could not be a subset of another call's request, so this case cannot be built any other way."
+        },
+        {
+          "id": "cal-contain-04",
+          "arguments": {
+            "owner": "northwind",
+            "repo": "billing-edge",
+            "path": "playbook/escalation"
+          },
+          "request": {
+            "target": "/repos/northwind/billing-edge/contents/playbook/escalation",
+            "body": ""
+          },
+          "information": [
+            "escalation"
+          ],
+          "case": "shared_org",
+          "why": "Same organisation and same path prefix as call 01, different repository. A human reads these as plainly distinct; the test is whether the matcher does."
+        },
+        {
+          "id": "cal-contain-05",
+          "arguments": {
+            "owner": "northwind",
+            "repo": "billing-core",
+            "ref": "stable"
+          },
+          "request": {
+            "target": "/repos/northwind/billing-core/commits?sha=stable",
+            "body": ""
+          },
+          "information": [],
+          "case": "enum",
+          "why": "A ref name shared with call 06 and nothing else of its own.",
+          "information_free": "Its only non-shared token is a low-cardinality ref name shared with its sibling call. An enum value is not information: it identifies a class, not an instance, and a match driven by it is driven by nothing."
+        },
+        {
+          "id": "cal-contain-06",
+          "arguments": {
+            "owner": "northwind",
+            "repo": "billing-edge",
+            "ref": "stable"
+          },
+          "request": {
+            "target": "/repos/northwind/billing-edge/commits?sha=stable",
+            "body": ""
+          },
+          "information": [],
+          "case": "enum",
+          "why": "The same ref name in the other repository of the same organisation.",
+          "information_free": "Its only non-shared token is a low-cardinality ref name shared with its sibling call. An enum value is not information: it identifies a class, not an instance, and a match driven by it is driven by nothing."
+        },
+        {
+          "id": "cal-contain-07",
+          "arguments": {
+            "owner": "eastwind",
+            "repo": "billing-core",
+            "path": "playbook/rotation"
+          },
+          "request": {
+            "target": "/repos/eastwind/billing-core/contents/playbook/rotation",
+            "body": ""
+          },
+          "information": [
+            "rotation"
+          ],
+          "case": "shared_org",
+          "why": "The mirror of call 04: the same repository name reached through the other organisation, so the distinguishing token moves from the second path segment to the first."
+        },
+        {
+          "id": "cal-contain-08",
+          "arguments": {
+            "owner": "eastwind",
+            "repo": "billing-core"
+          },
+          "request": {
+            "target": "/repos/eastwind/billing-core",
+            "body": ""
+          },
+          "information": [],
+          "case": "subset",
+          "why": "The subset case again, under the second organisation, so the family does not rest the whole attack on one anchor.",
+          "information_free": "Carries no value of its own. That is the attack and not an omission: containment asks whether every token of a call is present in a request, so a call that owns nothing unique is contained in any request that mentions its organisation and repository. A call with a distinguishing value could not be a subset of another call's request, so this case cannot be built any other way."
+        }
+      ]
     }
   ],
   "half": "calibration",

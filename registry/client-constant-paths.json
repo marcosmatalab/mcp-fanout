@@ -1,0 +1,36 @@
+{
+  "list_name": "client-constant-paths",
+  "version": "2026-09-19",
+  "_comment": "Destinations a CLIENT emits on a fixed schedule or before every request, whose target is constant whatever the tool call asked for. Number 5 publishes a content-attribution fraction whose denominator EXCLUDES these, alongside the fraction over all call-caused eligible flows and the raw fraction over every flow. Read docs/PREREG-F2.md section 4 before changing anything here.",
+  "_why_this_list_exists": "Measured on run 20260919T130847Z-concurrent: of 38 call-caused eligible flows, 17 were /robots.txt, one per fetch call, eleven bytes, identical whatever URL the call named. mcp-server-fetch depends on protego and checks robots.txt before every fetch. Two more were an embedded browser checking its own version. Those 19 flows carry no byte of any argument, so no matcher can ever attribute them by content: leaving them in the denominator of a CONTENT attribution figure measures the corpus's shape, not the matcher. The ceiling on that denominator was 19/38 = 0.5000 before a single line of matcher code was written, and nobody had computed it.",
+  "_this_is_not_a_silent_filter": "The fraction over all 38 call-caused eligible flows is published beside the content fraction, always, and the raw fraction over all 127 flows beside both. This file is committed, versioned by the date above, and the aggregate output cites it by name, version and sha256. A flow excluded here is still counted, still graded, and still visible in the other two figures.",
+  "_inclusion_criterion": "A destination belongs here only if the client emits it with a target that does not vary with the tool call's arguments. A destination whose target is derived from the call, however indirectly, does NOT belong here however uninteresting it looks. Being wrong in this direction inflates the headline figure, so the bar is that the constancy was OBSERVED in a run, not assumed from the name.",
+  "_frozen": "Frozen 2026-09-19 before the re-grading it feeds, and its sha256 is quoted in docs/PREREG-F2.md. Any entry added after that date is published as a SEPARATE, LABELLED figure and never folded into the pre-registered one.",
+
+  "exact_paths": [
+    {
+      "path": "/robots.txt",
+      "why": "Emitted by a fetch client before retrieving a URL, as a politeness check. Constant by definition: the path is fixed by RFC 9309 and carries nothing about what was requested.",
+      "observed": "17 of 38 call-caused eligible flows on run 20260919T130847Z-concurrent, all exactly 11 target bytes, one per driven fetch call across waves of 2, 5 and 10.",
+      "emitted_by": "mcp-server-fetch, via its protego dependency"
+    }
+  ],
+
+  "path_prefixes": [
+    {
+      "prefix": "/.well-known/",
+      "why": "Reserved by RFC 8615 for client-initiated discovery at a fixed location. Included on the same criterion as robots.txt, before a run needs it, so the rule is not written to fit a result.",
+      "observed": "NOT observed in any run to date. Listed pre-emptively and honestly labelled as such: it excludes nothing today."
+    }
+  ],
+
+  "hosts": [
+    {
+      "host": "clients2.google.com",
+      "why": "An embedded Chromium checking for its own updates. The browser emits it on a schedule of its own, and `make control` (docs/THREATS.md threat 15) established that the browser, not the tool call, is its cause.",
+      "observed": "2 of 38 call-caused eligible flows on run 20260919T130847Z-concurrent, 143 target bytes each, under puppeteer.",
+      "basis": "host_only",
+      "residual": "THIS ENTRY IS BROADER THAN THE RULE IT SERVES, and that is stated rather than hidden. The rule is about constant PATHS, and the run records target_bytes but not the target, so the constancy of this path was not verified: the exclusion is made at host level. A host-level exclusion would also hide a call-derived request to the same host, and nothing in this run rules that out. Narrowing it needs a capture that records enough to identify the path, which does not exist yet. Until it does, the 2 flows are the ones to remove from the content figure by hand if a reader disagrees, and the arithmetic to do so is published with it."
+    }
+  ]
+}

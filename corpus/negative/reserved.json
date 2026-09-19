@@ -1,0 +1,669 @@
+{
+  "_what_this_is": "Negative control, RESERVED half: concurrent call pairs that share LANGUAGE STRUCTURE and NO INFORMATION. Every match the matcher claims between two calls of one family is a false positive, because neither call's arguments caused the other's request. This half is measured ONCE, at the end, and is what a published false-positive figure comes from.",
+  "_why_this_file_exists": "It replaces corpus/negative/held-out.json as the reserve. That file was loaded with a bare json.load by an external review's scripts, bypassing calibrate.load_negative, and measured. Its figure is therefore a calibration figure. The material is still a valid negative control; it is simply no longer unseen, and docs/CALIBRATION.md and docs/PREREG-F2.md say so rather than quietly continuing to call it held out.",
+  "_the_guard_is_a_courtesy": "calibrate.load_negative refuses this half to a calibration purpose. That refusal is a COURTESY, not a lock: any json.load of this path bypasses it, which is exactly what happened. It is written here so nobody mistakes the refusal for a guarantee. See docs/PREREG-F2.md section 1 for what a lock would cost.",
+  "half": "reserved",
+  "pair_rule": "ordered pairs WITHIN a family only: (A, B) asks whether B's arguments appear in A's request. Cross-family pairs share no structure, so counting them would deflate the rate with cases nobody finds hard.",
+  "families": [
+    {
+      "family": "search_query",
+      "api": "a search endpoint: JSON {query} in, GET /api/search?q=<plus-encoded> out",
+      "shared_structure_note": "the JSON envelope, the path prefix, the opening phrase, and plus-encoding of every space",
+      "shared_literals": [
+        "{\"query\": \"",
+        "/api/search?q=",
+        "how to "
+      ],
+      "why": "Free-text search is the most common shape an agent sends and the one where shared English carries the most bytes. Every call begins with the same four words, which is not a trick: an agent asking a documentation search engine phrases its questions the same way every time.",
+      "calls": [
+        {
+          "id": "res-search-01",
+          "arguments": {
+            "query": "how to purge a stale dns record"
+          },
+          "request": {
+            "target": "/api/search?q=how+to+purge+a+stale+dns+record",
+            "body": ""
+          },
+          "information": [
+            "purge a stale dns record",
+            "purge+a+stale+dns+record"
+          ]
+        },
+        {
+          "id": "res-search-02",
+          "arguments": {
+            "query": "how to throttle a webhook retry loop"
+          },
+          "request": {
+            "target": "/api/search?q=how+to+throttle+a+webhook+retry+loop",
+            "body": ""
+          },
+          "information": [
+            "throttle a webhook retry loop",
+            "throttle+a+webhook+retry+loop"
+          ]
+        },
+        {
+          "id": "res-search-03",
+          "arguments": {
+            "query": "how to expire a cached bearer token"
+          },
+          "request": {
+            "target": "/api/search?q=how+to+expire+a+cached+bearer+token",
+            "body": ""
+          },
+          "information": [
+            "expire a cached bearer token",
+            "expire+a+cached+bearer+token"
+          ]
+        },
+        {
+          "id": "res-search-04",
+          "arguments": {
+            "query": "how to mirror a bucket across regions"
+          },
+          "request": {
+            "target": "/api/search?q=how+to+mirror+a+bucket+across+regions",
+            "body": ""
+          },
+          "information": [
+            "mirror a bucket across regions",
+            "mirror+a+bucket+across+regions"
+          ]
+        },
+        {
+          "id": "res-search-05",
+          "arguments": {
+            "query": "how to quarantine a flapping health check"
+          },
+          "request": {
+            "target": "/api/search?q=how+to+quarantine+a+flapping+health+check",
+            "body": ""
+          },
+          "information": [
+            "quarantine a flapping health check",
+            "quarantine+a+flapping+health+check"
+          ]
+        },
+        {
+          "id": "res-search-06",
+          "arguments": {
+            "query": "how to backfill a partitioned index"
+          },
+          "request": {
+            "target": "/api/search?q=how+to+backfill+a+partitioned+index",
+            "body": ""
+          },
+          "information": [
+            "backfill a partitioned index",
+            "backfill+a+partitioned+index"
+          ]
+        },
+        {
+          "id": "res-search-07",
+          "arguments": {
+            "query": "how to drain a saturated worker pool"
+          },
+          "request": {
+            "target": "/api/search?q=how+to+drain+a+saturated+worker+pool",
+            "body": ""
+          },
+          "information": [
+            "drain a saturated worker pool",
+            "drain+a+saturated+worker+pool"
+          ]
+        },
+        {
+          "id": "res-search-08",
+          "arguments": {
+            "query": "how to pin a transitive dependency"
+          },
+          "request": {
+            "target": "/api/search?q=how+to+pin+a+transitive+dependency",
+            "body": ""
+          },
+          "information": [
+            "pin a transitive dependency",
+            "pin+a+transitive+dependency"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "rest_path",
+      "api": "a repository contents API: JSON {owner, repo, path} in, GET /repos/.../contents/... out",
+      "shared_structure_note": "the JSON envelope, the path prefix, the docs/ directory and the .md extension",
+      "shared_literals": [
+        "{\"owner\": \"",
+        "\"path\": \"docs/",
+        "/repos/",
+        "/contents/docs/",
+        ".md"
+      ],
+      "why": "A REST path built by interpolating caller-supplied fields into a fixed template. The template is most of the bytes, and every call in this family shares it, so a matcher that keys on the template rather than on the interpolated values will claim every pair here.",
+      "calls": [
+        {
+          "id": "res-rest-01",
+          "arguments": {
+            "owner": "slate-harbor",
+            "repo": "ticket-relay",
+            "path": "docs/quotas.md"
+          },
+          "request": {
+            "target": "/repos/slate-harbor/ticket-relay/contents/docs/quotas.md",
+            "body": ""
+          },
+          "information": [
+            "slate-harbor",
+            "ticket-relay",
+            "docs/quotas.md"
+          ]
+        },
+        {
+          "id": "res-rest-02",
+          "arguments": {
+            "owner": "amber-works",
+            "repo": "quota-daemon",
+            "path": "docs/failover.md"
+          },
+          "request": {
+            "target": "/repos/amber-works/quota-daemon/contents/docs/failover.md",
+            "body": ""
+          },
+          "information": [
+            "amber-works",
+            "quota-daemon",
+            "docs/failover.md"
+          ]
+        },
+        {
+          "id": "res-rest-03",
+          "arguments": {
+            "owner": "basalt-yard",
+            "repo": "tally-courier",
+            "path": "docs/retention.md"
+          },
+          "request": {
+            "target": "/repos/basalt-yard/tally-courier/contents/docs/retention.md",
+            "body": ""
+          },
+          "information": [
+            "basalt-yard",
+            "tally-courier",
+            "docs/retention.md"
+          ]
+        },
+        {
+          "id": "res-rest-04",
+          "arguments": {
+            "owner": "cobalt-mill",
+            "repo": "notify-bridge",
+            "path": "docs/backpressure.md"
+          },
+          "request": {
+            "target": "/repos/cobalt-mill/notify-bridge/contents/docs/backpressure.md",
+            "body": ""
+          },
+          "information": [
+            "cobalt-mill",
+            "notify-bridge",
+            "docs/backpressure.md"
+          ]
+        },
+        {
+          "id": "res-rest-05",
+          "arguments": {
+            "owner": "dune-signal",
+            "repo": "asset-pruner",
+            "path": "docs/sharding.md"
+          },
+          "request": {
+            "target": "/repos/dune-signal/asset-pruner/contents/docs/sharding.md",
+            "body": ""
+          },
+          "information": [
+            "dune-signal",
+            "asset-pruner",
+            "docs/sharding.md"
+          ]
+        },
+        {
+          "id": "res-rest-06",
+          "arguments": {
+            "owner": "ember-ridge",
+            "repo": "trace-fanout",
+            "path": "docs/sampling.md"
+          },
+          "request": {
+            "target": "/repos/ember-ridge/trace-fanout/contents/docs/sampling.md",
+            "body": ""
+          },
+          "information": [
+            "ember-ridge",
+            "trace-fanout",
+            "docs/sampling.md"
+          ]
+        },
+        {
+          "id": "res-rest-07",
+          "arguments": {
+            "owner": "fjord-works",
+            "repo": "batch-warden",
+            "path": "docs/idempotency.md"
+          },
+          "request": {
+            "target": "/repos/fjord-works/batch-warden/contents/docs/idempotency.md",
+            "body": ""
+          },
+          "information": [
+            "fjord-works",
+            "batch-warden",
+            "docs/idempotency.md"
+          ]
+        },
+        {
+          "id": "res-rest-08",
+          "arguments": {
+            "owner": "gantry-lane",
+            "repo": "schema-vault",
+            "path": "docs/migrations.md"
+          },
+          "request": {
+            "target": "/repos/gantry-lane/schema-vault/contents/docs/migrations.md",
+            "body": ""
+          },
+          "information": [
+            "gantry-lane",
+            "schema-vault",
+            "docs/migrations.md"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "doc_url",
+      "api": "a fetch tool: JSON {url} in, GET <path> out",
+      "shared_structure_note": "the scheme, the host, and the /guides/ prefix, with only the final two segments varying",
+      "shared_literals": [
+        "https://docs.example.net/guides/",
+        "/guides/"
+      ],
+      "why": "The case where the argument and the request are nearly the same string, so a matcher has the easiest possible job and any false positive here is a matcher keying on the shared site structure rather than on the document asked for. This is also the family whose leaves straddle the shipped k, which is what makes it the family that moves when k moves.",
+      "calls": [
+        {
+          "id": "res-doc-01",
+          "arguments": {
+            "url": "https://docs.example.net/guides/storage/lifecycle-rules"
+          },
+          "request": {
+            "target": "/guides/storage/lifecycle-rules",
+            "body": ""
+          },
+          "information": [
+            "lifecycle-rules"
+          ]
+        },
+        {
+          "id": "res-doc-02",
+          "arguments": {
+            "url": "https://docs.example.net/guides/identity/delegation-chains"
+          },
+          "request": {
+            "target": "/guides/identity/delegation-chains",
+            "body": ""
+          },
+          "information": [
+            "delegation-chains"
+          ]
+        },
+        {
+          "id": "res-doc-03",
+          "arguments": {
+            "url": "https://docs.example.net/guides/network/peering-limits"
+          },
+          "request": {
+            "target": "/guides/network/peering-limits",
+            "body": ""
+          },
+          "information": [
+            "peering-limits"
+          ]
+        },
+        {
+          "id": "res-doc-04",
+          "arguments": {
+            "url": "https://docs.example.net/guides/runtime/warm-pools"
+          },
+          "request": {
+            "target": "/guides/runtime/warm-pools",
+            "body": ""
+          },
+          "information": [
+            "warm-pools"
+          ]
+        },
+        {
+          "id": "res-doc-05",
+          "arguments": {
+            "url": "https://docs.example.net/guides/billing/commitment-tiers"
+          },
+          "request": {
+            "target": "/guides/billing/commitment-tiers",
+            "body": ""
+          },
+          "information": [
+            "commitment-tiers"
+          ]
+        },
+        {
+          "id": "res-doc-06",
+          "arguments": {
+            "url": "https://docs.example.net/guides/observability/cardinality-caps"
+          },
+          "request": {
+            "target": "/guides/observability/cardinality-caps",
+            "body": ""
+          },
+          "information": [
+            "cardinality-caps"
+          ]
+        },
+        {
+          "id": "res-doc-07",
+          "arguments": {
+            "url": "https://docs.example.net/guides/delivery/canary-gates"
+          },
+          "request": {
+            "target": "/guides/delivery/canary-gates",
+            "body": ""
+          },
+          "information": [
+            "canary-gates"
+          ]
+        },
+        {
+          "id": "res-doc-08",
+          "arguments": {
+            "url": "https://docs.example.net/guides/security/key-custody"
+          },
+          "request": {
+            "target": "/guides/security/key-custody",
+            "body": ""
+          },
+          "information": [
+            "key-custody"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "json_post",
+      "api": "a rewrite endpoint: JSON {locale, text} in, JSON {locale, requestId, text} out",
+      "shared_structure_note": "the JSON envelope on both sides, a constant locale, and an opening article shared by every sentence",
+      "shared_literals": [
+        "\"locale\": \"en-US\"",
+        "\"text\": \"",
+        "the "
+      ],
+      "why": "The body channel, where the request is a re-serialisation of the arguments with a field added. The envelope and the locale are shared by construction and the only thing that differs is the sentence, so this family measures whether a match is being carried by the envelope.",
+      "calls": [
+        {
+          "id": "res-post-01",
+          "arguments": {
+            "locale": "en-US",
+            "text": "the migration window should exclude the quarterly close"
+          },
+          "request": {
+            "target": "/v1/rewrite",
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0001\", \"text\": \"the migration window should exclude the quarterly close\"}"
+          },
+          "information": [
+            "the migration window should exclude the quarterly close"
+          ]
+        },
+        {
+          "id": "res-post-02",
+          "arguments": {
+            "locale": "en-US",
+            "text": "the runbook should name a rollback owner for every step"
+          },
+          "request": {
+            "target": "/v1/rewrite",
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0002\", \"text\": \"the runbook should name a rollback owner for every step\"}"
+          },
+          "information": [
+            "the runbook should name a rollback owner for every step"
+          ]
+        },
+        {
+          "id": "res-post-03",
+          "arguments": {
+            "locale": "en-US",
+            "text": "the alert should page only after two consecutive failures"
+          },
+          "request": {
+            "target": "/v1/rewrite",
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0003\", \"text\": \"the alert should page only after two consecutive failures\"}"
+          },
+          "information": [
+            "the alert should page only after two consecutive failures"
+          ]
+        },
+        {
+          "id": "res-post-04",
+          "arguments": {
+            "locale": "en-US",
+            "text": "the retention policy should keep audit events for seven years"
+          },
+          "request": {
+            "target": "/v1/rewrite",
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0004\", \"text\": \"the retention policy should keep audit events for seven years\"}"
+          },
+          "information": [
+            "the retention policy should keep audit events for seven years"
+          ]
+        },
+        {
+          "id": "res-post-05",
+          "arguments": {
+            "locale": "en-US",
+            "text": "the deploy should halt when error budget is exhausted"
+          },
+          "request": {
+            "target": "/v1/rewrite",
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0005\", \"text\": \"the deploy should halt when error budget is exhausted\"}"
+          },
+          "information": [
+            "the deploy should halt when error budget is exhausted"
+          ]
+        },
+        {
+          "id": "res-post-06",
+          "arguments": {
+            "locale": "en-US",
+            "text": "the schema change should ship behind a read flag first"
+          },
+          "request": {
+            "target": "/v1/rewrite",
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0006\", \"text\": \"the schema change should ship behind a read flag first\"}"
+          },
+          "information": [
+            "the schema change should ship behind a read flag first"
+          ]
+        },
+        {
+          "id": "res-post-07",
+          "arguments": {
+            "locale": "en-US",
+            "text": "the backup should be restored into a scratch project monthly"
+          },
+          "request": {
+            "target": "/v1/rewrite",
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0007\", \"text\": \"the backup should be restored into a scratch project monthly\"}"
+          },
+          "information": [
+            "the backup should be restored into a scratch project monthly"
+          ]
+        },
+        {
+          "id": "res-post-08",
+          "arguments": {
+            "locale": "en-US",
+            "text": "the incident review should record what was ruled out"
+          },
+          "request": {
+            "target": "/v1/rewrite",
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0008\", \"text\": \"the incident review should record what was ruled out\"}"
+          },
+          "information": [
+            "the incident review should record what was ruled out"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "containment_subset",
+      "api": "a repository contents API: JSON {owner, repo, path?, ref?} in, GET /repos/<owner>/<repo>/... out",
+      "shared_structure_note": "the JSON envelope, the /repos/ prefix, two organisations and two repository names shared across the family, and a path vocabulary drawn from one repository layout",
+      "shared_literals": [
+        "{\"owner\": \"",
+        "\"repo\": \"",
+        "/repos/"
+      ],
+      "why": "The other four families in this corpus were authored against a k-gram matcher and share long literal runs. Structural containment does not read runs at all, so those families cannot falsify it and a rate of zero over them means only that they were built for a different instrument. This family is built against containment itself: a call whose tokens are a proper subset of another call's request, two calls sharing an enum value and nothing else, and one repository reached through two organisations. Five of its eight calls carry no information of their own and say so in an explicit information_free field, because a call that owns no distinguishing value is precisely the call containment gets wrong, and it cannot be built with one.",
+      "calls": [
+        {
+          "id": "res-contain-01",
+          "arguments": {
+            "owner": "glasswing",
+            "repo": "parcel-api",
+            "path": "handbook/handover"
+          },
+          "request": {
+            "target": "/repos/glasswing/parcel-api/contents/handbook/handover",
+            "body": ""
+          },
+          "information": [
+            "handbook/handover",
+            "handover"
+          ],
+          "case": "anchor",
+          "why": "The full call, and the request every subset case below is measured against."
+        },
+        {
+          "id": "res-contain-02",
+          "arguments": {
+            "owner": "glasswing",
+            "repo": "parcel-api"
+          },
+          "request": {
+            "target": "/repos/glasswing/parcel-api",
+            "body": ""
+          },
+          "information": [],
+          "case": "subset",
+          "why": "Its two tokens are a proper subset of call 01's request tokens, so containment claims it caused call 01's request. It did not. The family's headline case.",
+          "information_free": "Carries no value of its own. That is the attack and not an omission: containment asks whether every token of a call is present in a request, so a call that owns nothing unique is contained in any request that mentions its organisation and repository. A call with a distinguishing value could not be a subset of another call's request, so this case cannot be built any other way."
+        },
+        {
+          "id": "res-contain-03",
+          "arguments": {
+            "owner": "glasswing",
+            "repo": "parcel-api",
+            "path": "handbook"
+          },
+          "request": {
+            "target": "/repos/glasswing/parcel-api/contents/handbook",
+            "body": ""
+          },
+          "information": [],
+          "case": "subset",
+          "why": "A second subset one token longer, so the attack is visibly a property of containment and not of any particular minimum token count.",
+          "information_free": "Carries no value of its own. That is the attack and not an omission: containment asks whether every token of a call is present in a request, so a call that owns nothing unique is contained in any request that mentions its organisation and repository. A call with a distinguishing value could not be a subset of another call's request, so this case cannot be built any other way."
+        },
+        {
+          "id": "res-contain-04",
+          "arguments": {
+            "owner": "glasswing",
+            "repo": "parcel-web",
+            "path": "handbook/custody"
+          },
+          "request": {
+            "target": "/repos/glasswing/parcel-web/contents/handbook/custody",
+            "body": ""
+          },
+          "information": [
+            "custody"
+          ],
+          "case": "shared_org",
+          "why": "Same organisation and same path prefix as call 01, different repository. A human reads these as plainly distinct; the test is whether the matcher does."
+        },
+        {
+          "id": "res-contain-05",
+          "arguments": {
+            "owner": "glasswing",
+            "repo": "parcel-api",
+            "ref": "mainline"
+          },
+          "request": {
+            "target": "/repos/glasswing/parcel-api/commits?sha=mainline",
+            "body": ""
+          },
+          "information": [],
+          "case": "enum",
+          "why": "A ref name shared with call 06 and nothing else of its own.",
+          "information_free": "Its only non-shared token is a low-cardinality ref name shared with its sibling call. An enum value is not information: it identifies a class, not an instance, and a match driven by it is driven by nothing."
+        },
+        {
+          "id": "res-contain-06",
+          "arguments": {
+            "owner": "glasswing",
+            "repo": "parcel-web",
+            "ref": "mainline"
+          },
+          "request": {
+            "target": "/repos/glasswing/parcel-web/commits?sha=mainline",
+            "body": ""
+          },
+          "information": [],
+          "case": "enum",
+          "why": "The same ref name in the other repository of the same organisation.",
+          "information_free": "Its only non-shared token is a low-cardinality ref name shared with its sibling call. An enum value is not information: it identifies a class, not an instance, and a match driven by it is driven by nothing."
+        },
+        {
+          "id": "res-contain-07",
+          "arguments": {
+            "owner": "tidewater",
+            "repo": "parcel-api",
+            "path": "handbook/quiesce"
+          },
+          "request": {
+            "target": "/repos/tidewater/parcel-api/contents/handbook/quiesce",
+            "body": ""
+          },
+          "information": [
+            "quiesce"
+          ],
+          "case": "shared_org",
+          "why": "The mirror of call 04: the same repository name reached through the other organisation, so the distinguishing token moves from the second path segment to the first."
+        },
+        {
+          "id": "res-contain-08",
+          "arguments": {
+            "owner": "tidewater",
+            "repo": "parcel-api"
+          },
+          "request": {
+            "target": "/repos/tidewater/parcel-api",
+            "body": ""
+          },
+          "information": [],
+          "case": "subset",
+          "why": "The subset case again, under the second organisation, so the family does not rest the whole attack on one anchor.",
+          "information_free": "Carries no value of its own. That is the attack and not an omission: containment asks whether every token of a call is present in a request, so a call that owns nothing unique is contained in any request that mentions its organisation and repository. A call with a distinguishing value could not be a subset of another call's request, so this case cannot be built any other way."
+        }
+      ]
+    }
+  ]
+}

@@ -404,3 +404,71 @@ gate rule 6. Each names the threat and what it does to the numbers.
     one, and phase B's results are part of its input: if the 22-to-28 band turns out to carry a
     negligible share of real matches, the second option costs nothing and wins. Revisit after the
     phase B concurrent pass, with the band's measured share in hand.
+
+17. **A tool call executes third-party code it downloads while the call is running. The full
+    causal chain, named.** Threat 10 recorded the behaviour, priced its effect on the numbers and
+    stopped there: "the server shells out to npm during `tools/call`". That was the honest limit
+    of what had been established. The mechanism is now established too, read out of the installed
+    package rather than inferred from a hostname, and it is worse than the summary suggested.
+
+    **The chain.** `mcp-server-fetch@2026.8.18` (PyPI) declares `readabilipy>=0.2.0` among its
+    dependencies. `readabilipy/simple_json.py` calls `have_node()` while converting HTML to text,
+    which is to say inside `tools/call`. `have_node()` checks whether
+    `readabilipy/javascript/node_modules` exists and, if it does not, calls `run_npm_install()`.
+    `readabilipy/utils.py` then runs, literally:
+
+        cp = subprocess.run(["npm", "install"], check=True)
+
+    in the package's own `javascript/` directory. That directory ships a `package.json` and **no
+    lockfile**. Its dependencies are declared as ranges:
+
+        "@mozilla/readability": ">=0.4.1",
+        "jsdom": ">=12.2.0",
+        "minimist": "^1.2.3"
+
+    Reproduce with: `docker run --rm --entrypoint bash mcp-fanout-harness:0.1.0 -lc
+    'uv pip install --system -q mcp-server-fetch==2026.8.18 && sed -n "39,70p"
+    $(python -c "import readabilipy,os;print(os.path.dirname(readabilipy.__file__))")/utils.py'`.
+
+    **Why each link matters.** An open upper bound with no lockfile means the code that runs is
+    whatever the registry serves at the moment of the call. `jsdom` alone pulls a tree of about
+    forty packages, each resolved the same way. Pinning `mcp-server-fetch@2026.8.18` in
+    `registry/servers.yaml` pins the Python distribution and says nothing whatsoever about the
+    JavaScript that executes. Nothing in this project's records names the code that actually ran:
+    the manifest, the corpus digest and the version pin all describe the state BEFORE the call,
+    and this server mutates its own implementation after that snapshot is taken.
+
+    **The `check=True` with no output capture is a second defect on the same line.** npm's stdout
+    goes to the server's stdout, which is the JSON-RPC channel, so the install corrupts the
+    protocol stream with lines like `added 41 packages, and audited 42 packages in 4s`. A
+    transport-level corruption caused by a package manager, during a tool call, is visible from
+    the other side of the wire and was how threat 10 first noticed.
+
+    **The measured drift is the evidence, not a stale figure.** Threat 10 recorded 87 connections
+    on 2026-09-18. Runs `20260919T115452Z-sequential` and `20260919T130847Z-concurrent` both
+    recorded exactly **82**, and the agreement between two runs a pass apart rules out noise. The
+    same pinned server, driven through the same harness a day later, resolved a different
+    dependency set. That is not an old number needing a refresh: it is the direct measurement of
+    the instability this threat is about, and it is recorded here as such. The 82 decompose as 81
+    GET and one POST of 545 bytes, consistent with a packument and a tarball per package plus one
+    bulk advisory request.
+
+    **What it means for an agent, which is why this is a headline and not an appendix.** A tool
+    call made by an autonomous agent causes third-party code to be downloaded and executed on the
+    machine, from a registry the tool's own documentation never mentions, with contents that
+    differ between days, with no record of what ran, and with nothing shown to the user. The
+    agent asked for a web page. The system installed forty packages. Every property this project
+    exists to measure, provenance, attributability and the gap between what was authorised and
+    what left the machine, is present in that single behaviour, and it was found by instrumenting
+    an edge rather than by reading documentation.
+
+    **Where it goes.** Above number 3 as the leading candidate for the paper's headline result.
+    Number 3 measures a property of a population; this is a reproducible mechanism with a named
+    causal chain, and it generalises beyond MCP: any tool that lazily installs a dependency at
+    call time has it.
+
+    **Disclosure.** Gate rule 7 applies and, unlike threat 15's browser, both maintainers are
+    reachable: `alan-turing-institute/ReadabiliPy` and the `mcp-server-fetch` maintainers. Draft
+    in `docs/disclosure/2026-09-19-readabilipy-npm-install-at-call-time.md`, to be sent before
+    anything is published. Nothing about this is a vulnerability claim against either project;
+    it is a report of behaviour whose consequences change when the caller is an agent.

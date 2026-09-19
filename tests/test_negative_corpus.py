@@ -72,7 +72,18 @@ def test_every_family_states_what_it_is_for(half):
         assert fam["shared_literals"], fam["family"]
         assert fam["calls"], fam["family"]
         for call in fam["calls"]:
-            assert call["information"], f"{call['id']}: declares no information"
+            # A call must declare what would make a match a TRUE positive, OR declare in writing
+            # that it owns nothing and why. The second case is not a loophole, it is a case the
+            # corpus could not otherwise contain: a call whose tokens are a proper subset of
+            # another call's request cannot have a distinguishing value, because owning one is
+            # exactly what would stop it being a subset. Silence is still forbidden; only a
+            # stated, reasoned emptiness is allowed, and the reason has to be an argument rather
+            # than a label.
+            if call["information"]:
+                continue
+            reason = call.get("information_free", "")
+            assert len(reason.strip()) > 120, (
+                f"{call['id']}: declares no information and no reasoned information_free")
 
 
 @pytest.mark.parametrize("half", [CALIBRATION, HELD_OUT])
@@ -186,6 +197,13 @@ def _expected_target(family: str, args: dict) -> str | None:
         return urlparse(args["url"]).path
     if family == "json_post":
         return "/v1/rewrite"
+    if family == "containment_subset":
+        base = f"/repos/{args['owner']}/{args['repo']}"
+        if "path" in args:
+            return f"{base}/contents/{quote(args['path'])}"
+        if "ref" in args:
+            return f"{base}/commits?sha={quote_plus(args['ref'])}"
+        return base
     return None
 
 
