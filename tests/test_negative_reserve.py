@@ -121,14 +121,26 @@ def test_enough_pairs_to_carry_a_rate():
         assert n * (n - 1) >= 42, f"{fam['family']}: {n} calls is too few to state a rate"
 
 
-@pytest.mark.parametrize("doc", ["docs/PREREG-F2.md", "docs/CALIBRATION.md"])
-def test_no_published_figure_cites_the_reserve_yet(doc):
-    """The reserve is measured ONCE, at the end. Until then no document may quote a rate from it.
+def test_the_reserve_has_been_measured_once_and_says_so():
+    """The reserve was measured on 2026-09-19 after the seal, and that is now the published state.
 
-    This cannot stop a bypass, because nothing in a repository can. What it can do is make a
-    published figure that came from here fail the suite, which is the difference between a
-    courtesy and a courtesy somebody notices.
+    This test replaced one that forbade any document from quoting a reserved-half rate. That guard
+    did its job: it held from the moment the reserve was created until the single end-of-work
+    measurement, which is exactly the window it existed for. Keeping it afterwards would forbid
+    publishing the figure the reserve was built to produce.
+
+    What it guards now is the other direction: the figure may be published, and it may not be
+    published without the command that produced it, because a reserved-half rate with no command
+    is a number nobody can check (rule 6).
     """
-    text = (REPO / doc).read_text(encoding="utf-8")
-    for banned in ("reserved half: 0.0", "reserved half: 0,", "on the reserved half was"):
-        assert banned not in text, f"{doc} appears to quote a reserved-half rate: {banned!r}"
+    text = (REPO / "docs" / "PREREG-F2.md").read_text(encoding="utf-8")
+    assert "make f2-reserved" in text, "the reserved figure is quoted with no command behind it"
+    assert "measured once" in text
+
+
+def test_the_reserve_measurement_is_a_separate_command_from_the_calibration_one():
+    """A single command that could be pointed at either half is one somebody points wrongly."""
+    makefile = (REPO / "Makefile").read_text(encoding="utf-8")
+    assert "\nf2:" in makefile and "\nf2-reserved:" in makefile
+    tool = (REPO / "tools" / "measure_f2.py").read_text(encoding="utf-8")
+    assert "--reserved" in tool

@@ -166,6 +166,41 @@ an LLM propagation is linguistic and probabilistic, so a paraphrase breaks the h
 literal matching produces auditable evidence with near-zero false positives; semantic tracking
 produces inference. They are different products, and the doctrine already chose which one this is.
 
+## Two instruments, because there are two problems
+
+Numbers 4 and 5 were measured with one matcher until F2, and that was a mistake with a measured
+cost. They ask different questions over different material.
+
+**Number 4, provenance coverage, keeps the exact k-gram.** It asks whether a request carried
+material from a session context file. Context files are prose: long, unstructured, with no field
+boundaries to exploit. A literal k-gram at k = 22 is the right instrument there, its
+false-positive rate on the negative control is 0.0000, and F2 did not move a single one of its
+figures (docs/PREREG-F2.md, P6, verified byte-identical against the committed figure).
+
+**Number 5, attribution, moves to structural containment.** It asks whether a request was CAUSED
+by a specific call. A call's arguments are not prose: they are JSON fields whose values reappear
+on the wire as path segments and query values. That correspondence is structural, and a k-gram
+cannot see it. The diagnosis is one line of data: `/docs/deploy/runbook` is 20 bytes and invisible
+at k = 22, while `/docs/deploy/checklist` is 22 bytes and visible. A matcher whose sensitivity
+depends on how a documentation site happened to name a page is measuring the site.
+
+The criterion is containment: every structural token of the call present in the request, compared
+as sets of keyed digests so no token crosses in plaintext. Measured self-match went from 0.5000 to
+1.0000 on the negative control and from 0.5385 to 1.0000 on real material, with 0 of 280 false
+positives on the reserved half.
+
+**What makes this a split and not a replacement.** The two matchers share no code path, their
+figures are recorded in separate fields of `Flow`, and `aggregate` reads one for number 4 and the
+other for number 5. Merging them would have meant choosing one instrument for two problems again,
+which is the thing that was wrong. The cost is that the repository now carries two matchers and
+has to keep both calibrated, and that is the honest price of the split rather than an oversight.
+
+**What containment cannot do, in the method rather than in the code.** A call whose tokens are a
+proper subset of a concurrent call's cannot be uniquely attributed by any implementation of
+containment, and the commonest way to produce one is an agent re-reading its own document with
+more precision. docs/THREATS.md threat 18 carries the argument and the measured instance, and
+number 5 publishes the count of such calls so the limit is visible in the output.
+
 ## Cost
 
 One afternoon, about 10 EUR of compute. It touches nothing outside a container and starts no server

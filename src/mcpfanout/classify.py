@@ -34,6 +34,7 @@ REMOTE_LEAF = "remote_leaf"
 # Where the package-infrastructure exclusion list lives. Number 1 publishes a connection count
 # that excludes these hosts alongside the raw count that includes them (see ExclusionList).
 PACKAGE_INFRASTRUCTURE_PATH = "registry/package-infrastructure.json"
+CONSTANT_PATHS_PATH = "registry/client-constant-paths.json"
 
 # Default remote-leaf suffixes: hosted APIs that cannot be run on our own machine. Starter set,
 # meant to grow through the registry file, never claimed to be exhaustive.
@@ -175,3 +176,72 @@ class ExclusionList:
         return {"list_name": self.name, "version": self.version,
                 "path": f"{p.parent.name}/{p.name}" if p.parent.name else p.name,
                 "sha256": self.sha256, "suffix_count": len(self.suffixes)}
+
+
+@dataclass(frozen=True)
+class ConstantPathList:
+    """Destinations a CLIENT emits with a target that does not vary with the tool call.
+
+    The denominator of number 5's CONTENT attribution figure, and the reason it exists is
+    arithmetic rather than tidiness. In the run F2 was pre-registered against, 17 of 38
+    call-caused eligible flows were `/robots.txt`, eleven bytes, one per fetch call, identical
+    whatever URL the call named, and two more were a browser checking its own version. Those 19
+    carry no byte of any argument, so no matcher can attribute them by content. Leaving them in
+    the denominator of a CONTENT figure measures the corpus's shape rather than the matcher: the
+    ceiling was 19/38 = 0.5000 before a line of matcher code existed.
+
+    Same three properties as ExclusionList, for the same reasons: data in the repository, the
+    other denominators never discarded, and the output cites it by name, version and sha256. One
+    more on top, because this one is the denominator of a PRE-REGISTERED verdict: its sha256 is
+    quoted inside the frozen block of docs/PREREG-F2.md and a test fails if the file drifts, so
+    an entry added later cannot quietly move a threshold that was fixed before the measurement.
+
+    Two matching modes, and the second is deliberately broader than the rule.
+
+    - `exact_paths` and `path_prefixes` are the rule: a constant PATH.
+    - `hosts` is broader, and an entry using it has to say so in the file. The browser update
+      check is there because the run records target_bytes and not the target, so the constancy of
+      its path was never verified. A host-level exclusion would also hide a call-derived request
+      to that host, and the file states the residual and publishes the arithmetic to undo it.
+    """
+    name: str
+    version: str
+    exact_paths: tuple[str, ...]
+    path_prefixes: tuple[str, ...]
+    hosts: tuple[str, ...]
+    sha256: str
+    path: str
+
+    @classmethod
+    def load(cls, path: str | Path) -> "ConstantPathList | None":
+        p = Path(path)
+        if not p.is_file():
+            return None
+        raw = p.read_bytes()
+        data = json.loads(raw.decode("utf-8"))
+        return cls(
+            name=data.get("list_name", p.stem),
+            version=data.get("version", ""),
+            exact_paths=tuple(e["path"] for e in data.get("exact_paths", ())),
+            path_prefixes=tuple(e["prefix"] for e in data.get("path_prefixes", ())),
+            hosts=tuple(e["host"] for e in data.get("hosts", ())),
+            sha256=hashlib.sha256(raw).hexdigest(),
+            path=str(path),
+        )
+
+    def matches(self, host: str, target: str) -> bool:
+        """True when this flow is client-constant chatter rather than call-derived egress."""
+        if host and host in self.hosts:
+            return True
+        path = (target or "").split("?", 1)[0]
+        if path in self.exact_paths:
+            return True
+        return any(path.startswith(pre) for pre in self.path_prefixes)
+
+    def citation(self) -> dict:
+        p = Path(self.path)
+        return {"list_name": self.name, "version": self.version,
+                "path": f"{p.parent.name}/{p.name}" if p.parent.name else p.name,
+                "sha256": self.sha256,
+                "entry_count": len(self.exact_paths) + len(self.path_prefixes) + len(self.hosts),
+                "host_level_entries": len(self.hosts)}

@@ -106,6 +106,33 @@ class Redactor:
         return frozenset(self._digest_int(v) for v in shingle.fingerprints(data, self.k, self.w))
 
 
+    def token_digest(self, token: str) -> str:
+        """Salted digest of ONE structural token. Never the token itself leaves this process.
+
+        DOMAIN SEPARATION, and it is not decoration. A k-gram digest is the hash of a rolling-hash
+        VALUE; a token digest is the hash of the token's bytes. Without a separator the two live in
+        one namespace, and a k-gram whose rolling hash happened to equal a token's byte pattern
+        would be indistinguishable from that token. The two sets are compared against different
+        things and must never be interchangeable, so the prefix makes a cross-domain equality
+        impossible rather than improbable.
+
+        WHAT THIS DOES NOT PROTECT, stated where the code is rather than only in the doctrine.
+        Structural tokens are short, low-entropy and drawn from a known vocabulary: `docs`,
+        `deploy`, `warn`, a ref name, an enum. Against a holder of the salt they are recoverable by
+        enumeration in seconds. This is PENDING gap 2 above arriving on the main path, not a new
+        problem, and no digest function fixes it. For short tokens a keyed digest is obfuscation,
+        not access control (docs/DOCTRINE.md). Both PENDING gaps are preconditions of deploying
+        the structural matcher outside a measurement.
+        """
+        h = hashlib.blake2b(b"tok\x00" + token.encode("utf-8", "surrogateescape"),
+                            key=self.salt, digest_size=_DIGEST_BYTES)
+        return h.hexdigest()
+
+    def token_digest_set(self, tokens) -> frozenset[str]:
+        """Membership set of salted token digests. The only form tokens are compared in."""
+        return frozenset(self.token_digest(t) for t in tokens)
+
+
 def format_finding(digest: str, reference: str, domain: str) -> str:
     """The one sentence the collector is allowed to store or print about a match."""
     return f"fragment {digest} from reference {reference} appeared in output toward {domain}"

@@ -163,6 +163,37 @@ class Flow:
     # than a restatement of sequential driving: see match.grade_attribution.
     active_calls_in_window: int = 0
     matching_calls_in_window: int = 0
+    # THE STRUCTURAL MATCHER'S OWN FIELDS (number 5 only; number 4 keeps the k-gram above).
+    #
+    # Recorded separately rather than folded into matching_calls_in_window because the two
+    # instruments answer different questions and a single pair of counters would make the split
+    # unauditable. All four default to 0 so a run captured before F2 reads back unchanged.
+    #
+    # structural_match        at least one in-flight call survived containment AND discrimination
+    # structural_contained    calls whose whole token set was present, BEFORE discrimination
+    # structural_candidates   of those, the ones owning a token no neighbour owned
+    # non_discriminating_calls  in-flight calls dropped for owning no such token
+    # candidate_token_count   tokens of the single surviving candidate, 0 when there is not
+    #                         exactly one. One token is never strong evidence, and the grade
+    #                         applies that floor.
+    #
+    # The gap between structural_contained and structural_candidates is threat 18 made visible:
+    # a call whose tokens are a subset of a concurrent call's is contained and not a candidate,
+    # and without these two numbers side by side that loss is indistinguishable in the output
+    # from a flow that never matched anything.
+    structural_match: bool = False
+    structural_contained: int = 0
+    structural_candidates: int = 0
+    non_discriminating_calls: int = 0
+    candidate_token_count: int = 0
+    # Whether this flow's target is one a CLIENT emits with a target that does not vary with the
+    # tool call: /robots.txt before every fetch, a browser's own update check
+    # (registry/client-constant-paths.json). Recorded AT CAPTURE and not derived later, for the
+    # same reason `phase` is: the classification needs the request target, and the target is not
+    # stored. Storing the flag instead of the target keeps the record content-free while leaving
+    # the denominator of number 5's content figure computable. A run captured before this field
+    # existed reads back False, which counts the flow IN, which is the conservative direction.
+    constant_client_path: bool = False
     # Which lifecycle phase the driver had published when this flow was seen (PHASES_LIFECYCLE).
     # Defaulted to "" so a run written before the phase existed still reads back, and reported as
     # "unrecorded" rather than guessed: "we did not record the phase" and "the phase was driving"
