@@ -60,6 +60,11 @@ CALIBRATION = "calibration"
 HELD_OUT = "held_out"
 HALVES = (CALIBRATION, HELD_OUT)
 _FILENAMES = {CALIBRATION: "calibration.json", HELD_OUT: "held-out.json"}
+# The reserved half's filename, exported so that code which must REFUSE it (rarity.py checking that
+# it never became a background document) can do so without writing the name a second time. A second
+# literal would defeat the source scan in tests/test_negative_corpus.py, which is what proves no
+# tuning path reaches for this file at all.
+HELD_OUT_FILENAME = _FILENAMES[HELD_OUT]
 
 # What a caller is going to do with the corpus. Not decoration: the loader refuses one combination.
 PURPOSE_CALIBRATION = "calibration"   # choosing k, choosing a threshold, trying something out
@@ -173,17 +178,24 @@ def wilson_interval(successes: int, n: int, z: float = 1.959963984540054) -> tup
     return (max(0.0, lo), min(1.0, hi))
 
 
-def claims_match(a: NegativeCall, b: NegativeCall, redactor: Redactor) -> bool:
+def claims_match(a: NegativeCall, b: NegativeCall, redactor: Redactor, decide=None) -> bool:
     """Does the matcher affirm that B's arguments appear in A's request?
 
     This is the addon's own per-call question (capture_addon.request), run directly, so the figure
     describes the matcher that ships and not a reimplementation of it.
+
+    ``decide`` replaces that question with another predicate over the same inputs, which is how the
+    F1.3 rarity experiment is measured without the matcher gaining a parameter it does not ship
+    with. Default None means the shipped matcher, and every figure says which it used.
     """
     digests = frozenset(redactor.kgram_digest_set(args_bytes(b.arguments)))
+    if decide is not None:
+        return decide(a.target, a.body, digests, redactor)
     return _match.match_request(a.target, a.body, {}, digests, redactor).causal
 
 
-def false_positive_rate(corpus: NegativeCorpus, redactor: Redactor) -> dict:
+def false_positive_rate(corpus: NegativeCorpus, redactor: Redactor, decide=None,
+                        weighting: str = "") -> dict:
     """The F1.1 figure: how often the matcher claims a coincidence that does not exist.
 
     Reported per family as well as pooled, because the families are deliberately not equivalent:
@@ -197,7 +209,7 @@ def false_positive_rate(corpus: NegativeCorpus, redactor: Redactor) -> dict:
     for a, b in pairs:
         fam = by_family.setdefault(a.family, {"pairs": 0, "false_positives": 0})
         fam["pairs"] += 1
-        if claims_match(a, b, redactor):
+        if claims_match(a, b, redactor, decide):
             fam["false_positives"] += 1
             total_fp += 1
     for fam in by_family.values():
@@ -211,6 +223,10 @@ def false_positive_rate(corpus: NegativeCorpus, redactor: Redactor) -> dict:
         "name": "matcher_false_positive_rate_on_structured_language",
         "half": corpus.half,
         "k": redactor.k,
+        # Named rather than boolean: "which decision produced this rate" has more than two answers
+        # now, and a figure that only said True/False could not be told apart from the next variant.
+        "decision": weighting or "shipped_matcher",
+        "rarity_weighting": bool(weighting),
         "pairs": n,
         "false_positives": total_fp,
         "rate": round(total_fp / n, 4) if n else 0.0,

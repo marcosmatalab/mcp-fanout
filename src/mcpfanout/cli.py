@@ -244,6 +244,26 @@ def _cmd_ksweep(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_rarity(args: argparse.Namespace) -> int:
+    """F1.3: measure whether rarity weighting lowers the false-positive rate, and say what it implies.
+
+    Exit code carries the verdict: 0 if the rate fell (the weighting earns its place), 1 if it did
+    not (revert it and document why). A measurement whose conclusion needs a human to read the prose
+    is a measurement that gets quoted the other way round eventually.
+    """
+    from .rarity import VERDICT_KEPT, acceptance
+    from .shingle import DEFAULT_K
+    out = acceptance(shipped_k=args.k, probe_k=args.probe_k)
+    print(json.dumps(out, indent=2, sort_keys=True))
+    if args.out:
+        dest = Path(args.out)
+        dest.mkdir(parents=True, exist_ok=True)
+        path = dest / f"rarity-acceptance-k{args.k}.json"
+        path.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"wrote {path}", file=sys.stderr)
+    return 0 if out["verdict"] == VERDICT_KEPT else 1
+
+
 def _cmd_disclosure_check(args: argparse.Namespace) -> int:
     """Gate rule 7 as a command. Exit 0 if clear, 1 if anything needs reviewing or is unknown.
 
@@ -444,6 +464,14 @@ def build_parser() -> argparse.ArgumentParser:
     ks.add_argument("--k-max", type=int, default=64)
     ks.add_argument("--out", default=None, help="directory for the committed curve")
     ks.set_defaults(func=_cmd_ksweep)
+
+    ra = sub.add_parser("rarity", help="F1.3: does rarity weighting lower the false-positive rate")
+    ra.add_argument("--k", type=int, default=_shingle_default_k(),
+                    help="the shipped k: where the published comparison is made")
+    ra.add_argument("--probe-k", type=int, default=16,
+                    help="a k at which false positives still exist, so the mechanism is observable")
+    ra.add_argument("--out", default=None, help="directory for the committed figure")
+    ra.set_defaults(func=_cmd_rarity)
 
     dc = sub.add_parser("disclosure-check",
                         help="gate rule 7: destinations of a run that nobody declared")

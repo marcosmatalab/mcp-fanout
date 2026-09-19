@@ -1,0 +1,15 @@
+{
+  "_what_this_is": "The documents whose k-gram frequencies define 'common' for F1.3 rarity weighting. Globs are expanded in sorted order and each FILE is one document; document frequency is the number of documents a k-gram appears in. See README.md for the construction rule and its limits.",
+  "_never": "corpus/negative/held-out.json is NOT here and must never be: the published false-positive figure is measured on that half, and a background containing it would be scoring the matcher against material it had already been shown.",
+  "documents": [
+    "registry/probes/*.json",
+    "corpus/calls/*.json",
+    "corpus/concurrent/*.json",
+    "corpus/negative/calibration.json"
+  ],
+  "excluded": {
+    "corpus/negative/held-out.json": "the evaluation half (see _never)",
+    "docs/*.md": "the documentation of this experiment quotes the exact literal runs the negative families share, so including it would put the answer in the background",
+    "corpus/context/*": "the bait files carry planted canaries, and a background that contained a canary would weight our own markers down to nothing, which is the one thing the corpus plants them to be able to find"
+  }
+}
