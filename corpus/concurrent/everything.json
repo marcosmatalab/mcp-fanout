@@ -1,0 +1,22 @@
+[
+  {"tool": "echo", "arguments": {"message": "checking deploy runbook step 4"},
+   "why": "Ordinary text rather than a planted marker. This server is a local control: if any of this material appears on a wire, that is the finding (expects_egress: false)."},
+  {"tool": "echo", "arguments": {"message": "checking deploy runbook step 5"},
+   "why": "One byte different from the previous call. Two concurrent echoes of near-identical text are the simplest realistic ambiguous pair there is."},
+  {"tool": "simulate-research-query", "arguments": {"topic": "deployment rollback runbooks", "ambiguous": false},
+   "why": "The tool whose name says it simulates what an agent does. The topic words overlap the echoes above in single words, not in runs."},
+  {"tool": "simulate-research-query", "arguments": {"topic": "deployment rollback tracing", "ambiguous": true},
+   "why": "Same topic prefix, 22 bytes shared with the call above, and the flag flipped."},
+  {"tool": "get-structured-content", "arguments": {"location": "New York"},
+   "why": "An enum value the real schema declares. The guessed corpus this file replaces had three tool names that do not exist on this server, which is why every argument here is checked against the committed probe."},
+  {"tool": "get-annotated-message", "arguments": {"messageType": "debug"},
+   "why": "Second enum-constrained call, on a different field, so a schema change on either one fails the corpus test rather than the run."},
+  {"tool": "get-resource-reference", "arguments": {"resourceId": 1, "resourceType": "Text"},
+   "why": "Optional-argument call: the schema requires nothing and we pass two fields anyway, so args_present is true while required is empty."},
+  {"tool": "get-resource-links", "arguments": {"count": 3},
+   "why": "Bounded, because the number of links is not what is being measured."},
+  {"tool": "get-env", "arguments": {},
+   "why": "The argument-less call, and the interesting one for a control: it reads the server's own environment, so if this server ships anything out, our machine's state is what would travel."},
+  {"tool": "get-sum", "arguments": {"a": 40, "b": 2},
+   "why": "Numeric arguments only. Nothing in them can be a 16-byte run, so the call is structurally unmatchable and enters the wave as a candidate that can never win: the wave needs such calls, because real sessions contain them."}
+]

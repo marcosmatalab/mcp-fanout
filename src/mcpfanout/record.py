@@ -23,6 +23,23 @@ from typing import Iterable, Iterator, Type, TypeVar
 
 T = TypeVar("T")
 
+# WHICH PASS PRODUCED A RUN. A run is driven under exactly one of these conditions and the label
+# travels with it, because the conditions are not comparable and a figure from one must never be
+# read as a figure from the other (docs/PHASES.md, phase B: two passes).
+#
+#   sequential  one call in flight per server. Numbers 1, 2, 3 and 4 are read from this pass.
+#               CONTENT_UNIQUE is unreachable here BY CONSTRUCTION, so the attribution grades of
+#               this pass say nothing about whether content matching discriminates.
+#   concurrent  waves of N calls in flight per server. The pass that can produce CONTENT_UNIQUE
+#               and CONTENT_AMBIGUOUS, and therefore the only one number 5 may be read from.
+#   bench       phase A, our own server and our own sink, where ground truth exists.
+#   selftest    synthetic fixtures, no capture. Never a measurement of anything.
+PASS_SEQUENTIAL = "sequential"
+PASS_CONCURRENT = "concurrent"
+PASS_BENCH = "bench"
+PASS_SELFTEST = "selftest"
+PASSES = (PASS_SEQUENTIAL, PASS_CONCURRENT, PASS_BENCH, PASS_SELFTEST)
+
 
 @dataclass
 class ToolCall:
@@ -42,6 +59,12 @@ class ToolCall:
     # protocol, so anything else is the server corrupting its own channel -- a property of that
     # server worth recording, not a detail to absorb silently.
     stdout_noise_lines: int = 0
+    # How many calls were driven in the same wave as this one: 1 under the sequential pass, N
+    # under the concurrent pass. Recorded per call because "the server errored" and "the server
+    # errored at N=10 but not at N=2" are different findings, and a per-flow window count cannot
+    # say it: a call that failed may have produced no flow at all. Defaulted so a run written
+    # before the two-pass split still reads back.
+    wave_size: int = 0
 
 
 @dataclass
@@ -106,6 +129,11 @@ class RunManifest:
     # the convention: not propagating says something about its age, not about uptake. Defaulted
     # so a manifest written before this field existed still reads back.
     server_protocol_versions: dict[str, str] = field(default_factory=dict)
+    # Which of PASSES drove this run. Defaulted to "" so a manifest written before the two-pass
+    # split still reads back, and reported as "unlabelled" by the aggregate rather than guessed:
+    # an unlabelled run is one whose driving condition is unknown, and the grade distribution of a
+    # run whose concurrency is unknown means nothing at all.
+    pass_name: str = ""
     notes: str = ""
 
 

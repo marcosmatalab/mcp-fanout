@@ -12,15 +12,24 @@ REGISTRY="registry/servers.yaml"
 OUT_ROOT="runs"
 ONLY=()
 BENCH=0
+# Which phase B pass to drive. One run holds one pass and the run id says which, because the two
+# are separate experimental conditions whose figures are published separately (docs/PHASES.md,
+# phase B). drive_all.py refuses to write a second pass into a run that already holds one.
+PASS="sequential"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --registry) REGISTRY="$2"; shift 2 ;;
     --out) OUT_ROOT="$2"; shift 2 ;;
     --only) ONLY+=(--only "$2"); shift 2 ;;
+    --pass) PASS="$2"; shift 2 ;;
     --bench) BENCH=1; shift ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
+case "${PASS}" in
+  sequential|concurrent) ;;
+  *) echo "[run] --pass must be sequential or concurrent, got: ${PASS}" >&2; exit 2 ;;
+esac
 
 # Refuse to run outside a container. The header above says this script assumes it is inside one,
 # but saying so is not enforcing it: below, this script copies a CA into
@@ -35,10 +44,14 @@ if [[ "${MCPFANOUT_ALLOW_HOST:-0}" != "1" && ! -f /.dockerenv && ! -f /run/.cont
   exit 3
 fi
 
-RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
+# The pass is in the RUN ID, not only in the manifest. The committed figure is named after the
+# run, so a directory listing of docs/figures/ says which condition produced each artifact without
+# opening any of them; a timestamp alone would leave two incomparable figures looking like a pair.
+if [[ "${BENCH}" == "1" ]]; then LABEL="bench"; else LABEL="${PASS}"; fi
+RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)-${LABEL}"
 RUN_DIR="${OUT_ROOT%/}/${RUN_ID}"
 mkdir -p "${RUN_DIR}/control"
-echo "[run] run dir: ${RUN_DIR}"
+echo "[run] run dir: ${RUN_DIR} (pass: ${LABEL})"
 
 # Salt: fixed default for a reproducible measurement. Override MCPFANOUT_SALT for a real deployment.
 export MCPFANOUT_SALT="${MCPFANOUT_SALT:-mcp-fanout/fixed-salt/v1}"
@@ -101,6 +114,18 @@ export SSL_CERT_FILE="${CA}"
 export REQUESTS_CA_BUNDLE="${CA}"
 export NODE_EXTRA_CA_CERTS="${CA}"
 
+# Chromium does NOT read the system trust store: it reads an NSS database under ~/.pki/nssdb. So
+# update-ca-certificates above is invisible to it and puppeteer's navigations fail with
+# ERR_CERT_AUTHORITY_INVALID, which records zero egress for a browser that did try to leave.
+# Measured on the third ten-server capture. Rejected alternative: launch Chrome with
+# --ignore-certificate-errors, which would be a weaker browser than the one under measurement and
+# would hide a server that legitimately refuses a bad certificate. Trusting our own CA in the store
+# the browser actually reads changes nothing about how it validates.
+mkdir -p "${HOME}/.pki/nssdb"
+certutil -d "sql:${HOME}/.pki/nssdb" -N --empty-password >/dev/null 2>&1 || true
+certutil -d "sql:${HOME}/.pki/nssdb" -A -t "C,," -n mitmproxy -i "${CA}" >/dev/null 2>&1 \
+  || echo "[run] warning: could not add the CA to the NSS store; browser egress may not be captured" >&2
+
 # 4. Optional connection-count backstop: a pcap catches flows the proxy cannot read
 #    (non-HTTP, or a pinned client). Reconciliation is left to a follow-up; the pcap is the
 #    honest record that the proxy's fan-out count is a lower bound.
@@ -118,6 +143,7 @@ if [[ "${BENCH}" == "1" ]]; then
          --proxy "http://127.0.0.1:8080" --salt "${MCPFANOUT_SALT}" --sink-port 8099
 else
   python harness/drive_all.py --registry "${REGISTRY}" --run-dir "${RUN_DIR}" \
+         --mode "${PASS}" \
          --proxy "http://127.0.0.1:8080" --salt "${MCPFANOUT_SALT}" "${ONLY[@]+"${ONLY[@]}"}"
 fi
 
@@ -136,4 +162,18 @@ if [[ "${BENCH}" == "1" ]]; then
   echo "[run] done: ${RUN_DIR}/numbers.json and ${RUN_DIR}/instrument.json"
 else
   echo "[run] done: ${RUN_DIR}/numbers.json"
+fi
+
+# 8. Gate rule 7, as a command rather than as a thing to remember. It reduces the run's
+#    destinations to the ones nobody declared (registry/declared-destinations.json) and exits
+#    non-zero if any server needs reviewing. Not fatal here: the capture already happened and the
+#    records are on disk. What it gates is PUBLISHING, so it shouts instead of deleting a run.
+#    Its report names servers and hosts, so it stays inside the run directory (gate rule 3).
+if ! python -m mcpfanout.cli disclosure-check --run "${RUN_DIR}" >/dev/null; then
+  echo "[run] ============================================================" >&2
+  echo "[run] GATE RULE 7: at least one destination was not declared, or a" >&2
+  echo "[run] server has no declaration. STOP before publishing anything" >&2
+  echo "[run] from this run. See ${RUN_DIR}/disclosure.json and read the" >&2
+  echo "[run] documentation of each listed server for the listed hosts." >&2
+  echo "[run] ============================================================" >&2
 fi

@@ -1,0 +1,22 @@
+[
+  {"tool": "create_entities", "arguments": {"entities": [{"name": "deploy-2026-09-19", "entityType": "incident", "observations": ["rollback took eleven minutes"]}]},
+   "why": "An agent writing up an incident. The item schema requires name, entityType and observations, and observations is an array of strings. Writes here stay inside the container's own knowledge graph file, which is why a write is admissible on this server and not on github."},
+  {"tool": "create_entities", "arguments": {"entities": [{"name": "deploy-2026-09-18", "entityType": "incident", "observations": ["rollback took nine minutes"]}]},
+   "why": "The previous day's incident, written concurrently. The two calls share 'entityType': 'incident' and most of the observation wording, which is what two records of the same kind look like."},
+  {"tool": "add_observations", "arguments": {"observations": [{"entityName": "deploy-2026-09-19", "contents": ["runbook step 4 was the slow one"]}]},
+   "why": "An update naming an entity another call in this wave created. The entity name is shared material between two concurrent calls with different tools, which is the cross-tool version of the ambiguity."},
+  {"tool": "create_relations", "arguments": {"relations": [{"from": "deploy-2026-09-19", "to": "deploy-2026-09-18", "relationType": "followed"}]},
+   "why": "A relation whose arguments contain both entity names, so it competes with both create_entities calls at once."},
+  {"tool": "search_nodes", "arguments": {"query": "rollback"},
+   "why": "A one-word search. Seven bytes is below k=16, so this call contributes no matchable fragment at all: in a realistic corpus a sizeable share of calls are simply too short to be attributable by content, and that share is part of what this pass measures."},
+  {"tool": "search_nodes", "arguments": {"query": "deploy-2026-09-19 rollback"},
+   "why": "A longer search reusing the entity name, which is long enough to match and is present in three other calls."},
+  {"tool": "search_nodes", "arguments": {"query": "incident runbook slow step"},
+   "why": "A free-text search in the wording an agent would use, overlapping the observations above in single words rather than in runs."},
+  {"tool": "open_nodes", "arguments": {"names": ["deploy-2026-09-19", "deploy-2026-09-18"]},
+   "why": "Opens both entities, so like create_relations its argument set is a superset of two other calls'."},
+  {"tool": "read_graph", "arguments": {},
+   "why": "The argument-less call. It carries nothing that can travel and therefore competes for nothing."},
+  {"tool": "search_nodes", "arguments": {"query": "deploy-2026-09-18"},
+   "why": "The narrowest search, whose whole argument value is contained in four other calls. Deliberately the most ambiguous call in the wave, and an entirely ordinary one."}
+]

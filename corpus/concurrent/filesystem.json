@@ -1,0 +1,22 @@
+[
+  {"tool": "list_directory", "arguments": {"path": "/app/corpus/context"},
+   "why": "An agent orienting itself before reading. The container mounts corpus read-only at /app/corpus and the server is launched with that as its only allowed root, so every path here sits inside it."},
+  {"tool": "read_text_file", "arguments": {"path": "/app/corpus/context/README.md"},
+   "why": "First of four reads that share the 21-byte prefix /app/corpus/context/. With structured file arguments the shared material is the directory, and that is not an artefact of this corpus: agents read several files from one directory at once."},
+  {"tool": "read_text_file", "arguments": {"path": "/app/corpus/context/config.py"},
+   "why": "Sibling read. Differs from the previous call in the last nine bytes of the path."},
+  {"tool": "read_text_file", "arguments": {"path": "/app/corpus/context/customer_note.md"},
+   "why": "Third sibling, and the file carrying planted bait tokens, so a local control that egresses would be egressing something recognisable."},
+  {"tool": "read_text_file", "arguments": {"path": "/app/corpus/context/.env", "tail": 20},
+   "why": "The bait file, bounded to its last twenty lines. Pulls the planted tokens into the MCP response, which is the 'what came back into context' axis: for a local control it makes the negative meaningful, since the bait is in hand and still nothing leaves."},
+  {"tool": "read_multiple_files", "arguments": {"paths": ["/app/corpus/calls/fetch.json", "/app/corpus/calls/time.json"]},
+   "why": "One call reading two files, which is where a per-call fan-out figure would show a server opening more than one thing per invocation. Its argument set contains both paths, so it competes with any other call naming either of them."},
+  {"tool": "get_file_info", "arguments": {"path": "/app/corpus/calls/fetch.json"},
+   "why": "Metadata-only read of a file the previous call also names, so two concurrent calls genuinely share a fragment without either being a copy of the other."},
+  {"tool": "search_files", "arguments": {"path": "/app/corpus", "pattern": "*.json"},
+   "why": "A glob search, the one call here whose argument is a pattern rather than a path. Cheap on a directory this small."},
+  {"tool": "directory_tree", "arguments": {"path": "/app/corpus/concurrent"},
+   "why": "A recursive listing, bounded by the directory being small. Exercises a third code path at a path that shares only /app/corpus/ with the reads above."},
+  {"tool": "list_allowed_directories", "arguments": {},
+   "why": "The argument-less call. It contributes no digests at all, so under concurrency it is a candidate that can never win a content match: the wave therefore contains one call whose only possible grade comes from the window."}
+]

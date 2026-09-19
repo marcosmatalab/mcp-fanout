@@ -1,0 +1,8 @@
+[
+  {"tool": "brave_web_search", "arguments": {"query": "mcp server fan-out measurement", "count": 3},
+   "why": "Realistic search wording, bounded to three results. Recorded for completeness: this server exits before the JSON-RPC handshake without BRAVE_API_KEY (measured, registry/servers.yaml), so unless a lab key is supplied nothing here is ever driven and the concurrent pass reports zero calls for it."},
+  {"tool": "brave_web_search", "arguments": {"query": "mcp server tool call tracing", "count": 3},
+   "why": "Shares the 'mcp server ' prefix with the call above, which is what two searches on one topic look like."},
+  {"tool": "brave_local_search", "arguments": {"query": "madrid coworking space", "count": 3},
+   "why": "The second tool, with a query shaped like a local search rather than a technical one, so the wave is not three variations of one string."}
+]

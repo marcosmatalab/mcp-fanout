@@ -1,0 +1,22 @@
+[
+  {"tool": "get_current_time", "arguments": {"timezone": "Europe/Madrid"},
+   "why": "An agent resolving a meeting across offices. IANA names, which is what the schema description asks for. Note the JSON envelope itself is shared material: '{\"timezone\": \"Europe/' is 21 bytes, so every European zone here shares a run longer than k with every other, before a single character of the value differs."},
+  {"tool": "get_current_time", "arguments": {"timezone": "Europe/London"},
+   "why": "Second European zone, sharing the 'Europe/' prefix with three others."},
+  {"tool": "get_current_time", "arguments": {"timezone": "Europe/Berlin"},
+   "why": "Third, so the shared-prefix group is a group."},
+  {"tool": "get_current_time", "arguments": {"timezone": "America/New_York"},
+   "why": "A different continent, so the prefix group is not the whole wave."},
+  {"tool": "get_current_time", "arguments": {"timezone": "America/Los_Angeles"},
+   "why": "Second American zone. This server is a local control and is expected to egress nothing at all; if a timezone name reaches a network, that is the finding."},
+  {"tool": "get_current_time", "arguments": {"timezone": "Asia/Tokyo"},
+   "why": "A short value on a third continent, to keep the wave from being two prefix groups."},
+  {"tool": "convert_time", "arguments": {"source_timezone": "Europe/Madrid", "time": "09:30", "target_timezone": "America/New_York"},
+   "why": "All three fields required. Its argument set contains two values that appear alone in other calls of the wave, so it is ambiguous against both."},
+  {"tool": "convert_time", "arguments": {"source_timezone": "Europe/Madrid", "time": "17:00", "target_timezone": "Asia/Tokyo"},
+   "why": "Same source, different target and hour, which is what scheduling across three offices looks like."},
+  {"tool": "convert_time", "arguments": {"source_timezone": "Europe/London", "time": "09:30", "target_timezone": "Europe/Berlin"},
+   "why": "Two European zones in one call, differing from the call above in the source field only."},
+  {"tool": "get_current_time", "arguments": {"timezone": "UTC"},
+   "why": "The shortest possible value. Three bytes of distinguishing material inside a shared envelope: unmatchable by construction, and the most common timezone an agent asks for."}
+]

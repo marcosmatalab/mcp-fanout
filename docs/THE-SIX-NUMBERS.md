@@ -203,17 +203,28 @@ share, and under sequential driving it counted every content match as strong evi
 nothing had been told apart. It is replaced by the full distribution, which cannot be quoted as
 one flattering ratio.
 
-**What it cannot decide yet, and the output says so.** The number emits `sequential_driving:
-true` while every flow was seen with at most one call in flight. While that holds,
-`CONTENT_UNIQUE` is unreachable by construction and the strong-attribution figure must not be
-read as an answer to whether content matching recovers attribution where time cannot. That is
-phase C's question (`docs/PHASES.md`), and the tautology it avoids is written out in
-`docs/DOCTRINE.md`.
+**Which pass it may be read from, and the output says which one produced it.** Phase B is driven
+twice (`docs/PHASES.md`). Under the SEQUENTIAL pass the number emits `sequential_driving: true`,
+every flow was seen with at most one call in flight, `CONTENT_UNIQUE` is unreachable by
+construction, and the strong-attribution figure must not be read as an answer to whether content
+matching recovers attribution where time cannot: it is a restatement of the driving regime. Under
+the CONCURRENT pass the same distribution is the measurement, and the output carries
+`concurrent_driving_note` saying the one thing the figure invites a reader to assume and must not:
+there is **no ground truth in that pass**, so nothing there says a strong attribution was correct.
+Precision has a denominator only on the bench, and that is where it was measured.
 
-**Decides.** Whether the whole product works, once phase C exists. This is the number nobody has
-measured.
+Every aggregate carries `"pass"`, in the number and in the run's provenance, because the two
+conditions are not comparable and a figure from one read as the other is the error this whole split
+exists to prevent.
 
-**Command.** `make n5`.
+**Reported per rung, not only pooled.** `grades_by_window_size` gives the grade counts keyed by how
+many calls were in flight. A pooled figure cannot show how discrimination behaves as concurrency
+grows, which is the shape the pre-registered prediction in `docs/PHASES.md` is about, and "strong
+attribution was X%" is unreadable without the N it was measured at.
+
+**Decides.** Whether the whole product works. This is the number nobody has measured.
+
+**Command.** `make n5`. The concurrent pass that makes it meaningful: `make run-concurrent`.
 
 **Honest denominator.** An argument-less call ("list my files") has nothing to match and falls to
 `TEMPORAL_ONLY` or `UNATTRIBUTED` by construction. That split is itself a publishable result: the

@@ -25,6 +25,26 @@
 # "BRAVE_API_KEY environment variable is required". For that server the sentence above is simply
 # false, and "run it without credentials and watch the attempt" yields no attempt to watch. See
 # docs/THREATS.md, threat 8.
+#
+# TWO PASSES, TWO CORPORA. Phase B is driven twice and the two results are published separately
+# (docs/PHASES.md, phase B). `corpus_ref` is the SEQUENTIAL corpus: one call at a time, which is
+# what numbers 1, 2, 3 and 4 are read from. `concurrent_corpus_ref` is the CONCURRENT corpus,
+# driven as waves of N calls in flight at once, which is the only condition in which the
+# attribution grades of number 5 can be anything but CONTENT_MATCH_UNCONTESTED.
+#
+# `env` is per-server launch configuration, and it may hold NOTHING SECRET. Gate rule 5 keeps
+# tokens outside the repository and outside the image, so this field is for declarations about the
+# environment, not for credentials. Its one current use is the measured one: puppeteer's server
+# reads DOCKER_CONTAINER and, when it is set, launches Chrome with the flags a container needs.
+# Without it Chrome refuses to run as root and every call to that server errors, which records zero
+# egress for one of the three egress-capable servers for a reason that is ours and not the
+# server's. Setting it in the registry rather than in the corpus is deliberate: it is harness
+# configuration, so it must not appear in the ARGUMENTS the concurrent pass measures overlap on.
+#
+# `max_concurrency` caps N per server and `max_concurrency_why` says why that cap and not another,
+# in the server's own terms: a cap chosen without a reason is a knob someone turns later to get a
+# nicer number. The ladder driven is 2, 5 and 10, the same levels as the phase A bench, limited by
+# this cap and by the length of the concurrent corpus.
 
 k: 16
 w: 8
@@ -34,6 +54,11 @@ servers:
   - id: everything
     launch: ["npx", "-y", "@modelcontextprotocol/server-everything@2026.8.31"]
     corpus_ref: corpus/calls/everything.json
+    concurrent_corpus_ref: corpus/concurrent/everything.json
+    max_concurrency: 10
+    max_concurrency_why: >-
+      Ten: the corpus has ten calls, it is a local control, and every call is cheap, so the full
+      ladder 2/5/10 costs nothing.
     probe_ref: registry/probes/everything.json
     expects_egress: false
     needs_credentials: false
@@ -44,6 +69,10 @@ servers:
   - id: filesystem
     launch: ["npx", "-y", "@modelcontextprotocol/server-filesystem@2026.8.31", "/app/corpus"]
     corpus_ref: corpus/calls/filesystem.json
+    concurrent_corpus_ref: corpus/concurrent/filesystem.json
+    max_concurrency: 10
+    max_concurrency_why: >-
+      Ten: local reads of a read-only mount, cheap enough for the full ladder.
     probe_ref: registry/probes/filesystem.json
     expects_egress: false
     needs_credentials: false
@@ -54,6 +83,11 @@ servers:
   - id: memory
     launch: ["npx", "-y", "@modelcontextprotocol/server-memory@2026.8.31"]
     corpus_ref: corpus/calls/memory.json
+    concurrent_corpus_ref: corpus/concurrent/memory.json
+    max_concurrency: 10
+    max_concurrency_why: >-
+      Ten: the knowledge graph is a local JSON file, so concurrency costs nothing. Its writes are
+      ours and stay in the container.
     probe_ref: registry/probes/memory.json
     expects_egress: false
     needs_credentials: false
@@ -64,6 +98,11 @@ servers:
   - id: sequential-thinking
     launch: ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking@2026.8.31"]
     corpus_ref: corpus/calls/sequential-thinking.json
+    concurrent_corpus_ref: corpus/concurrent/sequential-thinking.json
+    max_concurrency: 5
+    max_concurrency_why: >-
+      Five: the corpus is one reasoning chain of five steps, and inventing five more thoughts to
+      reach N=10 would be padding, not realism. Ladder stops at 5.
     probe_ref: registry/probes/sequential-thinking.json
     expects_egress: false
     needs_credentials: false
@@ -74,6 +113,10 @@ servers:
   - id: git
     launch: ["uvx", "mcp-server-git@2026.8.18"]
     corpus_ref: corpus/calls/git.json
+    concurrent_corpus_ref: corpus/concurrent/git.json
+    max_concurrency: 10
+    max_concurrency_why: >-
+      Ten: read-only git commands on a small repository inside the image.
     probe_ref: registry/probes/git.json
     expects_egress: false
     needs_credentials: false
@@ -84,6 +127,10 @@ servers:
   - id: time
     launch: ["uvx", "mcp-server-time@2026.8.18"]
     corpus_ref: corpus/calls/time.json
+    concurrent_corpus_ref: corpus/concurrent/time.json
+    max_concurrency: 10
+    max_concurrency_why: >-
+      Ten: pure computation, no egress expected at all.
     probe_ref: registry/probes/time.json
     expects_egress: false
     needs_credentials: false
@@ -95,6 +142,11 @@ servers:
   - id: fetch
     launch: ["uvx", "mcp-server-fetch@2026.8.18"]
     corpus_ref: corpus/calls/fetch.json
+    concurrent_corpus_ref: corpus/concurrent/fetch.json
+    max_concurrency: 10
+    max_concurrency_why: >-
+      Ten: one request per call to a reserved example domain, and the interesting server for this
+      pass, so it gets the full ladder.
     probe_ref: registry/probes/fetch.json
     expects_egress: true
     needs_credentials: false
@@ -105,6 +157,12 @@ servers:
   - id: brave-search
     launch: ["npx", "-y", "@modelcontextprotocol/server-brave-search@0.6.2"]
     corpus_ref: corpus/calls/brave-search.json
+    concurrent_corpus_ref: corpus/concurrent/brave-search.json
+    max_concurrency: 3
+    max_concurrency_why: >-
+      Three, and academic: this server exits before the handshake without BRAVE_API_KEY, so with no
+      lab key the concurrent pass drives nothing here. The cap matches the corpus rather than
+      pretending to a ladder.
     # The probe that yielded these schemas ran with BRAVE_API_KEY set to the literal string
     # "placeholder-not-a-real-key", because the server exits before the handshake without it.
     # A placeholder is not a credential and the probe calls no tool, so nothing egressed.
@@ -121,6 +179,13 @@ servers:
   - id: github
     launch: ["npx", "-y", "@modelcontextprotocol/server-github@2025.4.8"]
     corpus_ref: corpus/calls/github.json
+    concurrent_corpus_ref: corpus/concurrent/github.json
+    max_concurrency: 10
+    max_concurrency_why: >-
+      Ten: read-only API calls. Unauthenticated search is rate limited to about ten requests a
+      minute, so a wave of ten is expected to produce 403s partway through. Recorded as data: a
+      rejected request still egressed, and the destination and the forwarded argument are what
+      numbers 1, 2 and 5 measure.
     probe_ref: registry/probes/github.json
     expects_egress: true
     # Measured correction: needs_credentials is about the API, not the launch. This server starts
@@ -135,7 +200,21 @@ servers:
 
   - id: puppeteer
     launch: ["npx", "-y", "@modelcontextprotocol/server-puppeteer@2025.5.12"]
+    # Read from the package's own source (dist/index.js, 2025.5.12): with DOCKER_CONTAINER set it
+    # launches headless with --no-sandbox --single-process --no-zygote. That is the server's own
+    # container path, so we take it instead of passing allowDangerous in a tool call: a corpus that
+    # sets a flag named "allow dangerous" to measure egress is a corpus doing something else.
+    env:
+      DOCKER_CONTAINER: "true"
     corpus_ref: corpus/calls/puppeteer.json
+    concurrent_corpus_ref: corpus/concurrent/puppeteer.json
+    max_concurrency: 2
+    max_concurrency_why: >-
+      Two, and this one is a judgement call with a residual. The server keeps a single browser page,
+      so concurrent navigations are either queued or refused; N=2 answers which, at the cost of one
+      extra headless fetch. Higher N would multiply browser cost without asking a new attribution
+      question, and what this server does at N=10 stays unmeasured, which is phase C material rather
+      than a gap in this pass.
     probe_ref: registry/probes/puppeteer.json
     expects_egress: true
     needs_credentials: false

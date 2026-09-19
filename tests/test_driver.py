@@ -69,10 +69,29 @@ def test_driver_handshake_accepted_by_a_server_that_only_supports_our_revision()
 
 
 def test_driver_handshake_rejected_when_server_speaks_only_another_revision():
-    """A mismatch must surface as an error, not be papered over by a mirroring server."""
-    with pytest.raises(RuntimeError, match="unsupported protocolVersion"):
-        drive(_mock_cmd(), [CallSpec("search", {})], run_id="t", server_id="mock",
-              env={"MOCK_SUPPORTED_PROTOCOLS": "2024-11-05"})
+    """A mismatch must surface, per call and with the reason, and must not end the run.
+
+    This assertion changed deliberately, and the reason is a measurement lost to it. It used to
+    require ``drive`` to RAISE on a handshake rejection, on the principle that a mismatch must not
+    be papered over. The principle is right; raising was the wrong mechanism for it. A startup
+    failure is a property of ONE server, and on the first ten-server capture one server that could
+    not start (mcp-server-git, no git binary in the image) raised out of drive, through drive_all,
+    and ended the whole run after two servers. Nine working servers were lost to one broken one.
+
+    So the failure is now recorded rather than thrown: every call of that server's corpus comes
+    back ok=False carrying the error text, which is what "surfaces" has to mean for a harness whose
+    output is a record. Nothing is papered over, because the reason is in the record and drive_all
+    prints it; what changed is that the finding no longer takes the other nine servers with it.
+    """
+    results = drive(_mock_cmd(), [CallSpec("search", {}), CallSpec("search", {"q": "x"})],
+                    run_id="t", server_id="mock",
+                    env={"MOCK_SUPPORTED_PROTOCOLS": "2024-11-05"})
+    assert len(results) == 2, "every call of the corpus is accounted for, driven or not"
+    assert not any(r.ok for r in results)
+    for r in results:
+        assert "unsupported protocolVersion" in r.error
+    # No traceparent was ever sent, so the record must not imply one was.
+    assert all(r.traceparent == "" for r in results)
 
 
 def test_probe_negotiates_down_to_what_the_server_supports():

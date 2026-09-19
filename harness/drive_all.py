@@ -1,8 +1,26 @@
-"""Drive every server in the registry through the proxy, sequentially, writing the run.
+"""Drive every server in the registry through the proxy, writing the run. Two passes, one per run.
 
-Run inside the harness container by run.sh, after mitmdump is up. Sequential by design: one
-call at a time per server gives the capture addon ground-truth attribution (see driver.py),
-which is what lets number 5 measure how often content matching ALONE would have sufficed.
+Run inside the harness container by run.sh, after mitmdump is up.
+
+TWO PASSES, AND WHY THEY CANNOT BE ONE RUN (docs/PHASES.md, phase B).
+
+  --mode sequential   one call in flight per server, from `corpus_ref`. This is what numbers 1,
+                      2, 3 and 4 are read from: fan-out, distinct domains, traceparent
+                      propagation and provenance coverage all ask what one invocation does, and
+                      asking it with ten invocations in flight would make every per-call figure a
+                      figure about our own wave size. Its attribution grades are
+                      CONTENT_MATCH_UNCONTESTED by construction, reported as such and never as a
+                      result about content matching.
+
+  --mode concurrent   waves of N calls in flight per server, from `concurrent_corpus_ref`, with N
+                      climbing the same ladder the phase A bench used (2, 5, 10) capped by the
+                      server's declared `max_concurrency`. This is the only condition in which
+                      CONTENT_UNIQUE and CONTENT_AMBIGUOUS can occur at all, so it is the only
+                      pass number 5 may be read from.
+
+The two write SEPARATE RUNS with the pass recorded in the manifest, and this file refuses to
+drive a second pass into an existing run directory. Mixing them would average two experimental
+conditions into one distribution, which is the one arithmetic no comment can undo afterwards.
 
 Needs the 'capture' extra (PyYAML). Never computes a number; it only produces calls.jsonl and
 manifest.json. Flows are written by the addon.
@@ -18,9 +36,20 @@ from pathlib import Path
 
 import yaml  # from the 'capture' extra
 
-from mcpfanout.driver import CallSpec, StdioMCPClient, drive
-from mcpfanout.record import ToolCall, RunManifest, write_jsonl, write_manifest
+from mcpfanout.driver import CallSpec, StdioMCPClient, drive, drive_wave
+from mcpfanout.record import (PASS_CONCURRENT, PASS_SEQUENTIAL, RunManifest, ToolCall,
+                              read_manifest, write_jsonl, write_manifest)
 from mcpfanout.redact import DEFAULT_SALT, Redactor
+
+# The concurrency ladder, the same levels the phase A bench drove (bench/waves.json). Same levels
+# on purpose: the bench established what the sensor does at N = 2, 5 and 10 with maximally
+# distinctive fragments, so driving real servers at other levels would leave the comparison
+# without a rung to stand on. Capped per server by max_concurrency and by corpus length.
+CONCURRENCY_LADDER = (2, 5, 10)
+
+# One wave of ten calls on a cold npx server can take a while, and a wave that times out is
+# recorded as N failed calls, which looks like a server refusing concurrency. Generous on purpose.
+WAVE_TIMEOUT_S = 90.0
 
 
 def load_corpus(path: Path) -> list[CallSpec]:
@@ -48,7 +77,10 @@ def warm(selected: list[dict]) -> int:
     for srv in selected:
         sid = srv["id"]
         try:
-            with StdioMCPClient(list(srv["launch"]), read_timeout=60.0) as client:
+            # Same declared env as the capture pass, minus the proxy: a server warmed under a
+            # different configuration is not the server that then gets measured.
+            with StdioMCPClient(list(srv["launch"]), server_env(srv, {}),
+                                read_timeout=60.0) as client:
                 client.initialize(timeout=300.0)
                 n = len(client.list_tools())
             print(f"[warm] {sid}: cache populated, {n} tools")
@@ -58,12 +90,127 @@ def warm(selected: list[dict]) -> int:
     return 0
 
 
+def concurrency_levels(cap: int, corpus_len: int) -> list[int]:
+    """Which rungs of the ladder this server is driven at.
+
+    Two limits, both real. ``cap`` is the server's declared ``max_concurrency``, which is a claim
+    about the server (a single browser page, a five-step reasoning chain) and carries its reason
+    in the registry. ``corpus_len`` is the arithmetic one: a wave of N needs N distinct calls, and
+    padding a corpus to reach a rung would mean inventing arguments to fill a number, which is
+    the opposite of the realism rule the concurrent corpus is written under
+    (corpus/concurrent/README.md).
+
+    Returns the rungs at or below both, so a server with a cap of 2 is driven at N = 2 only and
+    is reported as such rather than silently driven at 10.
+    """
+    limit = min(cap, corpus_len)
+    return [n for n in CONCURRENCY_LADDER if n <= limit]
+
+
+def server_env(srv: dict, proxy_env: dict) -> dict:
+    """The proxy environment plus this server's declared, non-secret configuration.
+
+    Per-server keys come from the registry's `env` field, which may hold nothing secret (gate rule
+    5). They are values cast to strings because YAML will happily give a bool and the environment
+    only carries text.
+    """
+    extra = {str(k): str(v) for k, v in (srv.get("env") or {}).items()}
+    return {**proxy_env, **extra}
+
+
+def drive_server_concurrent(srv: dict, *, run_id: str, control_dir: Path, redactor: Redactor,
+                            proxy_env: dict) -> tuple[list[ToolCall], list[dict]]:
+    """Drive one server as waves of N concurrent calls, climbing the ladder. Returns (calls, waves).
+
+    One client and one server process for the whole ladder, not one per wave. A fresh process per
+    wave would hide the case this pass exists to expose: a server that pools connections across
+    calls can only be seen pooling them if the calls share its lifetime.
+
+    A wave that raises is recorded as N failed calls and the ladder continues. A server that
+    cannot take concurrency is a finding, not a reason to abandon the run: the finding IS that it
+    refused, and the error text is what distinguishes "refused" from "timed out" from "crashed".
+    """
+    sid = srv["id"]
+    corpus = load_corpus(Path(srv["concurrent_corpus_ref"]))
+    levels = concurrency_levels(int(srv.get("max_concurrency", 1)), len(corpus))
+    calls: list[ToolCall] = []
+    waves: list[dict] = []
+
+    if not levels:
+        print(f"[drive_all] {sid}: no concurrency level fits (cap "
+              f"{srv.get('max_concurrency')}, corpus {len(corpus)}); driving nothing")
+        return calls, waves
+
+    try:
+        _drive_ladder(srv, levels, corpus, run_id=run_id, control_dir=control_dir,
+                      redactor=redactor, proxy_env=proxy_env, calls=calls, waves=waves)
+    except Exception as exc:
+        # Same rule as the sequential path (driver.drive): a server that cannot start is a data
+        # point, not a stop. Every call the ladder still owed is recorded as not driven, with the
+        # reason, so the run keeps the other nine servers.
+        err = f"{type(exc).__name__}: {exc}"
+        print(f"[drive_all] {sid}: did not complete its ladder ({err[:200]})")
+        index = sum(w["calls"] for w in waves)
+        for n in levels:
+            done = {w["n"] for w in waves}
+            if n in done:
+                continue
+            for i in range(n):
+                spec = corpus[i]
+                calls.append(ToolCall(run_id, sid, f"{sid}-c{index + i:03d}", spec.tool_name,
+                                      bool(spec.arguments), "", ok=False, error=err, wave_size=n))
+            waves.append({"server_id": sid, "n": n, "calls": n, "errored": n})
+            index += n
+    return calls, waves
+
+
+def _drive_ladder(srv: dict, levels: list[int], corpus: list[CallSpec], *, run_id: str,
+                  control_dir: Path, redactor: Redactor, proxy_env: dict,
+                  calls: list[ToolCall], waves: list[dict]) -> None:
+    """Climb one server's ladder over one connection, appending to the caller's lists.
+
+    Split out so the caller can wrap it whole and decide what an escaped exception means for the
+    record, exactly as driver.drive does with _drive_corpus. One client for the whole ladder, not
+    one per wave: a fresh process per wave would hide connection pooling across calls, which is a
+    case this pass exists to expose.
+    """
+    sid = srv["id"]
+    index = 0
+    with StdioMCPClient(list(srv["launch"]), server_env(srv, proxy_env),
+                        read_timeout=WAVE_TIMEOUT_S) as client:
+        client.initialize(timeout=300.0)
+        client.list_tools()  # listed for realism and to let servers lazily wire up their tools
+        for n in levels:
+            # The first n calls of the corpus, deterministically. Not a random sample: a run has
+            # to be reproducible (gate rule 1), and a random subset would change the argument
+            # overlap between waves, which is the independent variable of this whole pass.
+            specs = corpus[:n]
+            results = drive_wave(client, specs, run_id=run_id, server_id=sid,
+                                 redactor=redactor, control_dir=control_dir,
+                                 start_index=index, timeout=WAVE_TIMEOUT_S)
+            for r in results:
+                calls.append(ToolCall(run_id, sid, r.call_id, r.tool_name, r.args_present,
+                                      r.traceparent, ok=r.ok, error=r.error,
+                                      stdout_noise_lines=r.stdout_noise_lines, wave_size=n))
+            failed = [r for r in results if not r.ok]
+            waves.append({"server_id": sid, "n": n, "calls": len(results),
+                          "errored": len(failed)})
+            print(f"[drive_all] {sid}: wave N={n}, {len(results)} calls"
+                  + (f", {len(failed)} errored" if failed else ""))
+            for r in failed:
+                print(f"[drive_all]   {r.call_id} {r.tool_name}: {r.error[:200]}")
+            index += n
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--registry", required=True)
     ap.add_argument("--run-dir", required=True)
     ap.add_argument("--proxy", default="http://127.0.0.1:8080")
     ap.add_argument("--salt", default="")
+    ap.add_argument("--mode", choices=[PASS_SEQUENTIAL, PASS_CONCURRENT], default=PASS_SEQUENTIAL,
+                    help="which phase B pass to drive. See the module docstring and "
+                         "docs/PHASES.md: the two are separate runs and separate figures.")
     ap.add_argument("--only", action="append", default=[], metavar="ID",
                     help="drive only these server ids (repeatable). Default: all of them.")
     ap.add_argument("--warm", action="store_true",
@@ -78,12 +225,27 @@ def main() -> int:
     redactor = Redactor(salt=salt, k=k, w=w)
     run_id = run_dir.name
 
+    # A run holds ONE pass. Refused rather than merged: the aggregate reads the pass off the
+    # manifest and reports the grade distribution under it, so a directory holding both passes
+    # would publish one distribution over two experimental conditions with a label naming one of
+    # them. There is no honest way to read that figure afterwards, which is why this is a hard
+    # stop and not a warning.
+    existing = run_dir / "manifest.json"
+    if existing.is_file():
+        prior = read_manifest(existing).pass_name
+        if prior and prior != args.mode:
+            raise SystemExit(
+                f"[drive_all] refusing to drive the {args.mode} pass into {run_dir}: it already "
+                f"holds the {prior} pass. One pass per run (docs/PHASES.md, phase B). Point "
+                f"--run-dir at a new directory.")
+
     # Every server process inherits the proxy so its HTTP(S) egress passes through mitmdump.
     proxy_env = {"HTTP_PROXY": args.proxy, "HTTPS_PROXY": args.proxy,
                  "http_proxy": args.proxy, "https_proxy": args.proxy}
 
     all_calls: list[ToolCall] = []
     server_ids: list[str] = []
+    all_waves: list[dict] = []
     corpus_hash = hashlib.sha256()
 
     selected = reg.get("servers", [])
@@ -102,14 +264,36 @@ def main() -> int:
     if args.warm:
         return warm(selected)
 
+    # Which corpus field this pass reads. Named once, so a server missing it fails loudly here
+    # rather than driving the wrong corpus under the right label.
+    corpus_field = "corpus_ref" if args.mode == PASS_SEQUENTIAL else "concurrent_corpus_ref"
+    missing = [s["id"] for s in selected if not s.get(corpus_field)]
+    if missing:
+        raise SystemExit(f"[drive_all] {args.mode} pass needs {corpus_field} and these servers "
+                         f"have none: {missing}")
+
+    print(f"[drive_all] pass: {args.mode}")
     for srv in selected:
         sid = srv["id"]
         server_ids.append(sid)
+        corpus_hash.update(Path(srv[corpus_field]).read_bytes())
+
+        if args.mode == PASS_CONCURRENT:
+            calls, waves = drive_server_concurrent(
+                srv, run_id=run_id, control_dir=control_dir, redactor=redactor,
+                proxy_env=proxy_env)
+            all_calls += calls
+            all_waves += waves
+            noise = sum(c.stdout_noise_lines for c in calls)
+            if noise:
+                print(f"[drive_all] {sid}: {noise} non-JSON-RPC lines on stdout "
+                      f"(the server is corrupting its own protocol channel; recorded per call)")
+            continue
+
         corpus = load_corpus(Path(srv["corpus_ref"]))
-        corpus_hash.update(Path(srv["corpus_ref"]).read_bytes())
         results = drive(
             command=list(srv["launch"]), corpus=corpus, run_id=run_id, server_id=sid,
-            env=proxy_env, redactor=redactor, control_dir=control_dir,
+            env=server_env(srv, proxy_env), redactor=redactor, control_dir=control_dir,
         )
         for r in results:
             # Every field of DriveResult that ToolCall has, or the record lies by default value:
@@ -117,7 +301,7 @@ def main() -> int:
             # stdout_noise_lines: 0" for calls the driver had just counted 7 noise lines on.
             all_calls.append(ToolCall(run_id, sid, r.call_id, r.tool_name, r.args_present,
                                       r.traceparent, ok=r.ok, error=r.error,
-                                      stdout_noise_lines=r.stdout_noise_lines))
+                                      stdout_noise_lines=r.stdout_noise_lines, wave_size=1))
         # A server that fails to launch is a data point (zero egress), not a stop; log to stderr.
         failed = [r for r in results if not r.ok]
         if failed:
@@ -132,6 +316,12 @@ def main() -> int:
                   f"(the server is corrupting its own protocol channel; recorded per call)")
 
     write_jsonl(run_dir / "calls.jsonl", all_calls)
+    if all_waves:
+        # What was actually driven at each rung, per server. Kept beside the run because it names
+        # servers, and needed to read the pass at all: a grade distribution at N=10 means nothing
+        # if the waves at N=10 errored out. Intent and outcome in one line each, no numbers derived.
+        (run_dir / "waves.jsonl").write_text(
+            "".join(json.dumps(w, sort_keys=True) + "\n" for w in all_waves), encoding="utf-8")
     write_manifest(run_dir / "manifest.json", RunManifest(
         run_id=run_id, created=datetime.now(timezone.utc).isoformat(),
         salt_fixed=(salt == DEFAULT_SALT), k=k, w=w,
@@ -142,7 +332,13 @@ def main() -> int:
                                   for s in selected
                                   if s.get("protocol_version_answered")},
         tool_versions={"note": "fill with pinned server digests before publishing"},
-        notes=("Capture run. See docs/THE-GATE.md before publishing any number."
+        pass_name=args.mode,
+        notes=(f"Capture run, {args.mode} pass. See docs/THE-GATE.md before publishing any number."
+               + (" Numbers 1 to 4 are read from this pass; its attribution grades are "
+                  "CONTENT_MATCH_UNCONTESTED by construction." if args.mode == PASS_SEQUENTIAL else
+                  f" Waves at N in {list(CONCURRENCY_LADDER)} capped per server; number 5 is read "
+                  f"from this pass and numbers 1 and 2 are NOT (a per-call figure under "
+                  f"concurrency is a figure about our wave size).")
                + (f" SUBSET RUN: --only {sorted(set(args.only))}; the registry holds "
                   f"{len(reg.get('servers', []))} servers. Not a measurement of the registry."
                   if args.only else "")),

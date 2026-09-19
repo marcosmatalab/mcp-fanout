@@ -79,6 +79,16 @@ def _suffix_match(host: str, suffixes: tuple[str, ...]) -> bool:
     return any(host == s or host.endswith("." + s) for s in suffixes)
 
 
+def matches_suffix(host: str, suffixes) -> bool:
+    """Public form of the host-suffix rule: exact match, or a dot-bounded suffix match.
+
+    Exposed because gate rule 7's check (disclosure.py) asks the same question of a different
+    list, and two implementations of "is this host under that suffix" is how they come to
+    disagree about a hostname that matters.
+    """
+    return _suffix_match(host, tuple(suffixes))
+
+
 def classify_host(host: str, registry: Registry | None = None) -> str:
     """Classify one destination host into local / self_hostable / remote_leaf."""
     registry = registry or Registry()
