@@ -20,6 +20,11 @@ services:
     environment:
       # Override with a secret salt for a real deployment; leave unset for a reproducible run.
       - MCPFANOUT_SALT=${MCPFANOUT_SALT:-mcp-fanout/fixed-salt/v1}
+      # Lab credentials, declared by NAME in registry/servers.yaml and passed through from the
+      # operator's environment. Empty by default, so a run without them is uncredentialed rather
+      # than broken, and the manifest records which were present (gate rule 10). The values live
+      # in ~/.mcp-fanout-lab.env, outside this repository, and never in it (gate rule 5).
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
     # cap_add NET_RAW is only needed for the tcpdump backstop. Drop it to run proxy-only.
     cap_add:
       - NET_RAW

@@ -222,6 +222,12 @@ class RunManifest:
     # run whose concurrency is unknown means nothing at all.
     pass_name: str = ""
     notes: str = ""
+    # Per server, per DECLARED SECRET NAME, whether a value was available when the run was driven.
+    # Names and booleans only: this is committed as part of a figure, and a boolean cannot leak a
+    # token. It exists because an uncredentialed run is silent by nature (a server missing its
+    # token still starts, still handshakes, still produces flows), which is gate rule 10 applied
+    # to a credential. Empty dict means no server declared a secret.
+    credential_presence: dict = field(default_factory=dict)
 
 
 def write_jsonl(path: str | Path, rows: Iterable) -> None:

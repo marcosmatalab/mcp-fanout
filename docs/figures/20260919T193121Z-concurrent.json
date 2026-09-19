@@ -1,0 +1,262 @@
+{
+  "driving": {
+    "by_wave_size": {
+      "10": {
+        "calls": 70,
+        "errored": 1,
+        "ok": 69,
+        "stdout_noise_lines": 0,
+        "with_arguments": 67
+      },
+      "2": {
+        "calls": 20,
+        "errored": 2,
+        "ok": 18,
+        "stdout_noise_lines": 0,
+        "with_arguments": 20
+      },
+      "5": {
+        "calls": 40,
+        "errored": 0,
+        "ok": 40,
+        "stdout_noise_lines": 0,
+        "with_arguments": 40
+      }
+    },
+    "calls_errored": 3,
+    "calls_total": 130,
+    "command": "make numbers",
+    "error_fraction": 0.0231,
+    "flows_by_lifecycle_phase": {
+      "drained": 1,
+      "driving": 121,
+      "handshake": 7
+    },
+    "name": "driving_summary",
+    "not_one_of_the_six": "a denominator, not a finding: the six are ratios over what servers did in response to these calls"
+  },
+  "normalized": true,
+  "numbers": [
+    {
+      "command": "make n1",
+      "connections_excluding_package_infrastructure": {
+        "max": 1,
+        "n": 130,
+        "p50": 0,
+        "p95": 1
+      },
+      "connections_raw": {
+        "max": 1,
+        "n": 130,
+        "p50": 0,
+        "p95": 1
+      },
+      "distinct_hosts": {
+        "max": 1,
+        "n": 130,
+        "p50": 0,
+        "p95": 1
+      },
+      "distinct_hosts_note": "same quantity as number 2; published here so the raw connection count is never read on its own",
+      "exclusion_list": {
+        "list_name": "package-infrastructure",
+        "loaded": true,
+        "path": "registry/package-infrastructure.json",
+        "sha256": "3137eb3defc936d9ef5a06485242589a9adfb233d9573fae3489318157f9ceb0",
+        "suffix_count": 20,
+        "version": "2026-09-18"
+      },
+      "flows_with_unrecorded_phase": 0,
+      "launcher_connections": 7,
+      "launcher_connections_note": "seen while the launcher was resolving the package, before the server process existed. Excluded from every per-call figure by construction, never discarded",
+      "name": "outbound_connections_per_tool_call",
+      "number": 1,
+      "package_infrastructure_connections": 89
+    },
+    {
+      "command": "make n2",
+      "distribution": {
+        "max": 1,
+        "n": 130,
+        "p50": 0,
+        "p95": 1
+      },
+      "name": "distinct_domains_per_tool_call",
+      "number": 2
+    },
+    {
+      "by_protocol_revision": {
+        "2024-11-05": {
+          "fraction": 0.0,
+          "servers_propagating": 0,
+          "servers_total": 3
+        },
+        "2025-11-25": {
+          "fraction": 0.0,
+          "servers_propagating": 0,
+          "servers_total": 7
+        }
+      },
+      "command": "make n3",
+      "name": "servers_propagating_traceparent",
+      "number": 3,
+      "pooled_fraction": 0.0,
+      "pooled_note": "read the segments; SEP-414 is a 2026-07-28 change, so a server answering an earlier revision predates the convention",
+      "servers_propagating": 0,
+      "servers_total": 10
+    },
+    {
+      "body_matched_bytes": 0,
+      "command": "make n4",
+      "flows_total": 129,
+      "flows_with_body_match": 0,
+      "flows_with_context_match": 0,
+      "flows_with_target_match": 0,
+      "fraction_flows_with_match": 0.0,
+      "matched_bytes_total": 0,
+      "name": "provenance_coverage",
+      "number": 4,
+      "observed_body_bytes": 547,
+      "observed_outbound_bytes_total": 4202,
+      "observed_target_bytes": 3655,
+      "occurrence_counts": {
+        "connection_only": 0,
+        "observed": 129
+      },
+      "provenance_counts": {
+        "arguments": 9,
+        "both": 0,
+        "context": 0,
+        "none": 120,
+        "unknown": 0
+      },
+      "target_matched_bytes": 0
+    },
+    {
+      "attributable_denominator": 40,
+      "attributable_fraction": 0.425,
+      "attribution_grades": {
+        "CONTENT_AMBIGUOUS": 0,
+        "CONTENT_MATCH_UNCONTESTED": 0,
+        "CONTENT_UNIQUE": 17,
+        "TEMPORAL_ONLY": 0,
+        "TRACE_PROPAGATED": 0,
+        "UNATTRIBUTED": 112
+      },
+      "attribution_reasons": {
+        "fragment present in exactly 1 of 10 concurrent calls": 8,
+        "fragment present in exactly 1 of 2 concurrent calls": 4,
+        "fragment present in exactly 1 of 5 concurrent calls": 5,
+        "ineligible: package infrastructure traffic, carries no tool-call arguments": 82,
+        "no trace, no content match, and no temporal correlation available": 1,
+        "pre-launch: seen while the launcher was resolving the package, before the server process existed, so no tool call could have caused it": 7,
+        "time window covers 10 concurrent calls: correlation identifies no single call": 12,
+        "time window covers 2 concurrent calls: correlation identifies no single call": 5,
+        "time window covers 5 concurrent calls: correlation identifies no single call": 5
+      },
+      "command": "make n5",
+      "concurrent_driving_note": "flows were seen with up to 10 calls in flight, so the grades below are a measurement rather than a restatement of the driving regime. There is NO ground truth in this pass: nothing here says a strong attribution was correct. Attribution precision has a denominator only on the phase A bench, where we caused every transfer, and it was measured there (docs/PHASES.md, sensor gate). What this pass measures is how the grades are DISTRIBUTED over real traffic",
+      "content_attributable_fraction": null,
+      "content_denominator": null,
+      "content_denominator_note": "registry/client-constant-paths.json was not loaded, so the content denominator was NOT computed. It is never assumed empty: an empty list and a missing list would produce the same number and mean opposite things",
+      "content_match_by_channel": {
+        "body": 0,
+        "both": 0,
+        "target": 9
+      },
+      "discrimination": {
+        "by_window_size": {
+          "0": {
+            "contained_but_not_candidate": 0,
+            "flows": 1,
+            "non_discriminating_calls": 0
+          },
+          "10": {
+            "contained_but_not_candidate": 22,
+            "flows": 102,
+            "non_discriminating_calls": 2
+          },
+          "2": {
+            "contained_but_not_candidate": 0,
+            "flows": 9,
+            "non_discriminating_calls": 0
+          },
+          "5": {
+            "contained_but_not_candidate": 0,
+            "flows": 10,
+            "non_discriminating_calls": 0
+          }
+        },
+        "command": "make n5",
+        "what_this_measures": "per wave size: how many in-flight calls owned no token distinguishing them from their neighbours, and how many times a call was contained in a request and still refused as a candidate. Both are threat 18 made visible in the output"
+      },
+      "exclusion_list": {
+        "list_name": "package-infrastructure",
+        "loaded": true,
+        "path": "registry/package-infrastructure.json",
+        "sha256": "3137eb3defc936d9ef5a06485242589a9adfb233d9573fae3489318157f9ceb0",
+        "suffix_count": 20,
+        "version": "2026-09-18"
+      },
+      "flows_total": 129,
+      "grades_by_window_size": {
+        "0": {
+          "UNATTRIBUTED": 8
+        },
+        "10": {
+          "CONTENT_UNIQUE": 8,
+          "UNATTRIBUTED": 94
+        },
+        "2": {
+          "CONTENT_UNIQUE": 4,
+          "UNATTRIBUTED": 5
+        },
+        "5": {
+          "CONTENT_UNIQUE": 5,
+          "UNATTRIBUTED": 5
+        }
+      },
+      "max_active_calls_in_window": 10,
+      "name": "attribution_grade_distribution",
+      "number": 5,
+      "pass": "concurrent",
+      "published_as": "lower_bound",
+      "published_as_reason": "the sensor's self-match recall on realistic argument material is below 1, so an attributable share measured with it is a floor and not an estimate. Measured by `make inventory`; decomposed per family in docs/CALIBRATION.md, 'The self-match ceiling', and stated as threat 12 in docs/THREATS.md",
+      "raw_fraction_is_not_comparable": "strong_attribution_fraction divides by every flow in the run, including package infrastructure and flows seen before any call was sent. It is published so the share of a run that is machinery stays visible, and it may not be compared with either figure below or with another run's",
+      "sequential_driving": false,
+      "strong_attribution_count": 17,
+      "strong_attribution_fraction": 0.1318,
+      "strong_attribution_grades": [
+        "TRACE_PROPAGATED",
+        "CONTENT_UNIQUE"
+      ],
+      "structural_instrument": {
+        "flows_attributed_structurally": 17,
+        "flows_where_a_call_was_contained": 39,
+        "state": "present"
+      }
+    },
+    {
+      "category_counts": {
+        "local": 0,
+        "remote_leaf": 4,
+        "self_hostable": 0
+      },
+      "command": "make n6",
+      "distinct_nodes": 4,
+      "name": "selfhostable_third_parties",
+      "number": 6,
+      "selfhostable_fraction": 0.0
+    }
+  ],
+  "provenance": {
+    "command": "python -m mcpfanout.cli figures --run runs/20260919T193121Z-concurrent",
+    "corpus_sha256": "93f425420f8438fee6231e70721ad2eab491e01361466973cd06255f1d3483f7",
+    "created": "2026-09-19T19:32:16.276463+00:00",
+    "notes": "Capture run, concurrent pass. See docs/THE-GATE.md before publishing any number. Waves at N in [2, 5, 10] capped per server; number 5 is read from this pass and numbers 1 and 2 are NOT (a per-call figure under concurrency is a figure about our wave size).",
+    "pass": "concurrent",
+    "run_id": "20260919T193121Z-concurrent",
+    "salt_fixed": true,
+    "server_count": 10
+  }
+}
