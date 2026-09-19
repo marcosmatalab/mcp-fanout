@@ -218,7 +218,35 @@ gate rule 6. Each names the threat and what it does to the numbers.
     model). That is a floor over a two-call corpus in which one call carried a canary, and it is
     not an estimate of what the technique achieves at scale.
 
-12. **The in-flight window is OUR declaration, not the server's concurrency.** `driver.drive_wave`
+12. **Number 5 is published as a LOWER BOUND, not as an estimate, because the sensor's self-match recall on realistic argument material is below 1: half the realistic material does not match itself.** Measured, with a
+    command behind it: `make inventory`, artifact
+    `docs/figures/calibration/inventory-k22.json`, and the full decomposition in
+    `docs/CALIBRATION.md`, "The self-match ceiling".
+
+    Self-match is the true-positive question in its easiest possible form: does a call's own argument
+    material appear in the request that same call caused, with no competing candidate, nothing
+    concurrent and no window involved. Over the negative corpus's four realistic families it is
+    **0.5**, and it was already 0.5312 at the old k, so this is not a consequence of the k the sweep
+    chose. A call that fails here cannot be attributed by content under any concurrency, at any
+    grade.
+
+    Why, per family and measured rather than assumed: in one family the JSON envelope never reaches
+    the wire, because the server reassembles the fields into a path, so the longest run the arguments
+    share with the request is a path segment of 14 to 16 bytes. In another the arguments carry spaces
+    and the query string carries `+`, so the run breaks at the first space and the longest survivor
+    is 7 to 13 bytes. The two remaining families self-match completely. The planted bait is not
+    implicated: all five `CANARY_` values sit above both detection floors.
+
+    **What it does to the numbers.** An attributable share measured by a sensor that cannot see half
+    of the realistic material it is shown is at most half of the true share. So the attribution grade
+    distribution is a floor, in the same direction as threat 11 and for a deeper reason: threat 11 is
+    about a canary a client re-encodes, this is about ordinary argument material never reaching the
+    wire as a literal run at all. Both push the published share down, which is the safe direction.
+    Neither is fixable without inferring, which is negative 3, so both are declared rather than
+    closed. `number_5`'s own output carries `published_as: lower_bound` with this reason, and a test
+    fails if it stops doing so.
+
+13. **The in-flight window is OUR declaration, not the server's concurrency.** `driver.drive_wave`
     publishes all N calls as in flight before sending any of them, and clears the set after the
     wave. So a server that internally serialises a wave of ten still has each of its flows graded
     against ten candidates, and a `CONTENT_AMBIGUOUS` at N = 10 does not say the server had ten
@@ -237,7 +265,7 @@ gate rule 6. Each names the threat and what it does to the numbers.
     (gate rule 1). So the rungs share material by design, and a trend across N is a trend over
     nested sets, not over independent draws.
 
-13. **The concurrent pass has no ground truth, so a false strong attribution in it would be
+14. **The concurrent pass has no ground truth, so a false strong attribution in it would be
     invisible.** Precision needs a known cause, which exists only where we caused the transfer:
     phase A. There it was measured, at zero false strong attributions over 33 strong claims. In
     phase B nothing checks whether a `CONTENT_UNIQUE` was earned, and no figure from that pass may

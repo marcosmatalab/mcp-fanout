@@ -75,6 +75,11 @@ STRONG_ATTRIBUTION = (TRACE_PROPAGATED, CONTENT_UNIQUE)
 REASON_INELIGIBLE_PACKAGE_INFRASTRUCTURE = (
     "ineligible: package infrastructure traffic, carries no tool-call arguments")
 REASON_NO_EVIDENCE = "no trace, no content match, and no temporal correlation available"
+# A flow the LAUNCHER caused, before the server process existed. Not "we found no evidence": there
+# was nothing that could have caused it. npx and uvx resolve and download a package before the
+# server's first instruction runs, and that egress belongs to the package manager.
+REASON_PRE_LAUNCH = ("pre-launch: seen while the launcher was resolving the package, before the "
+                     "server process existed, so no tool call could have caused it")
 REASON_UNREADABLE_NO_CORRELATION = "request unreadable and no temporal correlation available"
 # A time window that covers several in-flight calls identifies a SET, not a call. Prefix only:
 # the count is interpolated, and tests match on the prefix.
@@ -270,8 +275,16 @@ def decide_provenance(request_observed: bool, has_context_match: bool,
 
 def grade_attribution(*, traceparent_present: bool, argument_match: bool,
                       active_calls_in_window: int, matching_calls_in_window: int,
-                      eligible: bool, has_time_and_pid: bool) -> tuple[str, str]:
+                      eligible: bool, has_time_and_pid: bool,
+                      call_caused_possible: bool = True) -> tuple[str, str]:
     """Claim three: how strongly this flow can be tied to a tool call. Returns (grade, reason).
+
+    ``call_caused_possible`` is False when the flow was seen in a lifecycle phase where no call of
+    ours existed yet (record.PHASES_NOT_CALL_CAUSED). It is checked FIRST, before trace and content
+    evidence, which is the opposite of how eligibility is treated and deliberately so: eligibility
+    withholds a temporal guess about a flow that could have been caused by a call, while this says
+    the flow predates every call there was. Nothing can outvote that, not even a content match,
+    because a content match against a call that had not been made yet would be a collision.
 
     THE TAUTOLOGY THIS FUNCTION EXISTS TO AVOID. The corpus is driven sequentially, so in every
     window there is exactly ONE active call. Under that regime, "the fragment matched and there
@@ -307,6 +320,9 @@ def grade_attribution(*, traceparent_present: bool, argument_match: bool,
     exclusion list withholds a temporal guess, it never suppresses direct evidence. Same
     principle as number 1 never filtering its raw count.
     """
+    if not call_caused_possible:
+        return UNATTRIBUTED, REASON_PRE_LAUNCH
+
     if traceparent_present:
         return TRACE_PROPAGATED, "our traceparent appeared in the outbound request"
 

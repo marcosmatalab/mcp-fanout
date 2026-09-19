@@ -190,6 +190,84 @@ which does not error, it just silently stops matching, and a capture would have 
 published figure describes. `run.sh` now reads the constant, the addon defaults to it, and a test
 pins the registry to it.
 
+## The self-match ceiling. The number that bounds everything phase B publishes
+
+Command: `make inventory`. Artifact: `docs/figures/calibration/inventory-k22.json`.
+
+This figure was a column in the k sweep's table and it does not belong there. The delta across k is
+irrelevant (0.5312 at k = 16, 0.5 at k = 22); **the level is what
+matters, and it was already the level at k = 16**: half of the realistic material does not match
+itself.
+
+### What self-match means, exactly
+
+For one call, take the bytes the matcher indexes on the cause side, which is
+`driver.args_bytes(its arguments)`, the same serialisation the driver publishes to the capture
+addon. Take the bytes of the request that **that same call** caused, its declared target and body.
+Ask the shipped matcher whether any k-gram of the first appears in the second.
+
+It is the true-positive question in the easiest form it has: the call is its own cause, there is no
+competing candidate, nothing is concurrent, and no window is involved. **A call that fails here can
+never be attributed by content anywhere**, under any concurrency, by any grade.
+
+Measured over `corpus/negative/calibration.json`, the calibration half of the negative corpus: 32 calls in four
+families, the same material the false-positive rate is measured over. It is **not** recall against
+real servers: the requests are the corpus's declared ones, re-derived from the arguments in the test
+suite, so this measures realistic argument SHAPES rather than the wire behaviour of ten real servers.
+
+### Why it is 0.5, decomposed
+
+Two thresholds, and they are different guarantees. A run of at least **k = 22** bytes IS
+found, because numbers 4 and 5 match exact k-grams. A run of at least **w + k - 1 =
+29** bytes is *also* guaranteed to survive winnowing, which is what
+the persisted digest-only fingerprints use. Between the two, a match enters the numbers but may not
+be reconstructible later from what was kept on disk.
+
+| Family | Calls | Self-match | Longest shared run, min / median / max | At or above 29 / between 22 and 28 / below 22 |
+| --- | --- | --- | --- | --- |
+| `json_post` | 8 | 1.0 | 68 / 69 / 72 | 8 / 0 / 0 |
+| `doc_url` | 8 | 1.0 | 23 / 27 / 31 | 3 / 5 / 0 |
+| `rest_path` | 8 | 0.0 | 14 / 15 / 16 | 0 / 0 / 8 |
+| `search_query` | 8 | 0.0 | 7 / 8 / 13 | 0 / 0 / 8 |
+
+**Two of the four families are structurally invisible, and for two different reasons.** In
+`rest_path` the JSON envelope never reaches the wire: the server reassembles the fields into a path,
+so the longest run the arguments share with the request is a single path segment of 14 to 16 bytes.
+In `search_query` the arguments carry spaces and the query string carries `+`, so the run breaks at
+the first space and the longest survivor is 7 to 13 bytes. Neither is a defect in the matcher and
+neither is fixable without inferring, which is negative 3.
+
+**The planted bait is not the problem.** All
+5 of the `CANARY_` values in
+`corpus/context/` sit at or above the winnowing floor, which the k + 8 rule in
+`tests/test_corpus_matches_probes.py` enforces. The ceiling is about the ordinary argument material
+an agent sends, not about the markers we plant in it.
+
+**One caveat nobody had written down.** 5 of the 8
+`doc_url` calls share a run between 22 and 28 bytes.
+Those matches enter numbers 4 and 5 but are **not** guaranteed to be present in the winnowed
+fingerprints that get persisted, so a later audit of the stored digests may not be able to
+reconstruct a match the run reported. The numbers are computed from exact k-grams, so they are
+correct; what is bounded is the after-the-fact auditability.
+
+**The phase A contrast, which is the point of having a bench at all.** All 60 detectable bench
+transfers share a run of 40 to
+45 bytes, every one above both
+floors. The bench's material is keyed digests, so it self-matches perfectly, and that is exactly why
+its recall figure says nothing about real arguments.
+
+### What follows: number 5 is published as a lower bound
+
+**An attributable share measured by a sensor that cannot see half of the realistic material it is
+shown is at most half of the true share. Number 5 is therefore published as a LOWER BOUND, not as an
+estimate, and this figure is the reason.** The same sentence is in `docs/THREATS.md` and in
+`docs/THE-SIX-NUMBERS.md`, and `number_5`'s own output carries it as `published_as`, so the figure
+cannot be quoted without it.
+
+This is a limit to declare, not a defect to fix before phase B. Every cause of it pushes the
+published share **down**: a miss is a false negative, which is the safe direction. What would be
+unacceptable is publishing the share as though the sensor saw everything.
+
 ## F1.3: rarity weighting. Measured, and REVERTED
 
 Command: `make rarity` (exit 0 if the rate fell, 1 if it did not, so the verdict is the exit code

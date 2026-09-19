@@ -170,3 +170,90 @@ def test_no_disclosure_report_is_committed_under_docs():
     offenders = [str(p.relative_to(REPO)) for p in (REPO / "docs").rglob("*.json")
                  if "disclosure" in p.name or "_operator_only" in p.read_text()]
     assert not offenders, f"an operator-only report is committed: {offenders}"
+
+
+def _launcher_flow(server_id: str, host: str) -> SimpleNamespace:
+    from mcpfanout.record import PHASE_LAUNCHER
+    return SimpleNamespace(server_id=server_id, dest_host=host, phase=PHASE_LAUNCHER)
+
+
+def _package_list():
+    from mcpfanout.classify import PACKAGE_INFRASTRUCTURE_PATH, ExclusionList
+    lst = ExclusionList.load(REPO / PACKAGE_INFRASTRUCTURE_PATH)
+    assert lst is not None
+    return lst
+
+
+def test_a_launcher_destination_is_recorded_apart_and_triggers_no_disclosure():
+    """Gate rule 7's first branch, mechanically, and it needs BOTH of its conditions.
+
+    A package registry reached before the first call, by a launch command that resolves a package, is
+    npm's traffic: asking whether the SERVER's documentation declares it is asking the wrong party. It
+    is reported, because an operator must see it, and it does not put the server into
+    servers_to_review. Both conditions come from declared data: the phase from the driver, the
+    destination from registry/package-infrastructure.json, the launch tool from the declaration.
+    """
+    report = check([_launcher_flow("everything", "registry.npmjs.org")], _declared(),
+                   _package_list())
+    assert report["verdict"] == VERDICT_CLEAR
+    assert report["servers_to_review"] == []
+    assert report["launcher_destinations"] == {"everything": ["registry.npmjs.org"]}
+    assert "not the server's" in report["launcher_note"]
+    # And it is NOT silently folded into the server's own observed destinations.
+    assert "everything" not in report["servers"]
+
+
+def test_pre_call_egress_that_is_not_a_package_registry_is_reviewed():
+    """A server phoning home at startup is exactly what gate rule 7 exists to surface.
+
+    Branch one requires the destination to be declared package infrastructure. Without that condition
+    the exclusion would launder any pre-call connection at all, which is the opposite of the rule.
+    """
+    report = check([_launcher_flow("everything", "telemetry.example.org")], _declared(),
+                   _package_list())
+    assert report["verdict"] == VERDICT_REVIEW
+    assert report["servers_to_review"] == ["everything"]
+    entry = report["servers"]["everything"]
+    assert entry["pre_first_call_undeclared"] == ["telemetry.example.org"]
+    assert "on its own at startup" in entry["reason"]
+
+
+def test_a_package_registry_before_the_first_call_is_still_reviewed_for_a_direct_launch():
+    """The other half of branch one: the launch command has to BE a package launcher.
+
+    A server started directly (python, node) has no resolution step, so a package registry before its
+    first call is the server itself reaching for something, not a launcher doing its job.
+    """
+    report = check([_launcher_flow("bench", "registry.npmjs.org")], _declared(), _package_list())
+    assert report["verdict"] == VERDICT_REVIEW
+    assert report["servers"]["bench"]["pre_first_call_undeclared"] == ["registry.npmjs.org"]
+
+
+def test_the_declared_launch_tool_matches_the_registry():
+    """It is copied data, so it can drift, and branch one turns on it."""
+    declared = _declared()
+    for server in _servers():
+        decl = declared.servers.get(server["id"])
+        assert decl is not None and decl.launch_tool == server["launch"][0], server["id"]
+
+
+def test_the_same_host_reached_during_a_call_still_triggers_review():  # noqa: D401
+    """The separation is by phase, not by hostname: the exclusion must not launder a real finding.
+
+    A package registry reached while a call is in flight is the threat-10 shape, and that IS the
+    server's behaviour whatever the destination is.
+    """
+    during = SimpleNamespace(server_id="everything", dest_host="registry.npmjs.org",
+                             phase="driving")
+    report = check([during], _declared(), _package_list())
+    assert report["verdict"] == VERDICT_REVIEW
+    assert report["servers_to_review"] == ["everything"]
+    assert report["launcher_destinations"] == {}
+
+
+def test_a_flow_with_no_recorded_phase_is_still_classified_rather_than_excused():
+    """An old run has no phase field, and "we did not record it" may not mean "it was the launcher"."""
+    old = SimpleNamespace(server_id="time", dest_host="telemetry.example.org")
+    report = check([old], _declared())
+    assert report["verdict"] == VERDICT_REVIEW
+    assert report["servers"]["time"]["new"] == ["telemetry.example.org"]

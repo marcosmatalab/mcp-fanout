@@ -44,6 +44,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .classify import matches_suffix
+from .record import PHASES_NOT_CALL_CAUSED as _PHASES_NOT_CALL_CAUSED
 
 DECLARED_DESTINATIONS_PATH = "registry/declared-destinations.json"
 
@@ -57,7 +58,17 @@ VERDICT_CLEAR = "clear"
 VERDICT_REVIEW = "review_required"
 VERDICT_UNDETERMINABLE = "undeterminable"
 
+# Commands that RESOLVE A PACKAGE and then exec the real server. For these, the subprocess we spawn
+# is the launcher, so a connection made before the first tool call, to a host on the declared
+# package-infrastructure list, is the launcher's traffic and not the server's. Both conditions are
+# required, and both come from declared data: the phase from the driver, the destination from
+# registry/package-infrastructure.json. Neither is inferred from a hostname's appearance.
+PACKAGE_LAUNCHERS = ("npx", "uvx", "pipx")
+
 REASON_NEW_HOST = "destination not declared and not a known exception"
+REASON_PRE_CALL_UNDECLARED = (
+    "seen before the first tool call, and NOT declared package infrastructure, so it is the "
+    "launched process reaching somewhere on its own at startup")
 REASON_NO_DECLARATION = "no declaration exists for this server, so nothing is declared for it"
 
 
@@ -69,6 +80,7 @@ class ServerDeclaration:
     hosts: tuple[str, ...]
     known_undeclared: dict          # host -> the document that carries the finding
     basis: str
+    launch_tool: str = ""           # argv[0] of the launch command; see PACKAGE_LAUNCHERS
 
     def status_of(self, host: str) -> str:
         """declared / known / new for one observed host."""
@@ -102,6 +114,7 @@ class DeclaredDestinations:
                 hosts=tuple(entry.get("hosts", ())),
                 known_undeclared=dict(entry.get("known_undeclared", {})),
                 basis=entry.get("basis", ""),
+                launch_tool=entry.get("launch_tool", ""),
             )
             for sid, entry in data.get("servers", {}).items()
         }
@@ -116,14 +129,24 @@ class DeclaredDestinations:
                 "sha256": self.sha256, "server_count": len(self.servers)}
 
 
-def check(flows, declared: DeclaredDestinations | None) -> dict:
+def check(flows, declared: DeclaredDestinations | None, package_infrastructure=None) -> dict:
     """Compare a run's observed destinations against the declaration. Operator-only output.
 
     ``flows`` is any iterable of records with ``server_id`` and ``dest_host`` (a run's
     ``flows.jsonl`` read back as ``Flow``). Connections with no host, which is what a
     non-HTTP flow looks like, are counted separately rather than treated as a destination:
     "we could not see where it went" is not "it went nowhere".
+
+    THE LAUNCHER'S DESTINATIONS ARE SEPARATED BEFORE ANYTHING IS CLASSIFIED, which is the first
+    branch of gate rule 7's decision procedure: a destination contacted by the launcher before the
+    server process exists is not the server's egress, so it is recorded apart and triggers no
+    disclosure. `npx -y pkg@ver` resolving a package is npm's traffic, and asking whether the
+    SERVER's documentation declares it is asking the wrong party. They are still reported, by host,
+    because an operator has to be able to see them; what they do not do is put a server into
+    servers_to_review.
     """
+    launcher_by_server: dict[str, set[str]] = {}
+    pre_call_other: dict[str, set[str]] = {}
     by_server: dict[str, set[str]] = {}
     hostless = 0
     for f in flows:
@@ -131,7 +154,23 @@ def check(flows, declared: DeclaredDestinations | None) -> dict:
         if not host:
             hostless += 1
             continue
-        by_server.setdefault(getattr(f, "server_id", "") or UNKNOWN_SERVER, set()).add(host)
+        sid = getattr(f, "server_id", "") or UNKNOWN_SERVER
+        if getattr(f, "phase", "") in _PHASES_NOT_CALL_CAUSED:
+            decl = declared.servers.get(sid) if declared else None
+            is_package_host = bool(package_infrastructure
+                                   and package_infrastructure.matches(host))
+            launched_by_a_launcher = bool(decl and decl.launch_tool in PACKAGE_LAUNCHERS)
+            if is_package_host and launched_by_a_launcher:
+                # Branch one of the decision procedure: the launcher's traffic. Recorded apart, no
+                # disclosure, and never folded into the server's own destinations.
+                launcher_by_server.setdefault(sid, set()).add(host)
+            else:
+                # Pre-first-call egress that is NOT the package manager resolving a dependency. The
+                # process we spawned reached somewhere on its own before any call was made, which is
+                # exactly the kind of finding gate rule 7 exists for, so it is reviewed.
+                pre_call_other.setdefault(sid, set()).add(host)
+            continue
+        by_server.setdefault(sid, set()).add(host)
 
     if declared is None:
         return {
@@ -143,6 +182,8 @@ def check(flows, declared: DeclaredDestinations | None) -> dict:
                        f"same as satisfied"),
             "declaration": None,
             "servers": {sid: {"observed_hosts": sorted(hosts)} for sid, hosts in sorted(by_server.items())},
+            "launcher_destinations": {sid: sorted(hosts)
+                                      for sid, hosts in sorted(launcher_by_server.items())},
             "connections_without_a_host": hostless,
         }
 
@@ -171,6 +212,13 @@ def check(flows, declared: DeclaredDestinations | None) -> dict:
             servers[sid]["reason"] = REASON_NEW_HOST
             review.append(sid)
 
+    for sid, hosts in sorted(pre_call_other.items()):
+        entry = servers.setdefault(sid, {"observed_hosts": [], "declared": [], "known": [],
+                                         "new": []})
+        entry["pre_first_call_undeclared"] = sorted(hosts)
+        entry["reason"] = REASON_PRE_CALL_UNDECLARED
+        review.append(sid)
+
     verdict = VERDICT_REVIEW if review else VERDICT_CLEAR
     return {
         "_operator_only": ("names servers and hostnames; gate rule 3 forbids publishing this file "
@@ -189,5 +237,17 @@ def check(flows, declared: DeclaredDestinations | None) -> dict:
             "README (see the registry file's own _what_basis_means)."),
         "declaration": declared.citation(),
         "servers": servers,
+        # Reported, never reviewed: gate rule 7's first branch. These are the package manager's
+        # destinations, seen before the server process existed, and the server's documentation is
+        # not the document that would declare them.
+        "launcher_destinations": {sid: sorted(hosts)
+                                  for sid, hosts in sorted(launcher_by_server.items())},
+        "launcher_note": ("contacted before the first tool call, by a launch command that resolves a "
+                          "package (npx, uvx), to a host on the declared package-infrastructure "
+                          "list: the launcher's traffic and not the server's, recorded apart and "
+                          "triggering no disclosure. Both conditions are required and both come "
+                          "from declared data"),
+        "package_infrastructure_list": (package_infrastructure.citation()
+                                        if package_infrastructure else None),
         "connections_without_a_host": hostless,
     }
