@@ -48,6 +48,7 @@ import threading
 import time
 from dataclasses import dataclass
 
+from . import structure
 from .record import PHASE_DRAINED, PHASE_DRIVING, PHASE_HANDSHAKE, PHASE_LAUNCHER
 
 # The revision whose wire format this module actually speaks. Claim 1 of the module docstring.
@@ -319,6 +320,25 @@ def args_digests_for(spec: CallSpec, redactor) -> list[str]:
     return sorted(redactor.kgram_digest_set(args_bytes(spec.arguments)))
 
 
+def token_digests_for(spec: CallSpec, redactor) -> list[str]:
+    """The sorted digest set of one call's STRUCTURAL TOKENS. Number 5's side of the join.
+
+    Published alongside args_digests, not instead of it: number 4 still matches k-grams against
+    context files and its figures must not move (docs/PREREG-F2.md, P6).
+
+    NOT ONE TOKEN CROSSES. The driver decomposes the arguments in its own process, digests each
+    token with the run's key, and publishes only digests. The addon decomposes the wire the same
+    way and digests what it finds. Neither side ever holds the other's plaintext, and the control
+    file that carries this is under runs/, which is gitignored precisely because it carries
+    salted digests tied to a specific server. What the digests do NOT provide is protection
+    against whoever holds the key: structural tokens are short and enumerable, which is stated in
+    redact.token_digest and in docs/DOCTRINE.md rather than glossed here.
+    """
+    if not spec.arguments:
+        return []
+    return sorted(redactor.token_digest_set(structure.tokens_of_arguments(spec.arguments)))
+
+
 def publish_active_calls(control_dir, run_id: str, server_id: str,
                          entries: list[dict], phase: str = "") -> None:
     """Publish the in-flight set the capture addon reads. Pass [] to declare none in flight.
@@ -360,6 +380,7 @@ def drive_wave(client: "StdioMCPClient", specs: list[CallSpec], run_id: str, ser
             "traceparent": new_traceparent(),
             "args_present": bool(spec.arguments),
             "args_digests": args_digests_for(spec, redactor),
+            "token_digests": token_digests_for(spec, redactor),
         })
     publish_active_calls(control_dir, run_id, server_id, entries, phase=PHASE_DRIVING)
 
@@ -464,6 +485,7 @@ def _drive_corpus(command, corpus, run_id, server_id, env, *, redactor, control_
                 publish_active_calls(control_dir, run_id, server_id, [{
                     "call_id": call_id, "traceparent": tp, "args_present": args_present,
                     "args_digests": args_digests_for(spec, redactor),
+                    "token_digests": token_digests_for(spec, redactor),
                 }], phase=PHASE_DRIVING)
 
             noise_before = client.stdout_noise_lines

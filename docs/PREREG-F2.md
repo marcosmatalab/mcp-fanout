@@ -320,3 +320,58 @@ errors is the wrong direction, and it is the direction that flatters the headlin
 published, as an amendment with its own commit and date, reporting BOTH the recovered subset
 calls and the false strong attributions on constant-path flows, and labelled in any output as
 measured after the fact. It may not be swapped into the block, whatever it shows.
+
+## 11. Results. Measured 2026-09-19, after the seal.
+
+Commands: `make f2` (calibration material), `make f2-reserved` (the reserve, run once), and
+`python -m mcpfanout.cli aggregate --number 5`. Nothing below was measured before the block above
+was committed in `68889d8`.
+
+| prediction | predicted | measured | holds |
+|---|---|---|---|
+| P1 both sides decompose identically | no drift | asserted over 4 shapes, `tests/test_structure.py` | yes |
+| P2 digests identical to tokens | identical to the digit | identical on every case tested | yes |
+| P3 self-match, older halves | 0.5000 to 1.0000 | 1.0000 (calibration), 1.0000 (held-out) | yes |
+| P3 self-match, real corpus | 0.5385 to 1.0000 | 1.0000, 13 of 13 | yes |
+| P3 FP, four original families | 0.0000 | 0 of 224 both halves | yes |
+| P4 strong attribution | 17 flows, in 15 to 19 | 17 | yes |
+| P4 false strong | 0 | 0 | yes |
+| P4 `/robots.txt` graded strong | none | none | yes |
+| P4 content fraction | 0.8947 | 0.8947 | yes |
+| P4 non-discriminating calls | 0, 0, 2, 0 | 0, 0, 2, 0 | yes |
+| P5 family without rule C | strictly > 0.0000 | **0.0893**, 5 of 56 | yes |
+| P5 family with rule C | 0.00 to 0.05 | **0.0000**, 0 of 56 | yes |
+| P6 number 4 unchanged | no movement | byte-identical to the committed figure | yes |
+
+The reserve, measured once: self-match 1.0000 over 40 calls in 5 families; `containment_subset`
+0.0893 without rule C and 0.0000 with it; 0 of 280 pairs across all five families with rule C.
+The calibration half gives the same two figures for that family, 0.0893 and 0.0000, which is the
+outcome a corpus built to one specification in two disjoint vocabularies should give.
+
+**The instrument verdict, against the threshold frozen in section 7: 0.8947 against 0.80. It
+passes.**
+
+### What the measured figure actually is, stated before anyone leans on it
+
+It is NOT a re-grade of the stored run, and section 6's phrase "re-graded without re-capturing"
+turned out to promise more than the data supports. `flows.jsonl` for
+`20260919T130847Z-concurrent` was written before the structural fields existed, so the run cannot
+be re-graded from what was persisted. That is threat 16 arriving from a new direction, and it is
+recorded here rather than smoothed over.
+
+What is re-derivable is the wire each call produces, because every driven call is a fetch of a URL
+the corpus names, and `make f2` cross-checks the derivation against the real run's composition:
+127 flows, 38 call-caused and eligible, 19 constant client paths, 19 in the content denominator.
+The derivation is honest exactly while that cross-check holds, so the command prints it rather
+than assuming it.
+
+`aggregate --number 5` on the stored run reads the three fractions correctly (0.0551 raw, 0.1842
+attributable, denominator 38) and reports that no flow carries the constant-path flag, because the
+run predates it. The first capture driven with the new addon produces all three from persisted
+data. Until then the 0.8947 is a corpus-derived figure with a published cross-check, and it is
+labelled that way wherever it appears.
+
+### What did not move, and why that matters
+
+Number 4 is byte-identical to the committed figure. The split is real: two problems, two
+instruments, and changing one did not disturb the other.

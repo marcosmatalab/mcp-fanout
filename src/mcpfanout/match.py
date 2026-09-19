@@ -249,6 +249,86 @@ def match_request(
     )
 
 
+# ---------------------------------------------------------------------------------------------
+# NUMBER 5'S MATCHER: structural containment over token digests.
+#
+# Separate from the k-gram path above, deliberately and permanently. Number 4 asks whether a
+# request carried material from a context file, which is prose, and keeps the k-gram. Number 5
+# asks whether a request was CAUSED by a specific call, whose arguments are JSON fields that
+# reappear as path segments and query values, and that correspondence is structural. Two problems,
+# two instruments (docs/METHOD.md, docs/PREREG-F2.md).
+#
+# Nothing here ever sees a token. The driver publishes the digest of each of a call's structural
+# tokens; the addon digests the tokens it decomposes off the wire; these functions compare sets of
+# digests. Set containment over digests is set containment over tokens up to a digest collision,
+# which is bounded in shingle.py and at these set sizes is not expected to fire once.
+# ---------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Candidates:
+    """The outcome of asking which in-flight calls could have caused one request.
+
+    Every field is published, because the difference between them is where threat 18 lives and a
+    grade distribution alone cannot show it.
+    """
+
+    contained: tuple[int, ...]          # calls whose whole token set is present in the request
+    discriminating: tuple[int, ...]     # of those, the ones that own a token no neighbour owns
+    non_discriminating_active: int      # in-flight calls excluded for owning no such token
+    token_count: int                    # tokens of the single surviving candidate, else 0
+
+
+def discriminating_candidates(call_token_sets: list[frozenset[str]],
+                              request_tokens: frozenset[str]) -> Candidates:
+    """Which in-flight calls could have caused this request, after the discrimination rule.
+
+    TWO STEPS, AND THE ORDER IS THE DESIGN.
+
+    1. Containment. A call is contained when EVERY one of its structural tokens is present in the
+       request. Not an intersection: intersecting fires whenever a call shares one token with a
+       request, and for a host token that is every request to that host.
+
+    2. Discrimination, and this is rule C from docs/PREREG-F2.md, adopted as a principle rather
+       than as a threshold. A call that owns no token distinguishing it from the other calls in
+       flight leaves the candidate set entirely. It is NOT that such a call makes the whole wave
+       ambiguous: that was measured and costs two thirds of what containment gains.
+
+    WHY THE RULE IS NOT OPTIONAL, measured rather than argued. In the concurrent run's fetch wave
+    at N = 10, one call is `{"url": "https://example.net/", "max_length": 2000}`, whose only
+    structural token is the host. Without step 2 it is contained in every flow of its own wave,
+    including all ten `/robots.txt` requests, and each of those grades as a confident, unique,
+    WRONG attribution to it: nine false strong attributions out of twenty flows. With step 2 it
+    owns nothing its neighbours do not, it leaves the candidate set, and those flows correctly
+    come out unattributed.
+
+    WHAT THE RULE COSTS, and it is a limit of the method rather than of this implementation. A
+    call whose tokens are a proper subset of a concurrent call's is also excluded, so it loses the
+    attribution of its OWN flow. In the same wave, `/docs/deploy/runbook` is lost to
+    `/docs/deploy/runbook?section=rollback-steps`, which is an agent re-reading its own document
+    with more precision and is one of the commonest things an agent does. That flow goes
+    unattributed and is never reassigned. docs/THREATS.md threat 18 carries the argument that no
+    containment-based matcher can do better, and `non_discriminating_active` is published so the
+    loss is visible in the output instead of looking like a matcher that failed to match.
+    """
+    contained = [i for i, toks in enumerate(call_token_sets)
+                 if toks and toks <= request_tokens]
+    non_discriminating = 0
+    keep: list[int] = []
+    for i, toks in enumerate(call_token_sets):
+        others = [u for j, u in enumerate(call_token_sets) if j != i]
+        shared: set[str] = set()
+        for other in others:
+            shared |= other
+        if toks and not (toks - shared):
+            non_discriminating += 1
+        elif i in contained:
+            keep.append(i)
+    token_count = len(call_token_sets[keep[0]]) if len(keep) == 1 else 0
+    return Candidates(contained=tuple(contained), discriminating=tuple(keep),
+                      non_discriminating_active=non_discriminating, token_count=token_count)
+
+
 def decide_occurrence(request_observed: bool) -> str:
     """Claim one: was the transfer observed, and could it be read."""
     return OCCURRENCE_OBSERVED if request_observed else OCCURRENCE_CONNECTION_ONLY
@@ -276,7 +356,8 @@ def decide_provenance(request_observed: bool, has_context_match: bool,
 def grade_attribution(*, traceparent_present: bool, argument_match: bool,
                       active_calls_in_window: int, matching_calls_in_window: int,
                       eligible: bool, has_time_and_pid: bool,
-                      call_caused_possible: bool = True) -> tuple[str, str]:
+                      call_caused_possible: bool = True,
+                      candidate_token_count: int = 0) -> tuple[str, str]:
     """Claim three: how strongly this flow can be tied to a tool call. Returns (grade, reason).
 
     ``call_caused_possible`` is False when the flow was seen in a lifecycle phase where no call of
@@ -327,6 +408,21 @@ def grade_attribution(*, traceparent_present: bool, argument_match: bool,
         return TRACE_PROPAGATED, "our traceparent appeared in the outbound request"
 
     if argument_match:
+        # THE ONE-TOKEN FLOOR. A single structural token is never strong evidence, whatever the
+        # window says, and this is checked before the window because it is a property of the
+        # evidence rather than of the competition. Measured against cases built to attack this
+        # matcher: {"query": "logs"} is contained in /api/logs?level=warn, and a lone shared enum
+        # value or a bare host is contained in anything that mentions it. The discrimination rule
+        # in discriminating_candidates already removes the common case, a call whose only token is
+        # shared with a neighbour; this catches the one it cannot, a call whose only token happens
+        # to be unique in a small wave and is still a single generic word. It costs nothing on the
+        # run this was pre-registered against, where every surviving candidate owns at least two
+        # tokens, and it is a belt rather than a tuning constant. Zero means the caller did not
+        # supply a token count (the k-gram path), and the floor does not apply.
+        if candidate_token_count == 1:
+            return CONTENT_AMBIGUOUS, (
+                "a single structural token is not strong evidence on its own: one token "
+                "identifies a class, not a call")
         if active_calls_in_window > 1 and matching_calls_in_window == 1:
             return CONTENT_UNIQUE, (
                 f"fragment present in exactly 1 of {active_calls_in_window} concurrent calls")

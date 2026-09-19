@@ -28,7 +28,8 @@ import sys
 from pathlib import Path
 
 from .aggregate import Run, compute_all, number_1, number_2, number_3, number_4, number_5, number_6
-from .classify import PACKAGE_INFRASTRUCTURE_PATH, ExclusionList, Registry
+from .classify import (CONSTANT_PATHS_PATH, PACKAGE_INFRASTRUCTURE_PATH,
+                       ConstantPathList, ExclusionList, Registry)
 
 
 def _resolve_run(run_arg: str, runs_root: Path = Path("runs")) -> Path:
@@ -101,14 +102,17 @@ def _cmd_aggregate(args: argparse.Namespace) -> int:
     # A declared exclusion list, loaded from registry/ and cited in the output. None is a
     # reported state, not a default: number_1 withholds the excluded figure and says why.
     exclusions = ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH)
+    # The denominator of number 5's content figure, frozen by sha256 inside the pre-registered
+    # block of docs/PREREG-F2.md. Same rule as above: None is reported, never assumed empty.
+    constant_paths = ConstantPathList.load(CONSTANT_PATHS_PATH)
     single = {
         "1": lambda: number_1(run, exclusions), "2": lambda: number_2(run),
         "3": lambda: number_3(run), "4": lambda: number_4(run),
-        "5": lambda: number_5(run, exclusions),
+        "5": lambda: number_5(run, exclusions, constant_paths),
         "6": lambda: number_6(run, registry),
     }
     if args.number == "all":
-        out = compute_all(run, registry, exclusions)
+        out = compute_all(run, registry, exclusions, constant_paths)
     else:
         out = single[args.number]()
     print(json.dumps(out, indent=2, sort_keys=True))

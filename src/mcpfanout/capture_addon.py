@@ -32,7 +32,8 @@ from pathlib import Path
 # this file the way mitmproxy does, so the mistake cannot come back.
 from mcpfanout import match as _match
 from mcpfanout import shingle as _shingle
-from mcpfanout.classify import classify_host
+from mcpfanout import structure as _structure
+from mcpfanout.classify import ConstantPathList, classify_host
 from mcpfanout.record import Flow
 from mcpfanout.redact import Redactor
 
@@ -61,6 +62,12 @@ class FanoutRecorder:
         if ctx_path and Path(ctx_path).exists():
             raw = json.loads(Path(ctx_path).read_text(encoding="utf-8"))
             self.context_index = {ref: frozenset(digs) for ref, digs in raw.items()}
+
+        # The declared list of client-constant targets, loaded once. Absent means the flag is
+        # never set, which counts every flow into the content denominator: the conservative
+        # direction, and it is reported by the aggregate rather than assumed.
+        self.constant_paths = ConstantPathList.load(
+            os.environ.get("MCPFANOUT_CONSTANT_PATHS", "registry/client-constant-paths.json"))
 
         self._buffer: list[Flow] = []
 
@@ -107,11 +114,31 @@ class FanoutRecorder:
                                                      self.redactor).causal:
                     matching.append(call)
 
-        # The attributed call: the single matching one if content discriminated, else the single
-        # active one if there is only one, else nothing. Never "whichever ran last".
-        if len(matching) == 1:
+        # NUMBER 5'S MATCHER, run beside the k-gram one and never merged into it. The wire is
+        # decomposed by the same rule the driver decomposed the arguments with, each token is
+        # digested with the run's key, and the comparison is set containment over digests. Not one
+        # token of either side's plaintext crosses: the driver published digests, and these are
+        # computed here from bytes that were already in this process.
+        wire_tokens = _structure.tokens_of_request(
+            req.pretty_host, req.path or "", body)
+        wire_digests = self.redactor.token_digest_set(wire_tokens)
+        call_token_sets = [frozenset(c.get("token_digests", [])) for c in active]
+        cand = _match.discriminating_candidates(call_token_sets, wire_digests)
+
+        # The attributed call. Structural evidence first, because it is the instrument number 5 is
+        # published from; the k-gram result stays in the record for number 4 and never attributes.
+        # Then the single active call if there is only one. Never "whichever ran last", and NEVER
+        # a call the discrimination rule just rejected: a flow whose only contained call was
+        # excluded for owning no distinguishing token goes out unattributed and is not handed back
+        # to that call by a fallback. That reassignment is the tempting bug, it would undo exactly
+        # what the rule bought, and tests/test_structural_attribution.py pins it.
+        if len(cand.discriminating) == 1:
+            attributed = active[cand.discriminating[0]]
+        elif cand.contained and not cand.discriminating:
+            attributed = {}
+        elif len(matching) == 1:
             attributed = matching[0]
-        elif len(active) == 1:
+        elif len(active) == 1 and not cand.contained:
             attributed = active[0]
         else:
             attributed = {}
@@ -155,6 +182,14 @@ class FanoutRecorder:
             occurrence=occurrence, provenance=provenance,
             active_calls_in_window=len(active),
             matching_calls_in_window=len(matching),
+            structural_match=bool(cand.discriminating),
+            structural_contained=len(cand.contained),
+            structural_candidates=len(cand.discriminating),
+            non_discriminating_calls=cand.non_discriminating_active,
+            candidate_token_count=cand.token_count,
+            constant_client_path=bool(self.constant_paths
+                                      and self.constant_paths.matches(req.pretty_host,
+                                                                      req.path or "")),
             # Read from the control file, never inferred from the in-flight set being empty: the
             # launcher phase is what makes a flow impossible to attribute to a call by construction,
             # and an empty list alone cannot say whether the server process even exists yet.

@@ -17,8 +17,9 @@ from pathlib import Path
 
 from . import match as _match
 from . import classify as _classify
-from .classify import ExclusionList, Registry, selfhostable_fraction
+from .classify import ConstantPathList, ExclusionList, Registry, selfhostable_fraction
 from . import record as _record
+from .record import Flow
 from .record import Flow, RunManifest, ToolCall, read_jsonl, read_manifest
 
 
@@ -288,7 +289,139 @@ def number_4(run: Run) -> dict:
             "command": "make n4"}
 
 
-def number_5(run: Run, exclusions: ExclusionList | None = None) -> dict:
+def _attributing_match(flow: Flow) -> bool:
+    """Which instrument attributes this flow, and it is NOT the one that measures number 4.
+
+    Number 4 asks whether a request carried material from a context file, which is prose, and
+    keeps the exact k-gram: `flow.causal` is its signal and nothing here touches it
+    (docs/PREREG-F2.md, P6). Number 5 asks whether a request was CAUSED by a specific call, whose
+    arguments are structure, and reads the structural matcher.
+
+    A run captured before F2 has `structural_match` False on every flow and would grade every
+    content match away. So the k-gram signal is still honoured when the structural fields were
+    never written: `structural_contained` is 0 across an entire pre-F2 run and non-zero somewhere
+    in any post-F2 run that matched anything. Falling back is the only reading that does not
+    silently rewrite an older run's figures into zeros.
+    """
+    if flow.structural_match:
+        return True
+    return flow.causal and flow.structural_contained == 0 and flow.structural_candidates == 0
+
+
+def _attributing_candidates(flow: Flow) -> int:
+    if flow.structural_match:
+        return flow.structural_candidates
+    return flow.matching_calls_in_window
+
+
+def _content_eligible(flow: Flow) -> bool:
+    """Call-caused, and not a target the client emits constantly whatever the call asked for."""
+    return _call_caused_possible(flow) and not flow.constant_client_path
+
+
+
+
+def _denominators(run: Run, strong: int, total: int, constant_paths,
+                  exclusions: ExclusionList | None) -> dict:
+    """The three fractions, always together, with the raw one marked.
+
+    THIS IS THE THIRD TIME A CONTAMINATED DENOMINATOR HAS BEEN CAUGHT IN THIS PROJECT, which is
+    why all three are published rather than the best one. `strong / len(run.flows)` divides by
+    every flow in the run, including package-manager traffic that cannot carry an argument and
+    flows seen before any call was sent. On the run F2 was pre-registered against, that reads
+    0.0551 where the call-caused figure is 0.1842: the same measurement, off by a factor of three,
+    and the difference is entirely in what was counted.
+
+    - `strong_attribution_fraction` (raw, over every flow) is NOT COMPARABLE to the others and
+      says so in the output. It is kept because discarding it would hide how much of a run is
+      machinery.
+    - `attributable_fraction` is over flows that could have been caused by a call at all.
+    - `content_attributable_fraction` is over those, minus targets a client emits constantly
+      whatever the call asked for. This is the only one number 5's pre-registered verdict binds
+      to (docs/PREREG-F2.md section 7), and the list that defines it is cited by sha256 so a
+      reader can check that it is the one that was frozen before the measurement.
+    """
+    # Call-caused AND eligible. Both, and the second is not optional: the 82 package-registry
+    # flows in the pre-registration run are in the `driving` phase, so a phase filter alone leaves
+    # them in and the denominator reads 120 instead of 38. They are excluded by the declared list,
+    # exactly as number 1 excludes them, and for the same reason: they cannot carry a tool call's
+    # arguments, so counting them measures how noisy a package manager is.
+    attributable = [f for f in run.flows
+                    if _call_caused_possible(f)
+                    and not (exclusions is not None and exclusions.matches(f.dest_host))]
+    out = {
+        "attributable_denominator": len(attributable),
+        "attributable_fraction": (round(strong / len(attributable), 4) if attributable else None),
+        "raw_fraction_is_not_comparable": (
+            "strong_attribution_fraction divides by every flow in the run, including package "
+            "infrastructure and flows seen before any call was sent. It is published so the "
+            "share of a run that is machinery stays visible, and it may not be compared with "
+            "either figure below or with another run's"),
+    }
+    if exclusions is None:
+        out["attributable_denominator_note"] = (
+            "no exclusion list was loaded, so package-infrastructure flows are still IN this "
+            "denominator and the fraction is a floor. Never assumed empty: a missing list and an "
+            "empty one give the same number and mean opposite things")
+    if constant_paths is None:
+        out["content_denominator"] = None
+        out["content_attributable_fraction"] = None
+        out["content_denominator_note"] = (
+            "registry/client-constant-paths.json was not loaded, so the content denominator was "
+            "NOT computed. It is never assumed empty: an empty list and a missing list would "
+            "produce the same number and mean opposite things")
+        return out
+    content = [f for f in attributable if not f.constant_client_path]
+    unflagged = all(not f.constant_client_path for f in run.flows)
+    out["content_denominator"] = len(content)
+    out["content_attributable_fraction"] = (
+        round(strong / len(content), 4) if content else None)
+    out["content_denominator_list"] = constant_paths.citation()
+    if unflagged:
+        out["content_denominator_warning"] = (
+            "no flow in this run carries the constant-path flag, so the content denominator "
+            "equals the attributable one. Either the run genuinely contained no constant client "
+            "chatter, or it was captured before the flag existed. A pre-F2 run reads back False "
+            "on every flow, which counts every flow IN, and that is the conservative direction "
+            "rather than the flattering one")
+    return out
+
+
+def _discrimination_summary(run: Run) -> dict:
+    """How often an agent's own concurrent calls became mutually indistinguishable.
+
+    A FINDING ABOUT THE PHENOMENON, NOT BOOKKEEPING, and that is why it is published rather than
+    logged. A call that owns no token distinguishing it from the others in flight cannot be
+    attributed by content by ANY implementation of containment (docs/THREATS.md threat 18), and
+    the commonest way to produce one is an agent re-reading its own document with more precision.
+    Without this figure the loss is invisible: a flow lost that way looks exactly like a flow that
+    never matched, so a limit of the method would get read as a weak matcher.
+
+    `contained_but_not_candidate` is the same story per flow: calls whose whole token set was
+    present in the request and which the discrimination rule still refused.
+    """
+    by_window: dict[str, dict] = {}
+    for f in run.flows:
+        if not _call_caused_possible(f):
+            continue
+        b = by_window.setdefault(str(f.active_calls_in_window),
+                                 {"flows": 0, "non_discriminating_calls": 0,
+                                  "contained_but_not_candidate": 0})
+        b["flows"] += 1
+        b["non_discriminating_calls"] = max(b["non_discriminating_calls"],
+                                            f.non_discriminating_calls)
+        b["contained_but_not_candidate"] += max(
+            0, f.structural_contained - f.structural_candidates)
+    return {"discrimination": {
+        "by_window_size": by_window,
+        "what_this_measures": (
+            "per wave size: how many in-flight calls owned no token distinguishing them from "
+            "their neighbours, and how many times a call was contained in a request and still "
+            "refused as a candidate. Both are threat 18 made visible in the output"),
+        "command": "make n5"}}
+
+def number_5(run: Run, exclusions: ExclusionList | None = None,
+             constant_paths: ConstantPathList | None = None) -> dict:
     """Distribution of attribution grades. The decisive number, and the honest shape of it.
 
     The grade is DERIVED HERE, not read from the record, because it depends on the declared
@@ -325,12 +458,13 @@ def number_5(run: Run, exclusions: ExclusionList | None = None) -> dict:
         eligible = not (exclusions is not None and exclusions.matches(f.dest_host))
         grade, reason = _match.grade_attribution(
             traceparent_present=f.our_traceparent_present,
-            argument_match=f.causal,
+            argument_match=_attributing_match(f),
             active_calls_in_window=f.active_calls_in_window,
-            matching_calls_in_window=f.matching_calls_in_window,
+            matching_calls_in_window=_attributing_candidates(f),
             eligible=eligible,
             has_time_and_pid=f.has_time_and_pid,
             call_caused_possible=_call_caused_possible(f),
+            candidate_token_count=f.candidate_token_count,
         )
         grades[grade] = grades.get(grade, 0) + 1
         reasons[reason] = reasons.get(reason, 0) + 1
@@ -349,12 +483,13 @@ def number_5(run: Run, exclusions: ExclusionList | None = None) -> dict:
         eligible = not (exclusions is not None and exclusions.matches(f.dest_host))
         grade, _ = _match.grade_attribution(
             traceparent_present=f.our_traceparent_present,
-            argument_match=f.causal,
+            argument_match=_attributing_match(f),
             active_calls_in_window=f.active_calls_in_window,
-            matching_calls_in_window=f.matching_calls_in_window,
+            matching_calls_in_window=_attributing_candidates(f),
             eligible=eligible,
             has_time_and_pid=f.has_time_and_pid,
             call_caused_possible=_call_caused_possible(f),
+            candidate_token_count=f.candidate_token_count,
         )
         bucket = by_window.setdefault(str(f.active_calls_in_window), {})
         bucket[grade] = bucket.get(grade, 0) + 1
@@ -386,6 +521,8 @@ def number_5(run: Run, exclusions: ExclusionList | None = None) -> dict:
            "grades_by_window_size": by_window,
            "strong_attribution_count": strong,
            "strong_attribution_fraction": round((strong / total) if total else 0.0, 4),
+           **_denominators(run, strong, total, constant_paths, exclusions),
+           **_discrimination_summary(run),
            "strong_attribution_grades": list(_match.STRONG_ATTRIBUTION),
            # None, not False, when there are no flows: with nothing observed, "was this run
            # sequential" is unanswerable from the flows, and False would assert concurrency that
@@ -479,7 +616,8 @@ def driving_summary(run: Run) -> dict:
 
 
 def compute_all(run: Run, registry: Registry | None = None,
-                exclusions: ExclusionList | None = None) -> dict:
+                exclusions: ExclusionList | None = None,
+                constant_paths: ConstantPathList | None = None) -> dict:
     return {
         "run_id": run.manifest.run_id,
         "created": run.manifest.created,
@@ -491,6 +629,7 @@ def compute_all(run: Run, registry: Registry | None = None,
         "driving": driving_summary(run),
         "numbers": [
             number_1(run, exclusions), number_2(run), number_3(run),
-            number_4(run), number_5(run, exclusions), number_6(run, registry),
+            number_4(run), number_5(run, exclusions, constant_paths),
+            number_6(run, registry),
         ],
     }

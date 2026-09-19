@@ -6,7 +6,7 @@
 .RECIPEPREFIX = >
 .PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
         bench-verify disclosure control control-publish fp fp-calibration ksweep positive rarity \
-        inventory clean
+        inventory f2 f2-reserved corpus-check clean
 
 RUN ?= latest
 
@@ -37,6 +37,22 @@ run:
 # A separate run and a separate figure, never merged with the sequential one (docs/PHASES.md).
 run-concurrent:
 > python3 -m mcpfanout.cli run --registry registry/servers.yaml --out runs/ --pass concurrent
+
+# F2: the structural matcher's predictions (docs/PREREG-F2.md), on CALIBRATION material.
+# This is the one to look at while working. It re-derives sections 4 and 5 of the
+# pre-registration, which is the rule 6 debt that document declared.
+f2:
+> python3 tools/measure_f2.py
+
+# F2 on the RESERVED half. Measured ONCE, at the end, and its figure is what gets published.
+# A separate target from `f2` on purpose: a single command that could be pointed at either half
+# is a command somebody points at the wrong one, which is how the previous reserve was lost.
+f2-reserved:
+> python3 tools/measure_f2.py --reserved
+
+# The negative corpus's generated halves, re-derived. Fails if either was edited by hand.
+corpus-check:
+> python3 tools/build_negative_extras.py --check
 
 # All six numbers from a run (default: the latest run under runs/).
 numbers:
