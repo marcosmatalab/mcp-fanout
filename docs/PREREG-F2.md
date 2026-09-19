@@ -414,3 +414,41 @@ prevent.
 measure.** A seal that has not left the machine is a draft with a hash on it. Commits from
 `e5c1892` onward are GPG-signed, which binds authorship but not time; it is the push that binds
 time, and only a push that happens before the measurement binds the right thing.
+
+## 13. For the write-up: what must appear in the method section, not be tidied away
+
+Reserved here so it survives the distance between this file and a paper, where the temptation to
+present a clean run is strongest.
+
+**1. A pre-registered claim in this document turned out to be false, and it is still written.**
+Section 6, inside the sealed block, predicted that the run could be "re-graded without
+re-capturing". It cannot: `flows.jsonl` predates the structural fields, so the run is not
+re-gradable from what was persisted. The prediction stayed exactly where it was and the
+correction was made outside the seal, in section 11. Nothing was edited to make the prediction
+look better, because editing it is the one thing the seal exists to prevent.
+
+This belongs in the method section for a reason beyond honesty. **A pre-registration in which
+everything came out right is evidence that the predictions were written to be safe.** One that
+contains a falsified claim, still legible, with the correction beside it and the digest proving
+the original was not touched, is evidence that the mechanism was load-bearing. The failed
+prediction is the strongest thing in this document.
+
+**2. The falsification is itself a finding about the instrument.** "Re-gradable from what was
+persisted" is threat 16's question: can a match that enters the numbers be re-derived from the
+digests that were stored. The answer here is no, for a reason nobody had written down, which is
+that adding a field to the record makes every earlier run un-re-gradable under the new matcher.
+That is a general property of evidence systems that evolve, not a detail of this one, and it is
+worth a paragraph in its own right.
+
+**3. The timestamp weakness, from section 12.** The pre-registration was pushed to an external
+host only after the measurement, so an external clock witnesses the bundle and not the order
+within it. The corroboration that exists is set out, the gap is named, and the rule derived from
+it (seal, commit, push, then measure) is stated. Publishing the apparatus without publishing its
+weakest link would make the apparatus decorative.
+
+**4. The reserve was burned once, by us.** The first reserved half was measured through a bare
+`json.load` that bypassed the loader's refusal, which established that the refusal was a courtesy
+and not a lock. The figure was demoted to calibration, a new reserve was built, and the courtesy
+is now documented as one. A paper that describes a held-out set should describe what keeps it
+held out, and "a function that callers may decline to use" is the honest answer for any corpus
+that ships in the same repository as the code.
