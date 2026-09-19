@@ -171,8 +171,14 @@ def number_3(run: Run) -> dict:
     Servers whose answered revision is unknown get their own bucket rather than being folded in.
     "Not known" is not a revision.
     """
-    servers = {c.server_id for c in run.calls} | {f.server_id for f in run.flows}
-    propagating = {f.server_id for f in run.flows if f.our_traceparent_present}
+    # Empty server ids are dropped, and that is a correction rather than tidying. A flow seen
+    # while no call was in flight carries server_id "" (the control file named nobody), and the
+    # set union turned that into an eleventh "server" in a ten-server run: it landed in the
+    # "unknown revision" bucket and inflated the denominator of a published fraction with a
+    # non-server. Found reading the first ten-server sequential capture, where a package-registry
+    # connection arrived between two servers' calls.
+    servers = ({c.server_id for c in run.calls} | {f.server_id for f in run.flows}) - {""}
+    propagating = {f.server_id for f in run.flows if f.our_traceparent_present} - {""}
     revisions = dict(run.manifest.server_protocol_versions or {})
 
     by_rev: dict[str, dict] = {}

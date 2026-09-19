@@ -248,3 +248,32 @@ def test_unknown_protocol_revision_gets_its_own_bucket(tmp_path):
     n = number_3(run)
     assert "unknown" in n["by_protocol_revision"]
     assert n["by_protocol_revision"]["unknown"]["servers_total"] == 1
+
+
+def test_number_3_does_not_count_a_flow_with_no_server_as_a_server():
+    """A connection seen with no call in flight is not an eleventh server.
+
+    Found reading the first ten-server sequential capture: a package-registry connection arrived
+    between two servers' calls, so the control file named nobody and the flow carried server_id "".
+    The union of call and flow server ids turned that empty string into a server, which landed in
+    the "unknown revision" bucket and inflated the denominator of a PUBLISHED fraction. The flow
+    itself is still counted everywhere it belongs (fan-out, provenance, grades); what it must not do
+    is become a participant.
+    """
+    from mcpfanout.aggregate import Run, number_3
+    from mcpfanout.record import Flow, RunManifest, ToolCall
+
+    def flow(server_id: str) -> Flow:
+        return Flow(run_id="r", server_id=server_id, call_id=None, ts=1.0, dest_host="a.example",
+                    dest_ip="203.0.113.1", scheme="https", method="GET", body_observed=True,
+                    our_traceparent_present=False, target_bytes=1, target_matched_bytes=0,
+                    body_bytes=0, body_matched_bytes=0, matched_refs=[], causal=False,
+                    causal_channel="none", node_category="remote_leaf", has_time_and_pid=True)
+
+    manifest = RunManifest(run_id="r", created="1970-01-01T00:00:00Z", salt_fixed=True, k=16, w=8,
+                           corpus_sha256="0" * 64, server_ids=["s1"],
+                           server_protocol_versions={"s1": "2025-11-25"})
+    run = Run(manifest, [ToolCall("r", "s1", "c0", "t", True, "tp")], [flow("s1"), flow("")])
+    out = number_3(run)
+    assert out["servers_total"] == 1, out
+    assert "unknown" not in out["by_protocol_revision"], out["by_protocol_revision"]
