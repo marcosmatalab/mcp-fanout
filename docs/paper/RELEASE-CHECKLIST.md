@@ -1,8 +1,19 @@
-# Release checklist. DO NOT publish before 2026-10-19.
+# Release checklist. Do not cut the TAGGED RELEASE before 2026-10-19.
 
-**The date is a commitment, not a preference.** Both disclosure reports state a publication window
-of about thirty days, around 2026-10-19 (`docs/DISCLOSURE-LOG.md`). Minting a DOI before that date
-breaks the window we gave the maintainers, whatever the repository already contains publicly.
+**What is deferred, stated precisely, because the old heading here read as if we were sitting on
+something.** We are not. **The findings have been public since 2026-09-19**: they are in this
+repository, which is public, and both disclosure issues link to it by URL. Anyone who read either
+issue that day could read the whole measurement that day.
+
+What waits for 2026-10-19 is the **tagged release and the minted DOI**, and only those. The
+reason is narrow: both reports told the maintainers we would write this up in about thirty days,
+so cutting the citable artifact earlier would make a stated date wrong. It is a commitment about
+our own timing, not an embargo, and there was never anything to embargo.
+
+Stated this way round because the distinction matters to how the disclosure reads. A report that
+says "here is the finding, here is the repository, I will publish in thirty days" is a courtesy
+notice. A report that withholds the finding and dangles a deadline is something else, and we did
+not do that.
 
 **Order matters, and it is counter-intuitive.** Zenodo mints a DOI when it DETECTS a release, so
 the integration must be connected FIRST and the release published SECOND. Connecting afterwards

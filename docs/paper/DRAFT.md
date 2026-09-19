@@ -21,10 +21,11 @@ at all, because Node.js ignores those variables in its global `fetch` unless a f
 default is explicitly enabled.
 
 We measure whether an agent's outbound requests can be attributed to the tool call that caused
-them, across **ten of the most-installed Model Context Protocol servers, driven under packet and
-proxy capture with 130 tool calls in concurrent waves of 2, 5 and 10, plus a 26-call sequential
-pass**. Ten curated servers are the head of a distribution whose tail is where small,
-unaudited implementations live, and every figure below describes that head. Matching is
+them, across **ten widely used, version-pinned Model Context Protocol servers, driven under
+packet and proxy capture with 130 tool calls in concurrent waves of 2, 5 and 10, plus a 26-call
+sequential pass**. These are curated, well-maintained servers and they are the head of a
+distribution whose tail is where small, unaudited implementations live; every figure below
+describes that head. We make no claim about install rank, which we did not measure. Matching is
 byte-literal over structural tokens, with no content retained and no inference. Against a
 threshold of 0.80 fixed and cryptographically sealed before any measurement existed, the
 attributable share of call-caused, content-eligible flows is **0.6579**. The instrument does not

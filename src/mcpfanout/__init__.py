@@ -6,4 +6,4 @@ aggregate) depends only on the standard library and is the part CI runs. The cap
 used to produce a run, never to compute a number from one.
 """
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"

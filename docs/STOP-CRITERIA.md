@@ -1,7 +1,15 @@
 # Stop criteria
 
-When to stop spending on the measurement. The measurement is one afternoon and about 10 EUR of
-compute; these criteria say when that afternoon has answered the question.
+When to stop spending on the measurement, where "spending" turned out to mean attention rather than money.
+
+**Corrected 2026-09-20.** Earlier versions of this paragraph said "one afternoon and about
+10 EUR of compute". Both figures were guesses and both were wrong, and README.md now publishes
+the measured table that disproves them. Measured: **0 EUR** of cloud compute, because everything
+runs in Docker on one machine; **0 EUR** of paid APIs, the only credential being a free-tier
+GitHub token; **138 seconds** of actual driving across 21 capture runs; **two days** of wall
+clock. The money cost is genuinely zero and the real cost is attention.
+
+These criteria say when the measurement has answered the question.
 
 The pre-registered version of this, with the sensor and product gates beside it, is
 `docs/PHASES.md`. This file is the reasoning; that file is the commitment made before the data
@@ -13,8 +21,14 @@ observe at all, and buyers who consider their existing gateway sufficient.
 
 If the median fan-out (number 1) is 1 and literal coincidence (numbers 4 and 5) is zero, the idea
 is real but the problem is small: servers call their own API and nothing of the context leaves.
-This is knowable for about 10 EUR and an afternoon. The causal union is trivial, the product (if
-any) is Half B alone, and there is no headline. Write it up and stop.
+This is knowable at the cost stated above, which is two days of attention and no money. The
+causal union is trivial, the product (if any) is Half B alone, and there is no headline. Write it
+up and stop.
+
+**This is the branch that fired.** Number 1's median is 0 and number 4 is zero bytes. What the
+criterion did not anticipate is that the instrument would fail its own threshold on the way
+(`docs/PREREG-F2.md` section 16), so "write it up and stop" is being followed with a negative
+result about the apparatus rather than a small result about the phenomenon.
 
 ## Continue, there is a product
 

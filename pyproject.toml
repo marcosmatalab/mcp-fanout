@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-fanout"
-version = "0.1.0"
+version = "1.0.0"
 description = "A reproducible measurement harness for MCP tool-call fan-out and causal-union rate."
 readme = "README.md"
 requires-python = ">=3.11"
