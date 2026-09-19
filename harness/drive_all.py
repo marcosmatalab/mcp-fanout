@@ -385,6 +385,7 @@ def main() -> int:
                                   if s.get("protocol_version_answered")},
         tool_versions={"note": "fill with pinned server digests before publishing"},
         credential_presence=credential_presence(selected),
+        servers_expecting_egress=[s["id"] for s in selected if s.get("expects_egress")],
         pass_name=args.mode,
         notes=(f"Capture run, {args.mode} pass. See docs/THE-GATE.md before publishing any number."
                + (" Numbers 1 to 4 are read from this pass; its attribution grades are "

@@ -29,9 +29,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libxcb1 \
         libpango-1.0-0 libcairo2 libasound2 libatspi2.0-0 libx11-6 libxext6 fonts-liberation \
         libnss3-tools \
- && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+ && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
  && apt-get install -y --no-install-recommends nodejs \
  && rm -rf /var/lib/apt/lists/*
+
+# NODE 24, AND THE REASON IS A MEASUREMENT DEFECT, not a preference for a newer runtime.
+#
+# The capture is a terminating proxy selected by HTTP(S)_PROXY, so interception depends on each
+# client choosing to honour those variables. Node's global `fetch` (undici) DOES NOT honour them
+# by default. The image shipped Node 20, where there is no way to make it: a server built on
+# global fetch reached its API and left nothing in flows.jsonl while every tool call succeeded and
+# returned the API's own answers. Measured on run 20260919T193121Z-concurrent: 10 outbound SYNs
+# straight to api.github.com in the pcap backstop, zero flows for that server.
+#
+# Node gained proxy support for global fetch in 22.21.0 and 24.5.0, still OFF by default, enabled
+# by NODE_USE_ENV_PROXY=1 or --use-env-proxy. So the fix is one variable and a runtime new enough
+# to have it, which is why the base moves from 20 to 24. See docs/THREATS.md threat 19.
+#
+# The assertion is not decoration. An older Node accepts the variable silently, ignores it, and
+# produces a capture that looks exactly like a correct one with a server that egressed nothing:
+# gate rule 10's failure mode, in a base image. Build must fail instead.
+RUN node -e "const [maj,min]=process.versions.node.split('.').map(Number);     const ok = (maj>24) || (maj===24&&min>=5) || (maj===22&&min>=21);     if(!ok){console.error('Node '+process.versions.node+' has no NODE_USE_ENV_PROXY; need >=22.21 or >=24.5');process.exit(1);}     console.log('node '+process.versions.node+' supports NODE_USE_ENV_PROXY')"
+
+# Turn it on for every process in the container. It is inert without HTTP(S)_PROXY set, so the
+# unproxied warm launch is unaffected, and the driver's subprocess env is built from os.environ so
+# it reaches each server.
+#
+# WHAT THIS DOES NOT COVER, and the pcap remains the judge rather than this line: it applies to
+# global fetch and undici. A client using node:https directly, or constructing its own agent, or
+# pinning certificates, still bypasses the proxy. `make backstop` counts outbound SYNs per
+# destination and is what says whether anything is still blind.
+ENV NODE_USE_ENV_PROXY=1
 
 # uv AND uvx for uvx-launched Python MCP servers. Both binaries, because registry/servers.yaml
 # launches fetch, git and time with `uvx` and the installer puts two separate executables in

@@ -538,3 +538,69 @@ paragraph exists, and it is the strongest argument in the repository for why thr
 never explained the gap: **threat 6 does, and it is an instrument limit rather than a sampling
 one.** `docs/LAB-ACCOUNTS.md` section 1 carries the consequence: no more credentials for servers
 whose clients ignore the proxy until transparent interception or eBPF exists.
+
+## 16. The instrument was blind, and with it fixed the threshold is NOT met. 2026-09-19.
+
+Run `20260919T194649Z-concurrent`, with `NODE_USE_ENV_PROXY=1` and Node 24 in the harness image.
+
+**What changed.** The proxy could not see Node's global `fetch` (threat 19). One of the three
+servers that egress at all was therefore invisible, and both previous passes measured a flow
+sample biased toward the two servers that happened to use proxy-honouring clients. With the fix,
+that server produces 17 flows where it produced none, and `egress_unobserved` falls from 7 to 0.
+
+| figure | 130847Z (derived) | 193121Z (persisted, blind) | **194649Z (persisted, corrected)** |
+|---|---|---|---|
+| content denominator | 19 | 21 | **38** |
+| strong | 17 | 17 | **25** |
+| **content fraction** | 0.8947 | 0.8095 | **0.6579** |
+| servers with observed egress | 2 | 2 | **3** |
+| `egress_unobserved` | not computed | 7 | **0** |
+
+**Against the threshold of 0.80 frozen in section 7: 0.6579. It is not met.**
+
+That is the result, stated first and without softening. The two figures above 0.80 were produced
+by an instrument that could not see a third of the egressing servers, and a verdict measured on a
+biased sample is not a verdict. The earlier passes are not retracted, they are superseded: they
+remain correct statements about the flows that were visible, and that population was not the one
+they were named after.
+
+### Where the 13 missing attributions went, which is the informative part
+
+Of 38 content-eligible flows, 25 grade CONTENT_UNIQUE. The remaining 13 decompose exactly:
+
+| cause | count | note |
+|---|---|---|
+| single-token floor | **6** | every one of them the newly visible server |
+| contained but not discriminating (threat 18) | 5 | 2 subset re-reads, 3 on the new server |
+| never contained | 2 | an embedded browser's own background traffic |
+
+**The one-token floor is the whole story, and it is a finding rather than a tuning problem.** It
+cost nothing on the servers measured before, because their arguments are URLs that decompose into
+four or five structural tokens. The newly visible server's arguments are single free-text queries:
+`{"query": "modelcontextprotocol servers"}` is ONE token. So every such call is attributable only
+as CONTENT_AMBIGUOUS, by the rule that one token identifies a class and not a call.
+
+This is the sharpest thing the corrected run produced: **structural containment's power depends on
+the shape of a tool's arguments, not on the matcher.** A tool taking a path, a URL or a resource
+identifier decomposes into several tokens and attributes uniquely. A tool taking one free-text
+string cannot be attributed by content under any rule that refuses to call one generic token
+strong evidence, and weakening that rule is what produced nine false strong attributions when it
+was measured in section 4. The previous passes contained no such tool, which is precisely why they
+looked better.
+
+### What this does to the product question
+
+Section 8 refused to freeze a product verdict and named threats 5 and 8. It should have named
+threat 19 too, and could not, because threat 19 did not exist yet. The product question stays
+open and its terms are now sharper: the attributable share is not one number, it is a function of
+how many structural tokens a tool's arguments carry, and a population of tools has a distribution
+of that. Nothing measured so far estimates that distribution.
+
+### The credential, re-assessed a second time
+
+`docs/LAB-ACCOUNTS.md` recorded that the GitHub token changed no published number and concluded
+the benefit was zero. That conclusion was wrong, and it was wrong for an instructive reason: the
+benefit was invisible, not absent. With the proxy fixed, the same credential moves the content
+denominator from 21 to 38 and the content fraction from 0.8095 to 0.6579, which is the single
+largest correction any decision in this project has produced. A credentialed server was not worth
+nothing; it was worth the thing that most needed measuring.

@@ -194,6 +194,77 @@ def number_2(run: Run) -> dict:
             "distribution": _dist(per_call), "command": "make n2"}
 
 
+def observability_by_server(run: Run) -> dict:
+    """How many servers the capture layer could SEE, which is not the same as how many were driven.
+
+    THE DEFECT THIS FIXES, and it invalidated two published figures. The proxy is selected by
+    HTTP(S)_PROXY, so it observes only clients that honour those variables. A server whose client
+    does not is driven, answers, egresses, and leaves nothing in flows.jsonl (docs/THREATS.md
+    threat 19). Counting it in the denominator of "how many servers propagate a traceparent" turns
+    NOT MEASURED into a measured zero, and a measured zero is a claim about the server. It is a
+    claim about our instrument.
+
+    Three states, and every one of them is derived from recorded facts rather than inferred:
+
+      proxy_observed        at least one flow reached flows.jsonl for it
+      egress_unobserved     no flow, AND it completed at least one driven call, AND the registry
+                            says expects_egress. It was asked to do something that leaves the
+                            machine, it did not fail, and we saw nothing. That is the blind spot.
+      no_egress_expected    no flow and no reason to expect one: the registry says it egresses
+                            nothing, or no call of ours succeeded, so silence is the right answer
+
+    COUNTS, NEVER NAMES. Gate rule 3 forbids a server id in published output, so the states are
+    published as tallies. The per-server detail lives in the run's own calls.jsonl and flows.jsonl
+    for the operator, and `make backstop` shows whether the unobserved ones left the machine at all.
+    """
+    driven = {c.server_id for c in run.calls} - {""}
+    succeeded = {c.server_id for c in run.calls if c.ok} - {""}
+    # CALL-CAUSED PHASES ONLY, and that correction matters. The first version of this counted any
+    # flow, so a server whose only observed traffic was `npx` fetching its own package came out
+    # `proxy_observed` while its API traffic was entirely invisible: the package manager honours
+    # the proxy, the server's client does not. Counting the launcher's egress as the server's
+    # would hide exactly the blind spot this function exists to expose.
+    with_flows = {f.server_id for f in run.flows if _call_caused_possible(f)} - {""}
+    declared = set(run.manifest.servers_expecting_egress or ())
+    # A run written before the field existed cannot distinguish "egresses nothing by design" from
+    # "we could not see it", so it says so instead of picking one. Guessing True would invent a
+    # blind spot for every local server; guessing False would hide every real one.
+    expectation_recorded = bool(declared)
+    states = {}
+    for sid in sorted(driven | with_flows):
+        if sid in with_flows:
+            states[sid] = "proxy_observed"
+        elif sid in succeeded and (not expectation_recorded or sid in declared):
+            states[sid] = "egress_unobserved"
+        else:
+            states[sid] = "no_egress_expected"
+    tally = {"proxy_observed": 0, "egress_unobserved": 0, "no_egress_expected": 0}
+    for state in states.values():
+        tally[state] += 1
+    out = {"servers_driven_or_seen": len(states), **tally,
+           "egress_expectation_recorded": expectation_recorded,
+           "what_this_measures": (
+               "how many servers the CAPTURE LAYER could see, which is not how many were driven. "
+               "A server whose client ignores HTTP(S)_PROXY is driven, answers and egresses while "
+               "leaving nothing in flows.jsonl, so counting it as a measured zero would state a "
+               "fact about our instrument as a fact about the server (docs/THREATS.md threat 19)"),
+           "command": "make n3"}
+    if not expectation_recorded:
+        out["egress_expectation_note"] = (
+            "this run did not record which servers the registry expects to egress, so every "
+            "server that completed a call and produced no flow is counted as unobserved. That "
+            "over-counts local servers, which egress nothing by design. Re-run to get the "
+            "distinction; it is not inferred here")
+    if tally["egress_unobserved"]:
+        out["warning"] = (
+            f"{tally['egress_unobserved']} server(s) completed calls and produced NO observed "
+            "flow. Their egress, if any, is invisible to the proxy. Run `make backstop` on this "
+            "run's pcap: outbound SYNs to a destination that is not the proxy are the evidence "
+            "that traffic left the machine unobserved. No figure below may treat those servers "
+            "as having egressed nothing")
+    return out
+
+
 def number_3(run: Run) -> dict:
     """Fraction of servers that propagate our traceparent, SEGMENTED by protocol revision.
 
@@ -229,13 +300,34 @@ def number_3(run: Run) -> dict:
         bucket["fraction"] = round(bucket["servers_propagating"] / bucket["servers_total"], 4)
 
     total = len(servers)
+    # THE DENOMINATOR THAT MAKES THIS A MEASUREMENT. A server whose traffic never reached the
+    # proxy did not decline to propagate a traceparent: we never saw it answer the question. Its
+    # inclusion turns "not measured" into a measured zero, which is a statement about the server
+    # made out of a limit of our instrument. So the headline fraction is over servers with at
+    # least one OBSERVED outbound flow, and the all-servers figure is published beside it and
+    # explicitly marked not comparable, the same contract number 5 uses for its raw fraction.
+    observed = {f.server_id for f in run.flows if _call_caused_possible(f)} - {""}
+    obs_propagating = propagating & observed
     return {"number": 3, "name": "servers_propagating_traceparent",
             "by_protocol_revision": by_rev,
+            "servers_with_observed_egress": len(observed),
+            "servers_propagating_of_observed": len(obs_propagating),
+            "fraction_of_observed": (round(len(obs_propagating) / len(observed), 4)
+                                     if observed else None),
+            "fraction_of_observed_note": (
+                "THE FIGURE TO READ. Denominator: servers with at least one flow the proxy "
+                "actually saw. A server the proxy never saw is not a server that declined to "
+                "propagate; see the observability block and docs/THREATS.md threat 19"),
             "pooled_fraction": round((len(propagating) / total) if total else 0.0, 4),
             "pooled_note": "read the segments; SEP-414 is a 2026-07-28 change, so a server "
                            "answering an earlier revision predates the convention",
+            "pooled_fraction_is_not_comparable": (
+                "its denominator counts servers whose egress was never observed, so it reports "
+                "NOT MEASURED as a zero. Kept because withholding it would hide how much of the "
+                "set was invisible, and never to be quoted on its own"),
             "servers_total": total,
             "servers_propagating": len(propagating),
+            "observability": observability_by_server(run),
             "command": "make n3"}
 
 
@@ -608,11 +700,23 @@ def number_6(run: Run, registry: Registry | None = None) -> dict:
     """Fraction of touched third parties that are themselves self-hostable. Sizes the recursion."""
     hosts = {f.dest_host for f in run.flows if f.dest_host}
     frac, counts = selfhostable_fraction(hosts, registry)
-    return {"number": 6, "name": "selfhostable_third_parties",
-            "selfhostable_fraction": round(frac, 4),
-            "distinct_nodes": sum(counts.values()),
-            "category_counts": counts,
-            "command": "make n6"}
+    obs = observability_by_server(run)
+    out = {"number": 6, "name": "selfhostable_third_parties",
+           "selfhostable_fraction": round(frac, 4),
+           "distinct_nodes": sum(counts.values()),
+           "category_counts": counts,
+           "observability": obs,
+           "command": "make n6"}
+    if obs["egress_unobserved"]:
+        # The node set is the set of hosts the PROXY saw. A server the proxy could not see
+        # contributes none of its destinations, so this fraction is computed over a truncated
+        # population and its denominator is not the population it names.
+        out["node_set_is_truncated"] = (
+            f"{obs['egress_unobserved']} server(s) completed calls and produced no observed flow, "
+            f"so their destinations are absent from these {sum(counts.values())} nodes. This "
+            "fraction describes the third parties the capture layer could see, not the third "
+            "parties that were touched. See docs/THREATS.md threat 19")
+    return out
 
 
 def driving_summary(run: Run) -> dict:

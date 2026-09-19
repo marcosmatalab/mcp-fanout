@@ -58,7 +58,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 563
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 569
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
@@ -137,7 +137,7 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 563 tests, no Docker, no network
+make verify      # 569 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
@@ -234,11 +234,21 @@ Two results from it that are NOT matcher work and outrank it:
 
 ## Pending work, in order
 
-0. **DEVELOPMENT IS STOPPED. The next thing is the write-up.** Decided 2026-09-19 after run
-   `20260919T193121Z-concurrent`. Do not open the per-flow candidate variant (declared as
-   amendment A1 and predicted to fail), the response channel, or the recursion. Anything added
-   from here competes with writing, and the instrument has passed its pre-registered threshold on
-   persisted data: 0.8095 against 0.80, `docs/PREREG-F2.md` section 15.
+0. **DEVELOPMENT IS STOPPED. The next thing is the write-up.** Do not open the per-flow candidate
+   variant (declared as amendment A1 and predicted to fail), the response channel, or the
+   recursion. Anything added from here competes with writing.
+
+   **The instrument does NOT meet its pre-registered threshold. 0.6579 against 0.80**, run
+   `20260919T194649Z-concurrent`, `docs/PREREG-F2.md` section 16. The two earlier figures above
+   0.80 were measured with a proxy blind to Node's global `fetch` (threat 19), so they described
+   a flow sample biased toward the two servers using proxy-honouring clients. They are superseded,
+   not retracted.
+
+   The cause is measured and is a finding, not a tuning problem: **containment's power depends on
+   the shape of a tool's arguments.** A tool taking a URL or a path decomposes into four or five
+   structural tokens and attributes uniquely; a tool taking one free-text query is ONE token and
+   can only be CONTENT_AMBIGUOUS, because one token identifies a class and not a call. Six of the
+   thirteen missing attributions are exactly that, all on the newly visible server.
 
    What the write-up must carry is listed in `docs/PREREG-F2.md` section 13, including the
    pre-registered claim that turned out false and is still inside the seal.

@@ -228,6 +228,13 @@ class RunManifest:
     # token still starts, still handshakes, still produces flows), which is gate rule 10 applied
     # to a credential. Empty dict means no server declared a secret.
     credential_presence: dict = field(default_factory=dict)
+    # Which servers the REGISTRY says reach a third party at all, copied from registry/servers.yaml
+    # at capture time. The aggregate is standard-library only and cannot read YAML, and it needs
+    # this to tell "egressed nothing" from "we could not see it egress": a local server producing
+    # no flow is the right answer, and a server with expects_egress that produces no flow is a
+    # blind spot (docs/THREATS.md threat 19). Empty list means the run predates this field, and
+    # aggregate.observability_by_server says so rather than guessing.
+    servers_expecting_egress: list = field(default_factory=list)
 
 
 def write_jsonl(path: str | Path, rows: Iterable) -> None:
