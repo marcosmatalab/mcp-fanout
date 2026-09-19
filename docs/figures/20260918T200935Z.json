@@ -1,4 +1,21 @@
 {
+  "driving": {
+    "by_wave_size": {
+      "unrecorded": {
+        "calls": 2,
+        "errored": 0,
+        "ok": 2,
+        "stdout_noise_lines": 7,
+        "with_arguments": 2
+      }
+    },
+    "calls_errored": 0,
+    "calls_total": 2,
+    "command": "make numbers",
+    "error_fraction": 0.0,
+    "name": "driving_summary",
+    "not_one_of_the_six": "a denominator, not a finding: the six are ratios over what servers did in response to these calls"
+  },
   "normalized": true,
   "numbers": [
     {
@@ -100,7 +117,7 @@
       "attribution_reasons": {
         "fragment matched with only one call active: no competing candidate existed, so nothing was discriminated": 1,
         "ineligible: package infrastructure traffic, carries no tool-call arguments": 87,
-        "time window and pid only, with 1 call(s) active": 3
+        "time window and pid, with exactly one call in flight": 3
       },
       "command": "make n5",
       "content_match_by_channel": {
@@ -117,11 +134,19 @@
         "version": "2026-09-18"
       },
       "flows_total": 91,
+      "grades_by_window_size": {
+        "1": {
+          "CONTENT_MATCH_UNCONTESTED": 1,
+          "TEMPORAL_ONLY": 3,
+          "UNATTRIBUTED": 87
+        }
+      },
       "max_active_calls_in_window": 1,
       "name": "attribution_grade_distribution",
       "number": 5,
+      "pass": "unlabelled",
       "sequential_driving": true,
-      "sequential_driving_note": "every flow was seen with at most one call in flight, so CONTENT_UNIQUE is unreachable by construction and content matches grade as CONTENT_MATCH_UNCONTESTED. Whether content matching recovers attribution when time cannot is answerable only with concurrent calls; see docs/PHASES.md, phase C",
+      "sequential_driving_note": "every flow was seen with at most one call in flight, so CONTENT_UNIQUE is unreachable by construction and content matches grade as CONTENT_MATCH_UNCONTESTED. This is the expected outcome of the sequential pass and is reported as such, never as a finding about content matching. The distribution that answers whether content matching discriminates comes from the concurrent pass; see docs/PHASES.md, phase B",
       "strong_attribution_count": 0,
       "strong_attribution_fraction": 0.0,
       "strong_attribution_grades": [
@@ -147,6 +172,7 @@
     "corpus_sha256": "01c66f73140375ff9b3c64759642c225ae04b041aee814e6aafeaa4a93dcd422",
     "created": "2026-09-18T20:09:43.087103+00:00",
     "notes": "Capture run. See docs/THE-GATE.md before publishing any number. SUBSET RUN: --only ['fetch']; the registry holds 10 servers. Not a measurement of the registry.",
+    "pass": "unlabelled",
     "run_id": "20260918T200935Z",
     "salt_fixed": true,
     "server_count": 1

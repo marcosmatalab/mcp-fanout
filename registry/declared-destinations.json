@@ -1,0 +1,90 @@
+{
+  "list_name": "declared-destinations",
+  "version": "2026-09-19",
+  "_what_this_is": "Per server, the destinations we expect it to reach. Gate rule 7 (docs/THE-GATE.md) says that if a server egresses to a destination its documentation does not declare, we stop and flag it before publishing. This file is what makes that rule a command (src/mcpfanout/disclosure.py, `make disclosure`) instead of a sentence somebody has to remember while reading a hostname list.",
+  "_what_basis_means": "The expectation is derived from the server's COMMITTED TOOL SCHEMAS (registry/probes/) and the package's stated purpose. It is NOT a quotation of upstream documentation, and the file never pretends otherwise. So the check does not decide gate rule 7 by itself: it narrows a run's destinations down to the ones nobody expected, and the rule-7 judgement is then made by reading that server's own documentation for the flagged host. Automating the judgement would mean asserting what a README says without having read it, which is the failure this repository calls a plausible guess.",
+  "_what_call_supplied_means": "Some tools fetch a destination the CALLER names: the declared set is then whatever our own corpus asked for. Those hosts are listed explicitly rather than derived, so this file stays readable by the standard library alone; tests/test_disclosure.py fails if a corpus starts naming a host that is not listed here.",
+  "_what_known_undeclared_means": "A destination already found, already written up, and deliberately not re-raised as new. It is NOT an excuse: each entry names the document that carries the finding. Anything outside declared and known_undeclared is new, and new is a stop.",
+  "servers": {
+    "everything": {
+      "call_supplied": false,
+      "hosts": [],
+      "known_undeclared": {},
+      "basis": "A reference server whose thirteen tools echo, sum, and return canned content. Nothing in the schemas takes a destination, and the registry marks it expects_egress: false. Any host at all is a finding here."
+    },
+    "filesystem": {
+      "call_supplied": false,
+      "hosts": [],
+      "known_undeclared": {},
+      "basis": "Fourteen tools that read and write a sandboxed directory tree. No tool takes a URL and expects_egress is false."
+    },
+    "memory": {
+      "call_supplied": false,
+      "hosts": [],
+      "known_undeclared": {},
+      "basis": "A knowledge graph persisted to a local JSON file. No tool takes a destination; a sync to anywhere would be the finding."
+    },
+    "sequential-thinking": {
+      "call_supplied": false,
+      "hosts": [],
+      "known_undeclared": {},
+      "basis": "One tool that records a chain of thoughts and returns it. No destination in the schema."
+    },
+    "git": {
+      "call_supplied": false,
+      "hosts": [],
+      "known_undeclared": {},
+      "basis": "Twelve tools over a local repository path. The corpus drives only read-only local commands (status, log, show, diff, branch), none of which contacts a remote; a push or fetch would, and none is driven."
+    },
+    "time": {
+      "call_supplied": false,
+      "hosts": [],
+      "known_undeclared": {},
+      "basis": "Two tools over the IANA zone database, which the package bundles. No network is needed to answer either one."
+    },
+    "fetch": {
+      "call_supplied": true,
+      "hosts": [
+        "example.net"
+      ],
+      "known_undeclared": {
+        "registry.npmjs.org": "docs/THREATS.md threat 10: measured 2026-09-18, this server shells out to npm DURING tools/call and opened 87 connections to the npm registry while serving two calls. Already published as a finding, so it is not re-raised as new; it remains the reason this entry exists."
+      },
+      "basis": "One tool, fetch(url), whose documented job is to retrieve the URL it is given. Our corpora name only example.net (RFC 2606 reserved), so that is the whole declared set for this pass."
+    },
+    "brave-search": {
+      "call_supplied": false,
+      "hosts": [
+        "api.search.brave.com"
+      ],
+      "known_undeclared": {},
+      "basis": "Two tools that query the Brave Search API, which is the package's entire purpose. Expected to produce nothing at all in practice: it exits before the handshake without BRAVE_API_KEY."
+    },
+    "github": {
+      "call_supplied": false,
+      "hosts": [
+        "api.github.com"
+      ],
+      "known_undeclared": {},
+      "basis": "Twenty-six tools over the GitHub REST API. The corpus drives searches and reads only. raw.githubusercontent.com is deliberately NOT declared: whether get_file_contents goes through the API or through the raw host is a behaviour to observe, not one to assume."
+    },
+    "puppeteer": {
+      "call_supplied": true,
+      "hosts": [
+        "example.net"
+      ],
+      "known_undeclared": {},
+      "basis": "Seven tools driving a headless Chromium at the URL a call names. Chromium's own background traffic (update checks, optimisation hints, certificate revocation) is deliberately NOT pre-declared: it is the most interesting thing this server could produce, and pre-excusing it would hide exactly the kind of destination gate rule 7 exists to surface."
+    },
+    "bench": {
+      "call_supplied": false,
+      "hosts": [
+        "bench.invalid",
+        "localhost",
+        "127.0.0.1"
+      ],
+      "known_undeclared": {},
+      "basis": "Phase A: our own server (bench/server.py) reaching our own sink (bench/sink.py) at sinkNNN.bench.invalid, all resolving to loopback via /etc/hosts.bench. Declared here so the check stays meaningful on a bench run instead of flagging destinations we built ourselves, which would train the operator to ignore the banner."
+    }
+  }
+}

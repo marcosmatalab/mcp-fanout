@@ -1,0 +1,12 @@
+[
+  {"tool": "sequentialthinking", "arguments": {"thought": "The rollback took eleven minutes, so the runbook's step ordering is the first thing to check.", "nextThoughtNeeded": true, "thoughtNumber": 1, "totalThoughts": 5},
+   "why": "One reasoning chain, driven as a wave. All four fields are required. The thoughts share vocabulary the way a real chain does: 'the runbook' and 'rollback' recur, because a chain that changed its words every step would not be a chain."},
+  {"tool": "sequentialthinking", "arguments": {"thought": "Step 4 of the runbook waits on a health check, and the health check has its own timeout.", "nextThoughtNeeded": true, "thoughtNumber": 2, "totalThoughts": 5},
+   "why": "Second step. Shares 'of the runbook' and 'health check' with its neighbours, which is the natural-language form of the shared prefix a URL corpus gets for free."},
+  {"tool": "sequentialthinking", "arguments": {"thought": "If the health check timeout is longer than the deploy window, the rollback cannot finish in time.", "nextThoughtNeeded": true, "thoughtNumber": 3, "totalThoughts": 5},
+   "why": "Third step, carrying two phrases from step 2 verbatim. Concurrent calls whose material overlaps in long phrases are the realistic hard case for byte-literal discrimination."},
+  {"tool": "sequentialthinking", "arguments": {"thought": "So the fix is to shorten the health check timeout, not to reorder the runbook steps.", "nextThoughtNeeded": true, "thoughtNumber": 4, "totalThoughts": 5},
+   "why": "A conclusion that reuses both earlier phrases, so its argument set intersects three other calls'."},
+  {"tool": "sequentialthinking", "arguments": {"thought": "Shorten the health check timeout to 30 seconds and re-run the deploy in staging.", "nextThoughtNeeded": false, "thoughtNumber": 5, "totalThoughts": 5},
+   "why": "The terminating step: nextThoughtNeeded is false so the chain ends rather than asking to be driven again, which a fixed corpus cannot do. Five entries and not ten because this server's tool is one tool and a chain of five is already a chain; max_concurrency is 5 for that reason."}
+]

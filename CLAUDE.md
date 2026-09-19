@@ -47,11 +47,12 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 205
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 331
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
-  `record`, `aggregate`, `demo`, `cli` must not gain third-party dependencies. The capture layer
+  `record`, `aggregate`, `disclosure`, `demo`, `cli` must not gain third-party dependencies. This is
+  why every registry file the core reads is JSON and not YAML. The capture layer
   (`driver`, `capture_addon`, `harness/`) may use the `capture` extra (mitmproxy, PyYAML). This is
   deliberate: the core is what CI runs and what must be reproducible, and a transitive dependency
   changing a number is exactly the supply-chain failure this project studies.
@@ -87,11 +88,15 @@ its documentation does not declare.
 src/mcpfanout/   measurement core (stdlib only) + driver and capture addon
 harness/         Docker image, run.sh orchestration, drive_all.py, probe.py
 corpus/context/  synthetic bait files with unique CANARY_ tokens (never real secrets)
-corpus/calls/    the fixed per-server tool-call corpus
+corpus/calls/    the SEQUENTIAL per-server corpus: one call at a time, carries the canary
+corpus/concurrent/  the CONCURRENT per-server corpus: realistic arguments that SHARE structure,
+                 no canary, driven as waves of N. Read its README before editing one
 bench/           phase A: our own MCP server, our own HTTP sink, the wave plan.
                  server.py and sink.py import NOTHING from mcpfanout, by test
-registry/        servers.yaml (what to measure), selfhostable.json (number 6 classification),
-                 package-infrastructure.json (number 1 exclusion list), probes/ (real tool schemas)
+registry/        servers.yaml (what to measure, with max_concurrency per server),
+                 selfhostable.json (number 6 classification), package-infrastructure.json
+                 (number 1 exclusion list), declared-destinations.json (gate rule 7),
+                 probes/ (real tool schemas)
 docs/            doctrine, method, the six numbers, the gate, phases, threats, stop criteria
 docs/figures/    committed normalized aggregates: the re-derivable half of a run
 tests/           the core test suite plus a mock MCP server
@@ -101,12 +106,23 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 205 tests, no Docker, no network
+make verify      # 331 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
-make run         # real capture, needs Docker and network
+make run         # phase B SEQUENTIAL pass: real capture, one call in flight. Docker + network
+make run-concurrent  # phase B CONCURRENT pass: waves of N = 2, 5, 10. A separate run, separate figure
+make disclosure  # gate rule 7: destinations nobody declared. Non-zero exit means stop
+make bench       # phase A bench capture
+make bench-verify    # the instrument block from a bench run
 ```
+
+**Phase B is two passes and they are never one run.** `corpus/calls/` sequentially for numbers 1 to
+4; `corpus/concurrent/` in waves for number 5. Driven sequentially, strong attribution is 0.0 by
+construction, so a single sequential phase B run does not measure the thesis, it makes it
+unobservable. Driven concurrently, a per-call fan-out figure is a figure about our own wave size.
+`docs/PHASES.md` carries the full argument and the pre-registered predictions, which are frozen by
+digest in `tests/test_phase_b_prediction.py`: editing them after a result fails the suite.
 
 ## Measured facts already established (do not rediscover)
 

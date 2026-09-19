@@ -1,0 +1,22 @@
+[
+  {"tool": "git_status", "arguments": {"repo_path": "/app"},
+   "why": "The image copies the repository to /app with its .git intact, so /app is a real repository inside the container. repo_path is required on all twelve tools, so every call in this wave carries the same four-byte value and the whole corpus shares its argument envelope: with a server whose arguments are all one field, realistic overlap is total."},
+  {"tool": "git_log", "arguments": {"repo_path": "/app", "max_count": 5},
+   "why": "Bounded history. An unbounded log on a large history eats the driver's per-request budget for no extra information."},
+  {"tool": "git_log", "arguments": {"repo_path": "/app", "max_count": 2},
+   "why": "The same call with a different bound, which is what an agent does when it narrows a search. Its argument set differs from the previous one in a single byte, so nothing in it can discriminate the two."},
+  {"tool": "git_show", "arguments": {"repo_path": "/app", "revision": "HEAD"},
+   "why": "Reads a commit body, the largest payload this server produces. If a local server egresses, a diff is the thing worth noticing it egressed."},
+  {"tool": "git_show", "arguments": {"repo_path": "/app", "revision": "HEAD~1"},
+   "why": "The previous commit, so two concurrent shows differ by two bytes."},
+  {"tool": "git_diff_unstaged", "arguments": {"repo_path": "/app", "context_lines": 3},
+   "why": "The working-tree diff with the conventional context. Read-only, like every call here: git_commit, git_add and git_checkout validate against their schemas and would act on the tree."},
+  {"tool": "git_diff_staged", "arguments": {"repo_path": "/app", "context_lines": 3},
+   "why": "The index diff, whose arguments are byte-identical to the previous call's. Two concurrent calls with identical argument sets are the limiting case of ambiguity, and it is reachable with one server and one field."},
+  {"tool": "git_diff", "arguments": {"repo_path": "/app", "target": "HEAD~2", "context_lines": 1},
+   "why": "A diff against an older revision with minimal context, so the wave includes one call with three fields."},
+  {"tool": "git_branch", "arguments": {"repo_path": "/app", "branch_type": "local"},
+   "why": "Lists local branches. branch_type is required and the schema does not constrain it to an enum, so the value is the one the tool's description names."},
+  {"tool": "git_status", "arguments": {"repo_path": "/app"},
+   "why": "A deliberate repeat of the first call. Two calls in one wave with identical tool and identical arguments cannot be told apart by any content method, and an agent retrying a status read is the most ordinary thing in this file. It is the floor on what content matching can do."}
+]

@@ -4,8 +4,11 @@ Subcommands:
   aggregate  Compute the six numbers from a run (the rule-6 commands behind the Makefile).
   figures    Write a run's normalized aggregate to docs/figures/ as a committed artifact.
   bench-verify  Phase A instrument metrics (recall, precision, false provenance).
+  disclosure-check  Gate rule 7: which of a run's destinations nobody declared. Operator-only
+             output: it names servers and hosts, so it is written into the run and never published.
   selftest   Build a synthetic run and compute its numbers, with no Docker and no network.
   run        Drive the pinned servers under capture and write a real run (delegates to harness/).
+             --pass picks which phase B pass to drive; the two are separate runs (docs/PHASES.md).
 
 Aggregate and selftest are pure standard library. `run` needs the 'capture' extra and Docker;
 it is intentionally a thin delegator so the heavy, environment-specific orchestration lives in
@@ -118,6 +121,39 @@ def _cmd_bench_verify(args: argparse.Namespace) -> int:
     return 0 if out.get("ok") else 1
 
 
+def _cmd_disclosure_check(args: argparse.Namespace) -> int:
+    """Gate rule 7 as a command. Exit 0 if clear, 1 if anything needs reviewing or is unknown.
+
+    Non-zero for "undeterminable" as well as for "review required", deliberately. The declaration
+    file being absent means the rule was not evaluated, and a zero exit there would let a missing
+    file read as a clean run in exactly the place where a clean reading is most expensive.
+
+    The report is written into the RUN directory, which is gitignored, because it names servers and
+    destination hosts (gate rule 3). Nothing here goes to docs/figures/.
+    """
+    from .disclosure import DECLARED_DESTINATIONS_PATH, DeclaredDestinations, VERDICT_CLEAR, check
+    run_dir = _resolve_run(args.run)
+    run = Run.load(run_dir)
+    declared = DeclaredDestinations.load(args.declared or DECLARED_DESTINATIONS_PATH)
+    report = check(run.flows, declared)
+    report["run_id"] = run.manifest.run_id
+    report["pass"] = run.manifest.pass_name or "unlabelled"
+    report["command"] = f"python -m mcpfanout.cli disclosure-check --run runs/{run.manifest.run_id}"
+    # Printed BEFORE it is saved, and the save is allowed to fail. The verdict is the product of
+    # this command; the file is a convenience, and a run directory written by the container is
+    # root-owned, so a host-side re-check would otherwise lose the report to a permission error
+    # after having computed it. Measured the hard way, on exactly that.
+    print(json.dumps(report, indent=2, sort_keys=True))
+    out = run_dir / "disclosure.json"
+    try:
+        out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"[disclosure] wrote {out}", file=sys.stderr)
+    except OSError as exc:
+        print(f"[disclosure] report NOT saved to {out} ({exc.strerror}); the verdict above and "
+              f"the exit code still stand", file=sys.stderr)
+    return 0 if report["verdict"] == VERDICT_CLEAR else 1
+
+
 def _cmd_figures(args: argparse.Namespace) -> int:
     """Write a run's NORMALIZED AGGREGATE to docs/figures/ as a committed artifact.
 
@@ -148,9 +184,17 @@ def _cmd_figures(args: argparse.Namespace) -> int:
             # reconstruct it from a Makefile.
             "command": f"python -m mcpfanout.cli figures --run runs/{run.manifest.run_id}",
         },
-        "numbers": compute_all(run, _load_registry(),
-                               ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH))["numbers"],
     }
+    computed = compute_all(run, _load_registry(), ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH))
+    # The pass sits in provenance because it is a property of how the run was driven, and it is
+    # NOT optional: a grade distribution whose driving condition is unknown cannot be read at all
+    # (docs/PHASES.md, phase B: two passes, published separately and labelled by pass).
+    payload["provenance"]["pass"] = computed["pass"]
+    # Driving alongside the numbers, never inside them: it is the denominator (how many calls
+    # errored, at which wave size), and a reader who has the six without it cannot tell a server
+    # that egresses nothing from a server whose calls failed.
+    payload["driving"] = computed["driving"]
+    payload["numbers"] = computed["numbers"]
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"{run.manifest.run_id}.json"
@@ -220,7 +264,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
     if not compose.exists():
         sys.exit("error: harness/docker-compose.yml not found.")
     cmd = ["docker", "compose", "-f", str(compose), "run", "--rm", "--build", "harness",
-           "--registry", args.registry, "--out", args.out]
+           "--registry", args.registry, "--out", args.out,
+           "--pass", getattr(args, "pass_name", "sequential")]
     if getattr(args, "bench", False):
         cmd.append("--bench")
     for sid in args.only:
@@ -253,6 +298,13 @@ def build_parser() -> argparse.ArgumentParser:
                     help="the bench's own ledger (default: <run>/bench_truth.jsonl)")
     bv.set_defaults(func=_cmd_bench_verify)
 
+    dc = sub.add_parser("disclosure-check",
+                        help="gate rule 7: destinations of a run that nobody declared")
+    dc.add_argument("--run", default="latest", help="'latest' or a path to runs/<id>")
+    dc.add_argument("--declared", default=None,
+                    help="the declaration file (default: registry/declared-destinations.json)")
+    dc.set_defaults(func=_cmd_disclosure_check)
+
     f = sub.add_parser("figures", help="write a run's normalized aggregate to docs/figures/")
     f.add_argument("--run", default="latest", help="'latest' or a path to runs/<id>")
     f.add_argument("--out", default="docs/figures", help="directory for the committed artifact")
@@ -263,6 +315,10 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--out", default="runs/")
     r.add_argument("--only", action="append", default=[], metavar="ID",
                    help="drive only these server ids (repeatable), for a smoke test")
+    r.add_argument("--pass", dest="pass_name", default="sequential",
+                   choices=["sequential", "concurrent"],
+                   help="which phase B pass to drive (default: sequential). The two are separate "
+                        "runs and separate published figures; see docs/PHASES.md, phase B.")
     r.add_argument("--bench", action="store_true",
                    help="phase A: drive concurrent waves against our own bench server and sink")
     r.set_defaults(func=_cmd_run)

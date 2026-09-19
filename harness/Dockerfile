@@ -10,8 +10,25 @@
 FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
+# git is a MEASUREMENT DEPENDENCY, not a convenience. mcp-server-git drives GitPython, which
+# needs the git BINARY: without it the server exits before the JSON-RPC handshake with
+# GIT_PYTHON_REFRESH advice on stderr, and the run records "did not start" for a server the
+# registry says starts with no credentials. Found on the first ten-server capture, and it also
+# exposed that harness/probe.py had been run on the HOST, where git exists, so the registry's
+# measured facts came from an environment the capture did not reproduce. Same class of error as
+# brave-search's missing key: a server that never starts produces no attempt to watch.
+# The headless-Chromium shared libraries, for the same reason git is here: without them
+# puppeteer's downloaded Chrome exits with "libglib-2.0.so.0: cannot open shared object file" and
+# every call to that server errors, so one of the three egress-capable servers records zero egress
+# for a reason that has nothing to do with the server. Measured on the first ten-server capture.
+# The list is Chrome's own runtime dependencies on bookworm; `chromium` from apt would pull them in
+# too, along with a browser binary puppeteer will not use, so the libraries are named instead.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl ca-certificates gnupg tcpdump \
+        curl ca-certificates gnupg tcpdump git \
+        libglib2.0-0 libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+        libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libxcb1 \
+        libpango-1.0-0 libcairo2 libasound2 libatspi2.0-0 libx11-6 libxext6 fonts-liberation \
+        libnss3-tools \
  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
  && apt-get install -y --no-install-recommends nodejs \
  && rm -rf /var/lib/apt/lists/*

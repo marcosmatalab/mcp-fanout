@@ -376,11 +376,52 @@ def drive(command: list[str], corpus: list[CallSpec], run_id: str, server_id: st
     its argument digests) before each call, which is how the capture addon attributes and matches
     without ever seeing raw arguments. When ``calls_path`` is given, each ToolCall is appended to
     calls.jsonl. With none of these, the driver is pure (used by the unit test).
+
+    A SERVER THAT CANNOT START IS A DATA POINT, NOT A STOP, and it took a ten-server capture to
+    notice this function did not implement that. Per-call failures were already recorded and
+    survived, but ``initialize`` and ``list_tools`` sat outside every try, so one server exiting
+    before the handshake (mcp-server-git, with no git binary in the image) raised out of here,
+    through drive_all, and ended the whole run after two servers. The nine that worked were lost
+    to the one that did not. Now a startup failure records every call of that server's corpus as
+    not driven, with the reason, and the run continues: "this server did not start" is exactly the
+    kind of finding the registry exists to hold.
     """
     from .record import ToolCall, write_jsonl  # local import: record is core, avoids a cycle at import time
 
     results: list[DriveResult] = []
     tool_calls = []
+    try:
+        _drive_corpus(command, corpus, run_id, server_id, env, redactor=redactor,
+                      control_dir=control_dir, results=results, tool_calls=tool_calls)
+    except Exception as exc:
+        # Startup, teardown, or a failure that killed the connection mid-corpus. Whatever was
+        # already driven is kept; the rest is recorded as not driven, once each, with the reason.
+        err = f"{type(exc).__name__}: {exc}"
+        for i, spec in enumerate(corpus):
+            call_id = f"{server_id}-c{i:03d}"
+            if any(r.call_id == call_id for r in results):
+                continue
+            results.append(DriveResult(call_id=call_id, tool_name=spec.tool_name,
+                                       args_present=bool(spec.arguments), traceparent="",
+                                       ok=False, error=err))
+            tool_calls.append(ToolCall(run_id, server_id, call_id, spec.tool_name,
+                                       bool(spec.arguments), "", ok=False, error=err,
+                                       wave_size=1))
+
+    if calls_path is not None:
+        write_jsonl(calls_path, tool_calls)
+    return results
+
+
+def _drive_corpus(command, corpus, run_id, server_id, env, *, redactor, control_dir,
+                  results, tool_calls) -> None:
+    """The driving loop itself, so ``drive`` can wrap it whole. Appends to the caller's lists.
+
+    Split out rather than nested in a try inside drive() so that the two concerns stay legible:
+    this function drives, and drive() decides what an escaped exception means for the record.
+    """
+    from .record import ToolCall
+
     with StdioMCPClient(command, env) as client:
         client.initialize()
         client.list_tools()  # listed for realism and to let servers lazily wire up tools
@@ -408,8 +449,5 @@ def drive(command: list[str], corpus: list[CallSpec], run_id: str, server_id: st
                                        args_present=args_present, traceparent=tp, ok=ok,
                                        error=err, stdout_noise_lines=noise))
             tool_calls.append(ToolCall(run_id, server_id, call_id, spec.tool_name, args_present,
-                                       tp, ok=ok, error=err, stdout_noise_lines=noise))
-
-    if calls_path is not None:
-        write_jsonl(calls_path, tool_calls)
-    return results
+                                       tp, ok=ok, error=err, stdout_noise_lines=noise,
+                                       wave_size=1))

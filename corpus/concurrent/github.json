@@ -1,0 +1,22 @@
+[
+  {"tool": "search_repositories", "arguments": {"query": "modelcontextprotocol servers"},
+   "why": "An agent looking for the reference server repository. The words are the ones a real query carries, so this call and the next share the 20-byte run 'modelcontextprotocol' in their arguments: the shared token is a real-world entity name, which is why realistic queries collide."},
+  {"tool": "search_repositories", "arguments": {"query": "modelcontextprotocol python sdk", "perPage": 5},
+   "why": "Second search on the same subject, bounded to five results. Shares 'modelcontextprotocol ' with the previous call and with three more below, so a fragment drawn from that token has several candidates: exactly the failure mode the pre-registered prediction names."},
+  {"tool": "search_code", "arguments": {"q": "list_allowed_directories repo:modelcontextprotocol/servers"},
+   "why": "Code search, a different parameter name (q, not query) and a qualifier syntax an agent would copy from the docs. The repo: qualifier is shared with the next call, which is how GitHub queries are actually written."},
+  {"tool": "search_code", "arguments": {"q": "tools/call repo:modelcontextprotocol/servers", "per_page": 5},
+   "why": "Same qualifier, different term. Two concurrent code searches over one repository is an ordinary agent behaviour and shares 34 bytes of argument material with the call above."},
+  {"tool": "get_file_contents", "arguments": {"owner": "modelcontextprotocol", "repo": "servers", "path": "README.md"},
+   "why": "A read of a public file. owner and repo repeat across the four get/list calls here, so a large part of every one of their argument sets is shared: with structured arguments the overlap comes from the fields, not from the free text."},
+  {"tool": "get_file_contents", "arguments": {"owner": "modelcontextprotocol", "repo": "servers", "path": "src/filesystem/README.md"},
+   "why": "Second read in the same repository, differing in one field. The pair is the structured-argument analogue of the sibling-URL pair in the fetch corpus."},
+  {"tool": "list_commits", "arguments": {"owner": "modelcontextprotocol", "repo": "servers", "perPage": 5},
+   "why": "Read-only history, bounded. Its arguments are a subset of the two reads above except for perPage, so if a fragment of 'owner/repo' travels, three calls contain it."},
+  {"tool": "list_issues", "arguments": {"owner": "modelcontextprotocol", "repo": "servers", "state": "open", "per_page": 5},
+   "why": "An agent triaging open issues. Uses the enum value the real schema declares (state: open), which is the kind of detail that made the guessed corpus fail before the probes existed."},
+  {"tool": "search_issues", "arguments": {"q": "repo:modelcontextprotocol/servers filesystem sandbox", "per_page": 5},
+   "why": "Issue search combining the qualifier and free text. Shares the qualifier with both code searches and the entity name with everything else here."},
+  {"tool": "search_users", "arguments": {"q": "modelcontextprotocol", "per_page": 5},
+   "why": "A one-token query whose whole argument value is a substring of five other calls' arguments. It is the most ambiguous call in the wave by construction, and it is also the most ordinary: an agent resolving an organisation name sends exactly this. Read-only, like everything here: the 26 tools include merge_pull_request and create_issue, and a witness that acts cannot attest to its own acts."}
+]

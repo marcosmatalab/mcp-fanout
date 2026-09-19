@@ -262,7 +262,19 @@ def number_5(run: Run, exclusions: ExclusionList | None = None) -> dict:
     ``sequential_driving`` is emitted because it is the precondition that makes CONTENT_UNIQUE
     unreachable. While it is true, a reader should expect zero CONTENT_UNIQUE and should not read
     the strong-attribution figure as an answer to whether content matching recovers attribution.
-    That question belongs to phase C (docs/PHASES.md).
+
+    WHICH PASS THIS RUN IS, AND WHY THE FIGURE CARRIES IT. Phase B is driven twice, and the two
+    passes are two experimental conditions, not two samples of one (docs/PHASES.md). Under the
+    sequential pass every window holds one call, so the grade distribution is a restatement of the
+    driving regime; under the concurrent pass the same distribution is the measurement. Publishing
+    them as one figure would average two conditions, so the pass label is emitted here and the
+    per-window breakdown below splits the distribution by how many calls were actually in flight.
+
+    ``grades_by_window_size`` is that breakdown: grade counts keyed by the number of calls in
+    flight when the flow was seen. It exists because "strong attribution was 30%" is unreadable
+    without knowing at which N, and because the interesting question is how discrimination decays
+    as N grows, which a pooled figure cannot show at all. The keys are stringified integers so the
+    JSON is stable and sorts predictably.
     """
     grades = {g: 0 for g in _match.ATTRIBUTION_GRADES}
     reasons: dict[str, int] = {}
@@ -286,26 +298,67 @@ def number_5(run: Run, exclusions: ExclusionList | None = None) -> dict:
         if f.causal and f.causal_channel in by_channel:
             by_channel[f.causal_channel] += 1
 
+    # The same grading, split by how many calls were in flight. Recomputed rather than tallied
+    # inside the loop above only for readability; it is the identical call with the identical
+    # inputs, so the two views cannot disagree.
+    by_window: dict[str, dict[str, int]] = {}
+    for f in run.flows:
+        eligible = not (exclusions is not None and exclusions.matches(f.dest_host))
+        grade, _ = _match.grade_attribution(
+            traceparent_present=f.our_traceparent_present,
+            argument_match=f.causal,
+            active_calls_in_window=f.active_calls_in_window,
+            matching_calls_in_window=f.matching_calls_in_window,
+            eligible=eligible,
+            has_time_and_pid=f.has_time_and_pid,
+        )
+        bucket = by_window.setdefault(str(f.active_calls_in_window), {})
+        bucket[grade] = bucket.get(grade, 0) + 1
+
     total = len(run.flows)
     strong = sum(grades[g] for g in _match.STRONG_ATTRIBUTION)
     max_window = max((f.active_calls_in_window for f in run.flows), default=0)
+    pass_name = run.manifest.pass_name or "unlabelled"
     out = {"number": 5, "name": "attribution_grade_distribution",
+           "pass": pass_name,
            "flows_total": total,
            "attribution_grades": grades,
            "attribution_reasons": reasons,
            "content_match_by_channel": by_channel,
+           "grades_by_window_size": by_window,
            "strong_attribution_count": strong,
            "strong_attribution_fraction": round((strong / total) if total else 0.0, 4),
            "strong_attribution_grades": list(_match.STRONG_ATTRIBUTION),
-           "sequential_driving": max_window <= 1,
+           # None, not False, when there are no flows: with nothing observed, "was this run
+           # sequential" is unanswerable from the flows, and False would assert concurrency that
+           # was never seen while True would assert a regime the pass did not have. Found on the
+           # first concurrent smoke run, against a local control that egressed nothing: the figure
+           # said sequential_driving true under a pass driven at N = 10.
+           "sequential_driving": (None if total == 0 else max_window <= 1),
            "max_active_calls_in_window": max_window,
            "command": "make n5"}
-    if max_window <= 1:
+    if total == 0:
+        out["no_flows_note"] = (
+            f"no outbound connection was observed at all, so no grade was assigned and nothing "
+            f"here describes attribution. Whether this pass drove concurrent calls is a property "
+            f"of the run ({pass_name}), not of these flows: see the driving summary for what was "
+            f"driven, and note that a server producing zero egress is itself a result")
+    elif max_window <= 1:
         out["sequential_driving_note"] = (
             "every flow was seen with at most one call in flight, so CONTENT_UNIQUE is "
             "unreachable by construction and content matches grade as "
-            "CONTENT_MATCH_UNCONTESTED. Whether content matching recovers attribution when time "
-            "cannot is answerable only with concurrent calls; see docs/PHASES.md, phase C")
+            "CONTENT_MATCH_UNCONTESTED. This is the expected outcome of the sequential pass and "
+            "is reported as such, never as a finding about content matching. The distribution "
+            "that answers whether content matching discriminates comes from the concurrent pass; "
+            "see docs/PHASES.md, phase B")
+    else:
+        out["concurrent_driving_note"] = (
+            f"flows were seen with up to {max_window} calls in flight, so the grades below are a "
+            "measurement rather than a restatement of the driving regime. There is NO ground "
+            "truth in this pass: nothing here says a strong attribution was correct. Attribution "
+            "precision has a denominator only on the phase A bench, where we caused every "
+            "transfer, and it was measured there (docs/PHASES.md, sensor gate). What this pass "
+            "measures is how the grades are DISTRIBUTED over real traffic")
     out["exclusion_list"] = ({"loaded": True, **exclusions.citation()} if exclusions
                              else {"loaded": False,
                                    "reason": "no exclusion list, so no flow was graded "
@@ -324,12 +377,53 @@ def number_6(run: Run, registry: Registry | None = None) -> dict:
             "command": "make n6"}
 
 
+def driving_summary(run: Run) -> dict:
+    """What was driven, and what the servers did with it. NOT one of the six, and needed to read them.
+
+    Every one of the six is a ratio or a distribution over what the servers did in response to
+    calls. A call that errored produced less egress, or none, so a figure read without knowing how
+    many calls failed is a figure whose denominator is unstated. Under the concurrent pass this
+    goes further: a server that refuses concurrency errors N-1 of a wave's N calls, and its grade
+    distribution at that rung then describes one call, not N.
+
+    Broken down by WAVE SIZE, which is the concurrent pass's independent variable, and by nothing
+    else: a per-server breakdown would name servers, and gate rule 3 forbids that in published
+    output. The per-server detail lives in the run's own waves.jsonl for the operator.
+    """
+    by_wave: dict[str, dict[str, int]] = {}
+    for c in run.calls:
+        # "unrecorded" rather than "0": a run driven before wave_size existed did have a wave size,
+        # we just did not write it down, and a key of 0 would read as a wave of no calls.
+        key = str(c.wave_size) if c.wave_size else "unrecorded"
+        bucket = by_wave.setdefault(key, {"calls": 0, "ok": 0, "errored": 0,
+                                          "with_arguments": 0, "stdout_noise_lines": 0})
+        bucket["calls"] += 1
+        bucket["ok" if c.ok else "errored"] += 1
+        bucket["with_arguments"] += 1 if c.args_present else 0
+        bucket["stdout_noise_lines"] += c.stdout_noise_lines
+    total = len(run.calls)
+    errored = sum(1 for c in run.calls if not c.ok)
+    return {"name": "driving_summary",
+            "not_one_of_the_six": ("a denominator, not a finding: the six are ratios over what "
+                                   "servers did in response to these calls"),
+            "calls_total": total,
+            "calls_errored": errored,
+            "error_fraction": round((errored / total) if total else 0.0, 4),
+            "by_wave_size": by_wave,
+            "command": "make numbers"}
+
+
 def compute_all(run: Run, registry: Registry | None = None,
                 exclusions: ExclusionList | None = None) -> dict:
     return {
         "run_id": run.manifest.run_id,
         "created": run.manifest.created,
         "salt_fixed": run.manifest.salt_fixed,
+        # Which experimental condition produced these numbers. "unlabelled" for a run written
+        # before the two-pass split; never guessed from the flows, because a run that happens to
+        # contain no concurrency and a run driven sequentially on purpose are different claims.
+        "pass": run.manifest.pass_name or "unlabelled",
+        "driving": driving_summary(run),
         "numbers": [
             number_1(run, exclusions), number_2(run), number_3(run),
             number_4(run), number_5(run, exclusions), number_6(run, registry),

@@ -34,6 +34,61 @@ def _instrument_artifacts() -> list[Path]:
     return sorted(FIGURES.glob("*-instrument.json"))
 
 
+# Runs driven BEFORE the two-pass split existed (docs/PHASES.md, phase B). Their manifests carry no
+# pass, so their artifacts say "unlabelled", which is the honest value: the driving condition was not
+# recorded and deriving it from the notes afterwards would be a guess dressed as provenance. Named
+# here explicitly so a NEW artifact cannot be unlabelled -- the list does not grow.
+LEGACY_UNLABELLED_RUNS = frozenset({"20260918T200935Z", "20260918T212417Z"})
+
+
+@pytest.mark.parametrize("path", _artifacts(), ids=lambda p: p.name)
+def test_the_artifact_declares_which_pass_produced_it(path):
+    """A grade distribution whose driving condition is unknown cannot be read at all.
+
+    The two phase B passes are two experimental conditions, and the label is what stops one being
+    quoted as the other. It lives in provenance rather than in the numbers because it describes how
+    the run was driven, not what was found.
+    """
+    doc = json.loads(path.read_text())
+    label = doc["provenance"].get("pass")
+    assert label, f"{path.name}: no pass label in provenance"
+    if label == "unlabelled":
+        assert doc["provenance"]["run_id"] in LEGACY_UNLABELLED_RUNS, (
+            f"{path.name}: a new artifact may not be unlabelled; drive it with --pass")
+    else:
+        assert label in ("sequential", "concurrent", "bench", "selftest"), label
+
+
+@pytest.mark.parametrize("path", _artifacts(), ids=lambda p: p.name)
+def test_the_artifact_carries_the_driving_summary(path):
+    """The six are ratios over what servers did in response to calls; this is the denominator.
+
+    Without it a reader cannot tell a server that egresses nothing from a server whose calls all
+    errored, and those are opposite findings that produce the same zeros.
+    """
+    doc = json.loads(path.read_text())
+    driving = doc["driving"]
+    assert driving["calls_total"] > 0
+    assert "by_wave_size" in driving
+    assert driving["name"] == "driving_summary"
+    # It must not be mistakable for a seventh number.
+    assert "not_one_of_the_six" in driving
+
+
+@pytest.mark.parametrize("path", _artifacts(), ids=lambda p: p.name)
+def test_number_5_publishes_the_per_window_breakdown(path):
+    """A pooled grade figure cannot show how discrimination behaves as concurrency grows.
+
+    "Strong attribution was 30%" is unreadable without the N it was measured at, and the shape of
+    the decay across N is the phase B result that the pre-registered prediction is about
+    (docs/PHASES.md, prediction B1).
+    """
+    n5 = _numbers_of(path)[5]
+    assert "grades_by_window_size" in n5
+    assert n5["grades_by_window_size"], "the breakdown is empty"
+    assert "pass" in n5
+
+
 def test_at_least_one_normalized_aggregate_is_committed():
     """Without one, threat 10's tension is documented as resolved while still being open."""
     assert _artifacts(), "docs/figures/ is empty; run `make figures` after a capture"

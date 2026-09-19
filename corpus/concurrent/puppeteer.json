@@ -1,0 +1,10 @@
+[
+  {"tool": "puppeteer_navigate", "arguments": {"url": "https://example.net/docs/deploy/runbook"},
+   "why": "A headless browser fetching the same runbook the fetch corpus reads, so the two servers are driven over comparable material and a difference in their numbers is a difference in the servers. example.net, not example.com: example.com does not resolve from the measurement network (corpus/calls/fetch.json records that measurement), and an unresolvable target produces no egress to observe."},
+  {"tool": "puppeteer_navigate", "arguments": {"url": "https://example.net/docs/deploy/rollback"},
+   "why": "Sibling page. Under concurrency this is also the test of whether the server serialises: it keeps one browser page, so two navigations at once are either queued or one of them errors, and both outcomes are recorded per call."},
+  {"tool": "puppeteer_navigate", "arguments": {"url": "https://example.net/docs/observability/tracing"},
+   "why": "Third navigation, partial prefix overlap, one navigation more than the declared max_concurrency of 2 so that the N=2 waves draw from a corpus larger than themselves."},
+  {"tool": "puppeteer_screenshot", "arguments": {"name": "runbook", "width": 800, "height": 600},
+   "why": "A screenshot after a navigation, which is the second code path this server has. Bounded dimensions because image size is not what is being measured. puppeteer_evaluate stays out of every corpus: it takes arbitrary JavaScript, and a corpus that ships executable script is a payload, not a measurement."}
+]
