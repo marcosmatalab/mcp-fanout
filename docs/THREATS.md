@@ -542,3 +542,63 @@ gate rule 6. Each names the threat and what it does to the numbers.
     that per-call provenance for nested concurrent calls is achievable where the agent runtime
     cooperates and is not achievable by observing egress alone. That is a product boundary, and it
     belongs in the write-up next to the numbers rather than in a footnote under them.
+
+19. **A terminating proxy configured by environment variables does not observe a modern Node
+    client, and the measurement looks clean while it happens. Candidate headline, above threat
+    17.** Threat 6 recorded proxy blind spots as a general caveat. This is the specific,
+    reproducible, named instance, and it is a defect of METHOD rather than of any server: anyone
+    who repeats this measurement the obvious way will make it.
+
+    **The chain.**
+
+    1. The capture is a terminating proxy selected by `HTTP_PROXY` / `HTTPS_PROXY`. Interception
+       is therefore not a property of the network, it is a property of each client CHOOSING to
+       honour two environment variables.
+    2. Node's global `fetch`, and the `undici` library behind it, **do not honour them by
+       default**. Python's `requests` and `urllib` do. `npm` and `npx` do. Chromium does. Node's
+       own HTTP client does not, and this is documented behaviour rather than a bug.
+    3. Node gained the capability in **22.21.0 and 24.5.0**, and it is still **off by default**:
+       it is enabled with `NODE_USE_ENV_PROXY=1` or `--use-env-proxy`.
+    4. The harness image shipped Node **20.20.2**, where the switch does not exist at all. So no
+       configuration of the harness could have made that traffic visible.
+
+    **The evidence, from the pcap rather than from reasoning.** Run
+    `20260919T193121Z-concurrent`, driven with a working GitHub credential, `make backstop`:
+    140 outbound SYNs, 66 to the proxy on loopback, and **10 straight to `140.82.121.5:443`,
+    which is `api.github.com`**. That server made 17 driven calls, 16 succeeded and returned
+    GitHub's own answers, and `flows.jsonl` holds **zero flows for it**.
+
+    **Why this is worse than a missing measurement.** The failure is not merely silent, it is
+    ACTIVELY MISLEADING, and it corrupted two published figures:
+
+    - Number 3, servers propagating a traceparent, read 0 of 10. A server whose traffic never
+      reached the proxy did not decline to propagate anything. Its zero was a fact about our
+      instrument published as a fact about the server. The figure now has a denominator of
+      servers with at least one OBSERVED call-caused flow, with the all-servers figure kept
+      beside it and marked not comparable.
+    - Number 6, self-hostable third parties, read 0.0 over 3 nodes. The node set is the set of
+      hosts the proxy saw, so a blind server contributes none of its destinations and the
+      fraction describes a truncated population under the name of the whole one. The figure now
+      carries the observability tally and says when its node set is truncated.
+
+    Both figures gained an **observability block**: how many servers the capture layer could see
+    (`proxy_observed`), how many completed calls and produced nothing observable while the
+    registry says they egress (`egress_unobserved`), and how many are silent by design
+    (`no_egress_expected`). Counts and not names, because gate rule 3 forbids a server id in
+    published output.
+
+    **The remedy, and what it does not cover.** `NODE_USE_ENV_PROXY=1` plus a Node new enough to
+    have it, both now in `harness/Dockerfile`, with a build-time assertion that fails the image
+    build on an older runtime: an old Node accepts the variable, ignores it, and produces a
+    capture indistinguishable from a correct one, which is gate rule 10's failure mode in a base
+    image. It covers global `fetch` and `undici`. It does **not** cover a client using
+    `node:https` directly, one constructing its own agent, or one pinning certificates. **The
+    pcap stays the judge**: `make backstop` counts outbound SYNs per destination, and anything
+    going somewhere that is not the proxy is still blind.
+
+    **Why this outranks threat 17 for the write-up.** Threat 17 is a finding about one package's
+    behaviour, reproducible and sharp. This is a finding about how the measurement itself must be
+    built: an environment-variable proxy is not an observation of an agent's egress, it is an
+    observation of the subset of clients that opted in, and the subset is not knowable in advance.
+    It converts "transparent interception or eBPF" from an engineering preference into a measured
+    requirement, and it generalises to every tool that claims to watch what an agent sends.

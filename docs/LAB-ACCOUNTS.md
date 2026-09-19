@@ -65,8 +65,19 @@ changed **nothing in any published number**, because this server's client is Nod
 straight to `140.82.121.5:443`, which is `api.github.com`, while `flows.jsonl` holds zero flows
 for the server. See `docs/THREATS.md` threat 6.
 
-So the honest accounting for this account: **the reasoning in this section was right and the
-benefit was zero**, because the limit was never the credential. It was the instrument. Nothing was
+**CORRECTED AGAIN, 2026-09-19, and this time the conclusion reverses rather than the reasoning.**
+The paragraph above concluded the benefit was zero. It was not: it was INVISIBLE. With
+`NODE_USE_ENV_PROXY=1` and Node 24 in the image (threat 19), the same token on the same corpus
+produces 17 flows where it produced none, moves number 5's content denominator from 21 to 38, and
+moves the content fraction from 0.8095 to **0.6579**, which is the largest correction any decision
+in this project has produced and is the one that took the instrument below its own pre-registered
+threshold. Keeping both paragraphs because the sequence is the lesson: a measurement that shows no
+effect and a measurement that cannot see the effect are indistinguishable from the outside, and
+the only thing that told them apart was the pcap.
+
+So the honest accounting for this account: **the reasoning in this section was right, the first
+conclusion drawn from it was wrong**, because the limit was never the credential. It was the
+instrument. Nothing was
 wasted that mattered (0 euros, 10 minutes, and the token is scoped to nothing), and the run is
 more informative for having been done, because it converted threat 6 from "one SYN, one server,
 probably small" into a measured ten-connection hole with a working credential behind it.
@@ -76,9 +87,11 @@ probably small" into a measured ten-connection hole with a working credential be
 anyway) or eBPF uprobes on the TLS library, which is the product-grade path `docs/METHOD.md`
 already names. The first is a container-networking change of perhaps half a day and it makes the
 capture layer differ from the one every published figure so far was measured with, which is a
-reproducibility cost that has to be paid deliberately. **Do not credential another server whose
-client ignores the proxy until one of those exists**: the result is a token in a lab and no
-change in any number.
+reproducibility cost that has to be paid deliberately. **Superseded 2026-09-19:** the proxy now intercepts Node's global fetch, so this server IS
+observable and the rule below applies only to clients that remain blind (a direct `node:https`
+user, a custom agent, a pinned client). `make backstop` is what identifies those: outbound SYNs to
+anything that is not the proxy. Do not credential a server that is still blind by that test; the
+result is a token in a lab and no change in any number.
 
 ## 2. Brave Search
 
