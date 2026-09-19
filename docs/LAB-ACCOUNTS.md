@@ -1,0 +1,166 @@
+# Lab accounts: what the capture needs, what it costs, what breaks without it
+
+**Nothing here has been created.** This is the plan you asked for, to decide on. No account, no
+token, no project and no workspace exists as a result of writing it.
+
+**Why it blocks the next capture.** Threats 5 and 8: nine of ten servers ran with no credentials,
+so the flows that carry real arguments to real destinations mostly do not exist, and a product
+verdict drawn from that run would be a verdict about an unauthenticated sample stated as a verdict
+about runtime provenance. `docs/PREREG-F2.md` section 8 refuses to freeze a product verdict for
+exactly this reason. The instrument verdict does not need these accounts; the product one cannot
+be reached without them.
+
+## 0. Two of the four are not in the measured set at all
+
+You named github, brave, slack and google-maps. `registry/servers.yaml` holds ten servers and
+**slack and google-maps are not among them**. They appear in CLAUDE.md only as package versions
+that resolve on npm. So for those two the account is the second problem, not the first:
+
+| server | in registry | probe committed | corpus | so what is missing |
+|---|---|---|---|---|
+| github | yes | `registry/probes/github.json`, 26 tools | sequential + concurrent | a token |
+| brave-search | yes | `registry/probes/brave-search.json`, 2 tools | sequential + concurrent | a key |
+| slack | **no** | **none** | **none** | registry entry, probe, two corpora, declared destinations, AND a workspace plus a token |
+| google-maps | **no** | **none** | **none** | the same, plus a billing-enabled cloud project |
+
+Adding a server is roughly half a day each: probe it, write both corpora against the real schemas
+(`tests/test_corpus_matches_probes.py` gates this), add declared destinations, pin the version.
+That is before any account exists. Decide whether the marginal server is worth it, because the
+argument for a bigger N is weaker than it looks: the thing being measured is fan-out per call, and
+two well-credentialed servers driving real calls tell you more than four gagged ones.
+
+## 1. GitHub
+
+**What the corpus actually drives.** Every call in both corpora is READ-ONLY against public
+repositories: `search_repositories`, `search_code`, `get_file_contents`, `list_commits`,
+`list_issues`, `search_issues`, `search_users`. Nothing writes. The server exposes 26 tools
+including `merge_pull_request` and `push_files`, and we drive none of them.
+
+**Minimum permission: a token with NO scopes.** A classic personal access token with every
+checkbox unticked authenticates and reads public data, which is all the corpus asks for. A
+fine-grained token scoped to public repositories with read-only metadata is equivalent and is the
+better choice because its capability is legible from the token page rather than from an absence of
+ticks.
+
+**Do not give it repository write, and do not use an account with private repositories.** A token
+that can write is a token that a corpus bug can write with, against a live service, and our own
+`create_issue` tool sits one line away in the same schema. An account with private repos also
+makes `search_code` return material we may not store, which collides with negative 2.
+
+**What breaks without it, measured rather than assumed.** In run `20260919T130847Z-concurrent`
+github started fine and 4 of 17 calls failed, every one of them `search_code`, with
+`Authentication Failed: Requires authentication`. GitHub's code search endpoint requires
+authentication; the rest of the corpus works unauthenticated at 60 requests/hour. So without a
+token we lose the code-search calls entirely and run the rest against a rate limit low enough that
+a wave of 10 is a meaningful fraction of the hour's budget.
+
+**Cost: 0 euros, about 10 minutes.**
+
+## 2. Brave Search
+
+**What breaks without it is total.** The server exits before the handshake:
+`Error: BRAVE_API_KEY environment variable is required`, and both driven calls die with
+`EOFError: server closed stdout`. There is no partial measurement to be had.
+
+**Minimum permission.** The key is the whole credential; Brave's API has no scope model. Use a key
+minted for this and nothing else, so it can be revoked without collateral.
+
+**Cost: 0 euros on the free tier, about 15 minutes**, including the card-on-file step the free tier
+asks for. The corpus is 3 concurrent calls and 2 sequential, far inside any free allowance, but
+the free tier is rate limited to roughly one query per second, which matters: a wave of N = 5 or
+10 fired at once is exactly the shape a per-second limit rejects. Expect throttling to show up as
+errored calls and do not read those as the server refusing concurrency. If we drive brave
+concurrently at all, `max_concurrency` for it should be set to 1 with that reason written in the
+registry, which is what that field is for.
+
+## 3. Slack
+
+**Needs a workspace before it needs a token.** A free workspace created for this purpose is the
+right container: the alternative, using a workspace with real colleagues in it, puts other
+people's messages inside our capture, which negative 2 and the GDPR sentence in `DOCTRINE.md` both
+make expensive.
+
+**Minimum permission** depends on a corpus that does not exist yet. Written read-only it is a bot
+token with `channels:history`, `channels:read` and `users:read` and nothing else. Do not grant
+`chat:write` unless the corpus drives a post, and if it does, drive it into a channel created for
+the purpose.
+
+**What breaks without it: everything, and nothing, because it is not measured today.**
+
+**Cost: 0 euros, about 1 hour for the workspace plus half a day for registry, probe and corpora.**
+
+## 4. Google Maps
+
+**The expensive one, and the only one with a real cost.** Google Maps Platform requires a Google
+Cloud project with **billing enabled** and a card on file, even to use the monthly free credit.
+That is a payment instrument attached to a lab that runs automated traffic, which is a different
+risk category from the other three.
+
+**Minimum permission.** An API key restricted two ways: to the specific APIs the corpus drives,
+and by nothing else, since the container has no stable IP. An unrestricted Maps key that leaks is
+billable by whoever finds it. If we do this, set a budget alert at a low figure on day one, before
+the first call.
+
+**Cost: 0 euros expected but NOT 0 euros guaranteed, about 1 hour plus half a day of repo work.**
+It is the only account on this list that can generate an invoice, and that is the fact to decide
+on rather than the setup time.
+
+## 5. Terms of use: what to check, and what this document deliberately does not assert
+
+This repository already has a rule for this. `registry/declared-destinations.json` says its
+expectations are derived from committed schemas and are "NOT a quotation of upstream
+documentation, and the file never pretends otherwise", because asserting what a document says
+without having read it is what this project calls a plausible guess. The same standard applies
+here, so what follows is the list of questions to put to each provider's current terms, not an
+answer to them.
+
+For each of the four, read the current terms and answer:
+
+1. **Is automated access permitted at all, and under what identification?** Most API terms permit
+   programmatic use by definition and restrict scraping of the human web surface. We only touch
+   APIs, which is the favourable side of that line, and it should still be confirmed per provider.
+2. **Is there a named rate limit, and is exceeding it a breach or just a 429?** This decides
+   whether a wave of 10 is a technical inconvenience or a terms problem.
+3. **May responses be stored, and for how long?** This is the one where our design helps: we store
+   salted digests and counts, never content (negative 2), and the aggregate names no host. A term
+   forbidding retention of results is one we already satisfy, and saying so precisely is stronger
+   than claiming we are exempt.
+4. **Does the provider forbid benchmarking or publishing measurements?** Some API terms restrict
+   publishing performance comparisons. We publish fan-out and attributability, not quality or
+   latency league tables, and gate rule 3 means the aggregate names no server. Check whether that
+   distinction is enough under each provider's wording.
+5. **Are lab or throwaway accounts permitted?** A term requiring accurate registration details is
+   satisfied by a real account used for a stated purpose, and is not satisfied by a fictitious
+   identity. Use your own identity on all four.
+
+**My reading of the risk, stated as a judgement and not as a finding:** github and brave are
+ordinary API consumption at trivial volume and are very unlikely to be contentious. Slack in a
+workspace we own is equally unremarkable. Google Maps is the one where the terms interact with
+billing, and it is also the one we least need.
+
+## 6. Recommendation
+
+**Do github and brave. Skip slack and google-maps for now.**
+
+Together they cost 0 euros and under half an hour, they need no repository work because both are
+already pinned, probed and have corpora, and they convert the two servers that are currently
+gagged into servers that reach their real third parties. That is the whole of what threats 5 and 8
+cost us in the measured set.
+
+Slack and google-maps each cost half a day of repository work before an account helps at all, and
+google-maps additionally attaches a payment instrument to an automated lab. Neither buys a new
+KIND of observation: both are ordinary HTTPS APIs like github and brave. If the paper needs a
+larger N later, they are the obvious next two, in that order, and google-maps last.
+
+**What the next capture should be, if you take that recommendation.** One concurrent pass with
+github and brave credentialed, brave capped at `max_concurrency: 1` with the rate limit as the
+written reason, everything else unchanged. That run produces number 5 from persisted structural
+fields rather than derived from the corpus, which is what closes threat 16 properly, and it does
+it on a set where two servers can actually reach their destinations.
+
+## 7. What this does not solve
+
+Threat 8's other half. Three of the ten servers are abandoned upstream and one, brave-search, is
+marked deprecated on the registry with its last release in 2024. Credentials do not make an
+abandoned server representative of anything, and no account on this list changes that. The set is
+what it is, and the write-up says so.

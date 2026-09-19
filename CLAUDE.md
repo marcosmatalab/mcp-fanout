@@ -223,6 +223,15 @@ Two results from it that are NOT matcher work and outrank it:
 
 ## Pending work, in order
 
+0. **The next capture is blocked on a decision, not on code.** `docs/LAB-ACCOUNTS.md` is the plan:
+   which accounts the credentialed servers need, the minimum permission each one is, what the
+   terms of use questions are (asked, not answered, by the same rule that governs
+   `declared-destinations.json`), and what each costs in euros and hours. Recommendation there is
+   github plus brave only, 0 euros and under half an hour, because slack and google-maps are not
+   in `registry/servers.yaml` at all and each needs half a day of repo work before an account
+   helps. Nothing has been created. Until it is decided, a new capture re-measures gagged servers
+   and threats 5 and 8 eat the numbers again.
+
 Items 1 to 3 of the previous list are done: the corpus is aligned against the real schemas and
 gated by `tests/test_corpus_matches_probes.py`, `registry/servers.yaml` is pinned to exact
 versions with measured per-server facts, and the protocol defect is fixed. A one-server capture
