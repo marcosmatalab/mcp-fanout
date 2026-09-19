@@ -222,3 +222,88 @@ def test_the_addon_reads_the_target_not_the_absolute_url(tmp_path):
     row = json.loads((tmp_path / "flows.jsonl").read_text().splitlines()[0])
     assert row["target_bytes"] == len("/v1/ping"), (
         "target_bytes covers more than path+query; the absolute URL leaked in")
+
+
+# ---------------------------------------------------------------------------------------------
+# The structural matcher, driven through the ADDON rather than through match.py.
+#
+# tests/test_structural_attribution.py tests the rules. These test that the addon actually
+# publishes them into a Flow, which is a separate failure: `make selftest` serialises the new
+# fields and never sets them, because its synthetic path does not run this hook. Without these,
+# the claim that number 5 comes from persisted data rests on unit tests of a function the capture
+# layer might not be calling.
+# ---------------------------------------------------------------------------------------------
+
+def _wave(*arg_dicts, salt=b"test-salt"):
+    """Several in-flight calls with their token digests, as drive_wave publishes them."""
+    from mcpfanout import structure as _S
+    from mcpfanout.redact import Redactor
+    r = Redactor(salt=salt)
+    calls = []
+    for i, args in enumerate(arg_dicts):
+        calls.append({"call_id": f"fetch-c{i:03d}", "traceparent": TRACEPARENT,
+                      "args_present": True, "args_digests": [],
+                      "token_digests": sorted(
+                          r.token_digest_set(_S.tokens_of_arguments(args)))})
+    return {"run_id": "t", "server_id": "fetch", "active_calls": calls, "phase": "driving"}
+
+
+RUNBOOK = {"url": "https://example.net/docs/deploy/runbook"}
+ROLLBACK = {"url": "https://example.net/docs/deploy/rollback"}
+DEEPER = {"url": "https://example.net/docs/deploy/runbook?section=rollback-steps"}
+ROOT = {"url": "https://example.net/", "max_length": 2000}
+
+
+def _row(tmp_path, payload, host, path):
+    rec = _recorder(tmp_path, payload)
+    rec.request(_FakeFlow(_FakeRequest(host=host, path=path)))
+    rec.done()
+    return [json.loads(l) for l in (tmp_path / "flows.jsonl").open()][-1]
+
+
+def test_the_addon_attributes_a_flow_by_structural_containment(tmp_path):
+    row = _row(tmp_path, _wave(RUNBOOK, ROLLBACK), "example.net", "/docs/deploy/rollback")
+    assert row["structural_match"] is True
+    assert row["structural_candidates"] == 1
+    assert row["candidate_token_count"] == 4
+    assert row["call_id"] == "fetch-c001", "attributed to the call that actually caused it"
+
+
+def test_the_addon_refuses_a_flow_whose_only_candidate_does_not_discriminate(tmp_path):
+    """The robots.txt case, end to end. The root call is contained and must not be credited."""
+    row = _row(tmp_path, _wave(RUNBOOK, ROLLBACK, ROOT), "example.net", "/robots.txt")
+    assert row["structural_contained"] == 1, "the root call is contained: its only token is host"
+    assert row["structural_candidates"] == 0
+    assert row["structural_match"] is False
+    assert row["call_id"] is None, "never handed back to the call discrimination rejected"
+
+
+def test_the_addon_records_the_subset_loss_rather_than_guessing(tmp_path):
+    """Threat 18 through the capture layer: contained, not a candidate, and visible as both."""
+    row = _row(tmp_path, _wave(RUNBOOK, DEEPER, ROOT), "example.net", "/docs/deploy/runbook")
+    assert row["structural_contained"] == 2
+    assert row["structural_candidates"] == 0
+    assert row["non_discriminating_calls"] == 2
+    assert row["call_id"] is None
+
+
+def test_the_addon_flags_a_constant_client_path(tmp_path):
+    """The content denominator has to be computable from the record, or it is not a denominator."""
+    row = _row(tmp_path, _wave(RUNBOOK), "example.net", "/robots.txt")
+    assert row["constant_client_path"] is True
+    assert _row(tmp_path, _wave(RUNBOOK), "example.net",
+                "/docs/deploy/runbook")["constant_client_path"] is False
+
+
+def test_no_token_of_plaintext_reaches_the_flow_record(tmp_path):
+    """Negative 2, checked where the bytes are actually written to disk."""
+    row = _row(tmp_path, _wave(RUNBOOK, ROLLBACK), "example.net", "/docs/deploy/rollback")
+    blob = json.dumps(row)
+    for token in ("runbook", "rollback", "deploy", "docs"):
+        assert token not in blob, f"{token!r} reached the persisted record"
+
+
+def test_a_flow_carrying_nothing_of_ours_is_not_attributed(tmp_path):
+    row = _row(tmp_path, _wave(RUNBOOK, ROLLBACK), "other.example.org", "/unrelated/path")
+    assert row["structural_match"] is False and row["structural_contained"] == 0
+    assert row["call_id"] is None
