@@ -67,9 +67,28 @@ screen on purpose: it is where credibility is won or lost.
 6. **Threats to validity written, at least four.** See docs/THREATS.md. A measurement that does
    not state how it could be wrong is not a measurement.
 
-7. **Responsible disclosure.** If a server egresses to a destination its documentation does not
-   declare, stop and flag it. Publish nothing that locates that specific server until the finding
-   is authorized. Aggregate first, name never (see rule 3).
+7. **Responsible disclosure, with a command behind it.** If a server egresses to a destination its
+   documentation does not declare, stop and flag it. Publish nothing that locates that specific
+   server until the finding is authorized. Aggregate first, name never (see rule 3).
+
+   `make disclosure` (`src/mcpfanout/disclosure.py`) reduces a run's destinations to the ones
+   nobody expected, per server, against the declared set in
+   `registry/declared-destinations.json`, and exits non-zero if anything needs reviewing. It runs
+   at the end of every capture and prints a stop banner. Until it existed, this rule was honoured
+   by reading a hostname list after a run and remembering what belongs there, which works for one
+   server and fails for ten, silently, in the direction of publishing.
+
+   **What the command does not do**, because the bound matters more than the convenience: it does
+   not decide the rule. The declared set is derived from the committed tool schemas and the
+   packages' stated purpose, NOT from a reading of each upstream README, and the registry file says
+   so in its own `_what_basis_means` field. Asserting what a document says without having read it
+   is the plausible guess this project keeps finding in its own history. The command narrows a
+   hostname dump to a short list of destinations to read documentation ABOUT; a person then reads
+   it. Three outcomes, never two: clear, review required, and **undeterminable** when the
+   declaration is missing, because unevaluated is not the same as satisfied.
+
+   Its report names servers and hosts, so it stays in the run directory, which is gitignored, and
+   never under `docs/`.
 
 8. **The instrument passes before the phenomenon is measured.** No figure from a real-server run
    (phase B) may be published until the controlled bench (phase A) has passed the sensor gate in

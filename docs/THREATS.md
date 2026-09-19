@@ -41,16 +41,58 @@ gate rule 6. Each names the threat and what it does to the numbers.
    attempt, which is honest for destination and argument-forwarding, but the fan-out of a fully
    authenticated session can be larger. Stated.
 
-6. **Proxy blind spots undercount fan-out.** The terminating proxy reads only HTTP(S) it can
-   decrypt. Non-HTTP protocols and certificate-pinned clients bypass it, so numbers 1 and 2 are
-   lower bounds. The pcap backstop records the connections the proxy missed; until reconciliation
-   is implemented, treat the proxy fan-out as a floor.
+6. **Proxy blind spots undercount fan-out, and the size of the blind spot is now measured.** The
+   terminating proxy reads only HTTP(S) that is routed through it and that it can decrypt.
+   Non-HTTP protocols and certificate-pinned clients bypass it, so numbers 1 and 2 are lower
+   bounds. The pcap backstop records the connections the proxy missed; until reconciliation is
+   implemented, treat the proxy fan-out as a floor.
 
-7. **Sequential-driving attribution.** Number 5's ground truth relies on driving one call at a
-   time, so exactly one call is active per server. This is correct for the measurement and is the
-   point (it lets us measure content-match recall against ground truth), but it means the harness
-   does not itself exercise the concurrent case that makes attribution hard in production. Number 5
-   estimates how well content matching would do there; it does not reproduce there.
+   **Measured 2026-09-19, on the first ten-server capture: a client that does not honour the proxy
+   environment is invisible to the proxy and visible only in the pcap.** The proxy is a
+   `HTTP(S)_PROXY` proxy, which means interception depends on each client choosing to use it.
+   Python's requests and urllib do, npm and npx do, Chromium does. Node's own `fetch` (undici) does
+   **not**: it ignores `HTTP_PROXY` and `HTTPS_PROXY` by default. One of the ten servers reaches its
+   API that way, so its API traffic never entered `flows.jsonl` while the tool call plainly
+   succeeded and returned the API's own answer.
+
+   The pcap is what proves it rather than a suspicion: of 53 outbound SYNs in that run, 26 went to
+   the proxy on loopback and one went straight to the API's address on port 443. So for that server
+   numbers 1, 2, 4 and 5 are not a floor with a small gap, they are **zero for a reason that has
+   nothing to do with the server**, and no figure about it may be read from this capture layer.
+
+   How it is handled, and what it costs. It is reported, not silently patched, because the two
+   available fixes are not equivalent. Injecting a proxy agent into each server's runtime would mean
+   modifying third-party code inside our own harness, which is the wrong side of negative 1 in
+   spirit even where it is technically our own process. Transparent interception (a netfilter
+   REDIRECT of all outbound 80/443 into mitmproxy, inside the container) is the real fix: it removes
+   the dependence on client cooperation entirely and would also catch the non-HTTP and
+   non-proxy-aware cases. It is a capture-layer change with its own failure modes, so it is a costed
+   decision rather than a patch, and until it is taken the per-server coverage is part of the
+   result: which servers were observable at all is a finding of the run.
+
+   Two consequences to state once and not forget: a per-server figure from this layer is only
+   meaningful for servers whose client honoured the proxy, and the pcap SYN count is the honest
+   denominator for how much was missed.
+
+7. **Each phase B pass can only answer half the question, and neither half may be quoted as the
+   other.** Phase B is driven twice (`docs/PHASES.md`), and the split exists because a single pass
+   is wrong whichever way it is driven.
+
+   Driven **sequentially**, exactly one call is in flight per server. That is what makes numbers 1
+   and 2 meaningful, because "connections per call" is a per-invocation figure and with ten calls in
+   flight it would be a figure about our own wave size. But `CONTENT_UNIQUE` requires more than one
+   candidate, so under this pass the strong-attribution fraction is **0.0 by construction**, for
+   every server, whatever the servers do. That zero is not a finding and the aggregate says so in
+   the output itself.
+
+   Driven **concurrently**, the grade distribution becomes a measurement, and the per-call figures
+   stop being readable in the same run. So numbers 1 to 4 come from one pass, number 5 from the
+   other, both labelled, never merged. `harness/drive_all.py` refuses to write both into one run.
+
+   The residual, after the split: production concurrency is not our concurrency. An agent's real
+   traffic is not waves of N identical-shaped calls climbing a ladder, and phase C is where the
+   pattern is adversarial rather than tidy.
+
 
 8. **One of the ten servers cannot be measured without credentials, and three are abandoned.**
    Probed 2026-09-18, each pinned to the exact version in `registry/servers.yaml`. This is what
@@ -175,4 +217,36 @@ gate rule 6. Each names the threat and what it does to the numbers.
     `CONTENT_MATCH_UNCONTESTED` rather than `CONTENT_UNIQUE` (`docs/DOCTRINE.md`, the evidence
     model). That is a floor over a two-call corpus in which one call carried a canary, and it is
     not an estimate of what the technique achieves at scale.
+
+12. **The in-flight window is OUR declaration, not the server's concurrency.** `driver.drive_wave`
+    publishes all N calls as in flight before sending any of them, and clears the set after the
+    wave. So a server that internally serialises a wave of ten still has each of its flows graded
+    against ten candidates, and a `CONTENT_AMBIGUOUS` at N = 10 does not say the server had ten
+    things in flight. It says **the observer could not tell them apart**.
+
+    That is the right claim for a tracer, which is why it is built this way: an observer at the edge
+    knows what the client had outstanding, not what the server did internally. But it biases the
+    concurrent pass **pessimistically**, which is the safe direction and is stated rather than
+    corrected: discrimination is measured as harder than a server's own internals may make it.
+    `grades_by_window_size` is what keeps the dependence on our wave size visible instead of pooled
+    away.
+
+    A second, smaller effect from the same mechanism: the rungs are **not independent samples**. A
+    wave at N = 2 drives the first two calls of the corpus and a wave at N = 10 drives those same
+    two plus eight more, deterministically, because a reproducible run cannot draw a random subset
+    (gate rule 1). So the rungs share material by design, and a trend across N is a trend over
+    nested sets, not over independent draws.
+
+13. **The concurrent pass has no ground truth, so a false strong attribution in it would be
+    invisible.** Precision needs a known cause, which exists only where we caused the transfer:
+    phase A. There it was measured, at zero false strong attributions over 33 strong claims. In
+    phase B nothing checks whether a `CONTENT_UNIQUE` was earned, and no figure from that pass may
+    be read as though something did.
+
+    Why that is acceptable here and not everywhere: the two claims are separate. "The sensor does
+    not claim a cause it did not have" is an instrument property, measured on the bench and gated by
+    rule 8. "How the grades are distributed over real traffic" is a phenomenon property, and it is
+    what phase B measures. The reading to refuse is the one that treats a phase B strong-attribution
+    count as a verified one. The pre-registered prediction in `docs/PHASES.md` names this asymmetry
+    explicitly, because it is exactly the half of the prediction that the pass cannot falsify.
 

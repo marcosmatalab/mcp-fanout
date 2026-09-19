@@ -1,0 +1,22 @@
+[
+  {"tool": "fetch", "arguments": {"url": "https://example.net/docs/deploy/runbook"},
+   "why": "An agent reading a deploy runbook. This and the next two share the path prefix /docs/deploy/, which is what a real site looks like and is exactly the structural overlap the concurrent pass exists to measure: the shared prefix is longer than k=16, so a k-gram from it is in several calls' arguments at once."},
+  {"tool": "fetch", "arguments": {"url": "https://example.net/docs/deploy/rollback"},
+   "why": "Sibling page of the previous one. Distinguished only by the last 8 bytes of the path, which is the hard case for byte-literal discrimination and the realistic one: sibling documents share their prefix."},
+  {"tool": "fetch", "arguments": {"url": "https://example.net/docs/deploy/checklist"},
+   "why": "Third sibling, so the shared-prefix group is a group and not a pair. With three of ten calls sharing /docs/deploy/, a fragment drawn from the prefix has three candidates and a fragment drawn from the leaf has one."},
+  {"tool": "fetch", "arguments": {"url": "https://example.net/docs/observability/tracing"},
+   "why": "Same site, different section. Shares the /docs/ prefix with the three above but not the second segment, so it tests a partial overlap rather than a full one."},
+  {"tool": "fetch", "arguments": {"url": "https://example.net/blog/2026/09/incident-review"},
+   "why": "A dated blog path, the other common URL shape. Shares nothing with /docs/ beyond the host, which is not matchable material: the matcher sees the request target only, never the host, so this call is the closest thing here to a distinct fragment."},
+  {"tool": "fetch", "arguments": {"url": "https://example.net/search?q=deployment+runbook"},
+   "why": "The query-string channel, with the words an agent would actually search for. The plus-encoding is the point: our arguments carry a space where the wire carries '+', so the literal run breaks at the space. This is threat 11 arriving in a realistic argument rather than in a contrived one."},
+  {"tool": "fetch", "arguments": {"url": "https://example.net/search?q=deployment+rollback"},
+   "why": "Second search sharing the whole prefix /search?q=deployment+, which is 24 bytes of shared material: two concurrent searches over the same topic are the textbook ambiguous case, and agents do exactly this."},
+  {"tool": "fetch", "arguments": {"url": "https://example.net/status"},
+   "why": "A short target on purpose. Six bytes of path is below k=16, so no content match is possible at all and the flow can only grade on the window. It sizes how much of a realistic corpus is structurally unmatchable rather than merely ambiguous."},
+  {"tool": "fetch", "arguments": {"url": "https://example.net/docs/deploy/runbook?section=rollback-steps"},
+   "why": "The same document as the first call with a fragment selector, which is what an agent does when it re-reads one section. Its argument material is a superset of call 0's, so call 0's fragments match this flow too: ambiguity created by an agent's own re-reading, not by a coincidence."},
+  {"tool": "fetch", "arguments": {"url": "https://example.net/", "max_length": 2000},
+   "why": "The site root with a bounded response, so one call in the wave carries a second argument and a target of one byte. Bounded because response size is not what is being measured and a large body costs capture time for nothing."}
+]

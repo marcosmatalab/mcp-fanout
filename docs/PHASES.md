@@ -47,14 +47,126 @@ fraction of known transfers that literal matching cannot see. It is documented a
 negative**, permanently, and never as debt. Calling it debt would imply a future version closes
 it, and closing it means inferring, which is the one thing the project has decided not to do.
 
-## Phase B: real servers
+## Phase B: real servers, driven TWICE
 
-The ten pinned servers in `registry/servers.yaml`, with the corpus aligned against their real
-schemas (`registry/probes/`, gated by `tests/test_corpus_matches_probes.py`). This phase measures
-the phenomenon: fan-out, distinct domains, propagation, provenance coverage, attribution grades,
-self-hostable fraction. It measures nothing about the instrument.
+The ten pinned servers in `registry/servers.yaml`, with both corpora aligned against their real
+schemas (`registry/probes/`, gated by `tests/test_corpus_matches_probes.py` and
+`tests/test_concurrent_corpus.py`). This phase measures the phenomenon: fan-out, distinct domains,
+propagation, provenance coverage, attribution grades, self-hostable fraction. It measures nothing
+about the instrument.
 
-Blocked on phase A by gate rule 8.
+Unblocked: phase A passed the sensor gate, which is what gate rule 8 required.
+
+### Why two passes and not one
+
+One sequential pass cannot measure the thesis, and the reason is arithmetic rather than a matter
+of degree. `CONTENT_UNIQUE` requires `active_calls_in_window > 1` (`match.grade_attribution`, and
+that requirement is the whole defence against the tautology). Driven one call at a time, every
+window holds exactly one call, so the strong-attribution fraction of a sequential phase B run is
+**0.0 by construction**, for every server, whatever the servers do. Running phase B that way would
+not measure the thesis; it would make it unobservable again, with a published figure of zero that
+reads like a finding.
+
+But the reverse is also true, and it is why concurrency is not simply switched on for everything:
+numbers 1 and 2 are **per invocation**. With ten calls in flight, "connections per call" is a
+figure about our own wave size and the attribution of a connection to a call is exactly what is
+in question, so a per-call distribution measured under concurrency would be circular.
+
+So the two conditions are driven as two runs, and each publishes only what it can answer:
+
+| | Sequential pass | Concurrent pass |
+| --- | --- | --- |
+| Command | `make run` | `make run-concurrent` |
+| Corpus | `corpus/calls/` | `corpus/concurrent/` |
+| In flight per server | 1 | N on the ladder 2, 5, 10, capped per server |
+| Publishes | numbers 1, 2, 3, 4 | number 5: the grade distribution, split by N |
+| Its attribution grades are | `CONTENT_MATCH_UNCONTESTED` by construction, reported as such | the measurement |
+| May NOT claim | anything about whether content discriminates | any per-call fan-out figure |
+| Ground truth | none, and none needed | none, and none needed: precision was measured on the bench |
+
+**The two figures are published separately and labelled by pass.** The label is in the manifest
+(`record.PASSES`), in the run directory's name, in the aggregate output (`"pass"`), and in the
+committed artifact's provenance. `harness/drive_all.py` refuses to drive a second pass into a run
+that already holds one: merging them would average two experimental conditions into one
+distribution, and no footnote undoes that arithmetic afterwards.
+
+**Why no ground truth in the concurrent pass, and why that is not a hole.** Precision needs a known
+cause, which exists only where we caused the transfer, which is phase A. That is where it was
+measured: zero false strong attributions over 33 strong claims. The concurrent pass asks a
+different question, the one phase A cannot answer, which is how the grades come out on traffic
+nobody designed. Adding a fabricated ground truth here would mean planting a unique marker per
+call, which is the bench again (`corpus/concurrent/README.md`).
+
+**The ladder is the bench's ladder**, N = 2, 5 and 10, capped per server by `max_concurrency` with
+its reason in the registry. Same rungs on purpose: the bench established what the sensor does at
+those levels with maximally distinctive fragments, so any difference measured here is a difference
+in the material, not in the level.
+
+**The corpus rule, which is the inverse of the bench's.** The bench requires that no two fragments
+share a 16-byte run. This corpus requires the opposite: arguments that look like what an agent
+would really send, which means they share domains, path prefixes, parameter names and common words.
+Made artificially distinct, the concurrent pass would replicate the bench on a real server and
+measure something already known. `tests/test_concurrent_corpus.py` fails if the corpus is pairwise
+k-gram-disjoint, which is the mechanical form of that rule.
+
+### Pre-registered predictions for the concurrent pass
+
+Written **2026-09-19, before the first concurrent run existed**, for the same reason the sensor
+gate's thresholds were: a disappointing result must not be re-framed as a pass afterwards, and a
+surprising one must be surprising against something written down. The block below is frozen by
+digest in `tests/test_phase_b_prediction.py`, so editing it after the data arrives fails the suite.
+
+<!-- PREREGISTERED:BEGIN -->
+
+**B1. Discrimination on real servers will be WORSE than on the bench, and the failure mode will be
+`CONTENT_AMBIGUOUS` rather than a false attribution.**
+
+Mechanism: the bench's fragments are keyed digests, which is maximally distinctive material. Real
+arguments are natural language and URLs, and they share structure: common words, the same domain,
+the same path prefix, the same parameter names. Two concurrent calls to one API share far more than
+two random fragments do, so the matched fragment will frequently be present in several in-flight
+calls at once, which is `CONTENT_AMBIGUOUS` by definition.
+
+Measurable form: per rung N, the **discrimination ratio** `CONTENT_UNIQUE / (CONTENT_UNIQUE +
+CONTENT_AMBIGUOUS)`. On the bench this ratio was 1.0 in the `all_distinct` cell at N = 2, 5 and 10.
+B1 predicts it is below 1.0 here, and that it falls as N grows.
+
+What falsifies B1: a discrimination ratio at or near 1.0 at N = 5 or N = 10. If that happens, the
+prediction was wrong and the written prediction is in front of the result, which is the point of
+writing it.
+
+What CANNOT falsify the second half of B1, stated because the asymmetry is easy to miss: whether a
+`CONTENT_UNIQUE` claim made here was CORRECT is not checkable in this pass at all. There is no
+ground truth, so "the failure mode is ambiguity rather than a false claim" is testable only in the
+weak sense that ambiguity is the dominant non-unique outcome among matched flows. A false claim
+would be invisible. Phase C, where the pattern is adversarial and ours, is where that half becomes
+falsifiable.
+
+**B2. Most realistic calls will not be matchable at all, so `UNATTRIBUTED` will dominate every rung
+and the grade distribution will be thin at the top rather than wrong at the top.**
+
+Mechanism: byte-literal matching needs a 16-byte run surviving verbatim onto the wire. Realistic
+arguments break that in four ordinary ways, none of them adversarial: values shorter than k (a
+timezone, a one-word query), percent- and plus-encoding of spaces, structured arguments the server
+reassembles into its own request shape, and arguments that never travel because the server answers
+locally. Nothing about this is a defect: it is negative 3 priced in realistic material.
+
+Measurable form: the share of flows graded `UNATTRIBUTED` in the concurrent pass, and the share of
+driven calls whose arguments contain no 16-byte run at all.
+
+What falsifies B2: content matches on the majority of flows.
+
+Why B2 is pre-registered alongside B1: without it, a low `CONTENT_UNIQUE` count could be read as
+B1 confirmed, when the cause would be that almost nothing was matchable in the first place. B1 is
+about **discrimination among candidates**; B2 is about **how many flows ever reach the question**.
+They are separate claims and the run answers them separately.
+
+<!-- PREREGISTERED:END -->
+
+### Observed, concurrent pass
+
+Not yet run. This section is filled from the committed artifact and nothing else, and the
+prediction block above is not edited when it is.
 
 ## Phase C: attacking attribution
 

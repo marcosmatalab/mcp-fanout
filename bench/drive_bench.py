@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from mcpfanout.driver import CallSpec, StdioMCPClient, drive_wave
-from mcpfanout.record import RunManifest, ToolCall, write_jsonl, write_manifest
+from mcpfanout.record import PASS_BENCH, RunManifest, ToolCall, write_jsonl, write_manifest
 from mcpfanout.redact import DEFAULT_SALT, Redactor
 
 # 40 bytes of synthetic material per fragment, well over k = 16 so a literal run is detectable
@@ -153,7 +153,7 @@ def main() -> int:
             for spec, r in zip(specs, results):
                 all_calls.append(ToolCall(run_id, server_id, r.call_id, r.tool_name,
                                           r.args_present, r.traceparent, ok=r.ok, error=r.error,
-                                          stdout_noise_lines=r.stdout_noise_lines))
+                                          stdout_noise_lines=r.stdout_noise_lines, wave_size=n))
                 plan_rows.append({
                     "call_id": r.call_id, "cell": cell["cell"], "group": cell["group"],
                     "n": n, "slot": spec.arguments["slot"], "tool": spec.tool_name,
@@ -184,6 +184,7 @@ def main() -> int:
         salt_fixed=(salt == DEFAULT_SALT), k=redactor.k, w=redactor.w,
         corpus_sha256=hashlib.sha256(Path(args.waves).read_bytes()).hexdigest(),
         server_ids=[server_id], tool_versions={"bench": "phase-a"},
+        pass_name=PASS_BENCH,
         server_protocol_versions={server_id: "2025-11-25"},
         notes=("PHASE A BENCH run, not a measurement of any third-party server. Ground truth is "
                "the bench's own ledger; see docs/PHASES.md and mcpfanout.bench_metrics."),

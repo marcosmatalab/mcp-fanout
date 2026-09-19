@@ -1,4 +1,21 @@
 {
+  "driving": {
+    "by_wave_size": {
+      "unrecorded": {
+        "calls": 82,
+        "errored": 0,
+        "ok": 82,
+        "stdout_noise_lines": 0,
+        "with_arguments": 82
+      }
+    },
+    "calls_errored": 0,
+    "calls_total": 82,
+    "command": "make numbers",
+    "error_fraction": 0.0,
+    "name": "driving_summary",
+    "not_one_of_the_six": "a denominator, not a finding: the six are ratios over what servers did in response to these calls"
+  },
   "normalized": true,
   "numbers": [
     {
@@ -114,6 +131,7 @@
         "time window covers 5 concurrent calls: correlation identifies no single call": 10
       },
       "command": "make n5",
+      "concurrent_driving_note": "flows were seen with up to 10 calls in flight, so the grades below are a measurement rather than a restatement of the driving regime. There is NO ground truth in this pass: nothing here says a strong attribution was correct. Attribution precision has a denominator only on the phase A bench, where we caused every transfer, and it was measured there (docs/PHASES.md, sensor gate). What this pass measures is how the grades are DISTRIBUTED over real traffic",
       "content_match_by_channel": {
         "body": 54,
         "both": 0,
@@ -128,9 +146,34 @@
         "version": "2026-09-18"
       },
       "flows_total": 85,
+      "grades_by_window_size": {
+        "0": {
+          "UNATTRIBUTED": 1
+        },
+        "1": {
+          "CONTENT_MATCH_UNCONTESTED": 5,
+          "TEMPORAL_ONLY": 3
+        },
+        "10": {
+          "CONTENT_AMBIGUOUS": 12,
+          "CONTENT_UNIQUE": 18,
+          "UNATTRIBUTED": 10
+        },
+        "2": {
+          "CONTENT_AMBIGUOUS": 2,
+          "CONTENT_UNIQUE": 2,
+          "UNATTRIBUTED": 2
+        },
+        "5": {
+          "CONTENT_AMBIGUOUS": 7,
+          "CONTENT_UNIQUE": 13,
+          "UNATTRIBUTED": 10
+        }
+      },
       "max_active_calls_in_window": 10,
       "name": "attribution_grade_distribution",
       "number": 5,
+      "pass": "unlabelled",
       "sequential_driving": false,
       "strong_attribution_count": 33,
       "strong_attribution_fraction": 0.3882,
@@ -157,6 +200,7 @@
     "corpus_sha256": "e5f7da022712432af13f44d3f5fd8d21b824909b32ca256d3f3120225beb61d8",
     "created": "2026-09-18T21:24:22.522137+00:00",
     "notes": "PHASE A BENCH run, not a measurement of any third-party server. Ground truth is the bench's own ledger; see docs/PHASES.md and mcpfanout.bench_metrics.",
+    "pass": "unlabelled",
     "run_id": "20260918T212417Z",
     "salt_fixed": true,
     "server_count": 1

@@ -93,9 +93,20 @@ cause.
 | `UNATTRIBUTED` | no evidence, or ineligible, always with a named reason |
 
 Strong attribution counts the first two only. `CONTENT_UNIQUE` requires more than one call in
-flight, so **while the corpus is driven sequentially the harness emits none, by construction, and
-a test asserts it.** Anything else would publish the experimental setup as a result. That question
-needs concurrent calls, which is phase C in `docs/PHASES.md`.
+flight, so **a sequentially driven run emits none, by construction, and a test asserts it.**
+Anything else would publish the experimental setup as a result.
+
+Which is why phase B is driven **twice**, and the two results are published separately and labelled
+by pass (`docs/PHASES.md`):
+
+| Pass | Command | Publishes | May not claim |
+| --- | --- | --- | --- |
+| Sequential, one call in flight | `make run` | numbers 1, 2, 3, 4 | anything about whether content discriminates |
+| Concurrent, waves of N = 2, 5, 10 | `make run-concurrent` | number 5, split by N | any per-call fan-out figure |
+
+Merging them would average two experimental conditions into one distribution, so the harness refuses
+to write both into one run. Neither pass has ground truth and neither needs it: precision was
+measured where it has a denominator, on the phase A bench.
 
 The harness publishes the full distribution. That is measurement, not a promise.
 
@@ -111,16 +122,23 @@ make install
 # 2. Run the pure-Python core against synthetic fixtures and prove reproducibility
 make verify
 
-# 3. Run the full capture against the pinned servers (needs Docker + network)
-make run            # writes runs/<timestamp>/records.jsonl
+# 3. Phase B, sequential pass: one call in flight (needs Docker + network)
+make run            # writes runs/<timestamp>-sequential/flows.jsonl
 
-# 4. Compute all six numbers from the latest run
+# 4. Phase B, concurrent pass: waves of N = 2, 5, 10, capped per server
+make run-concurrent # writes runs/<timestamp>-concurrent/flows.jsonl. A SEPARATE run and figure
+
+# 5. Compute all six numbers from the latest run
 make numbers        # or make n1 ... n6 individually
+
+# 6. Gate rule 7: which destinations nobody declared. Non-zero exit means stop and review
+make disclosure
 ```
 
 See [`docs/METHOD.md`](docs/METHOD.md) for the observation model and the capture layers,
-and [`docs/THE-GATE.md`](docs/THE-GATE.md) for the seven conditions a run must pass before
-any number is reported.
+[`docs/PHASES.md`](docs/PHASES.md) for the three phases and the two phase B passes, and
+[`docs/THE-GATE.md`](docs/THE-GATE.md) for the eight conditions a run must pass before any number
+is reported.
 
 ## Reproducibility, privacy, disclosure
 
@@ -130,9 +148,14 @@ any number is reported.
 - **Digest-only.** Payloads are never stored. The harness keeps salted shingle hashes and
   references. The sentence it can emit is: "the fragment with hash X, from reference Y, appeared
   in the output toward domain Z." See [`src/mcpfanout/redact.py`](src/mcpfanout/redact.py).
-- **Responsible disclosure.** If a server egresses to a destination its documentation does not
-  declare, the harness stops and flags it. Nothing that locates a specific server is published
-  until authorized. See [`docs/THE-GATE.md`](docs/THE-GATE.md) rule 7.
+- **Responsible disclosure, with a command.** If a server egresses to a destination its
+  documentation does not declare, the harness stops and flags it: `make disclosure` reduces a run's
+  destinations to the ones nobody expected, per server, against
+  `registry/declared-destinations.json`, and exits non-zero. It does not decide the rule (the
+  declared set comes from tool schemas and stated purpose, not from a reading of each upstream
+  README); it narrows a hostname dump to a short list to read documentation about. Its own output
+  names hosts, so it stays in the untracked run directory. Nothing that locates a specific server is
+  published until authorized. See [`docs/THE-GATE.md`](docs/THE-GATE.md) rule 7.
 
 ## Cost
 
@@ -149,7 +172,9 @@ This is `v0.1`: the honest state of each part.
 | Matching core (shingling, causal union, classification, aggregation) | Implemented and unit-tested |
 | MCP stdio driver with `traceparent` in `_meta` | Implemented, tested against a mock server |
 | mitmproxy capture addon and Docker harness | Implemented, runnable where Docker and network are available; not exercised in CI |
-| Server registry (10 servers) and per-server call corpus | Scaffolded with a starter set, meant to grow |
+| Server registry (10 servers), pinned and probed | Every server's tool schemas measured and committed under `registry/probes/` |
+| Per-server call corpora, sequential and concurrent | Both aligned against the real schemas and gated by tests |
+| Phase A bench (the instrument) | Built, run, and passing its pre-registered sensor gate |
 | eBPF SSL uprobe capture (product-grade, catches pinned TLS) | Out of scope for the measurement, documented as the next layer |
 
 ## License

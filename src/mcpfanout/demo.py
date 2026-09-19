@@ -15,7 +15,7 @@ from pathlib import Path
 
 from . import match as _match
 from .classify import classify_host
-from .record import Flow, RunManifest, ToolCall, write_jsonl, write_manifest
+from .record import PASS_SELFTEST, Flow, RunManifest, ToolCall, write_jsonl, write_manifest
 from .redact import DEFAULT_SALT, Redactor
 
 # A synthetic secret long enough to exceed k (16 bytes), so a literal appearance is detectable.
@@ -39,8 +39,12 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
     # Two calls: call A carries the secret in its arguments; call B carries no arguments.
     args_a = json.dumps({"query": "load creds", "token": _SECRET.decode()}).encode()
     calls = [
-        ToolCall(run_id, "s1", "cA", "search", args_present=True, traceparent="00-aaaa-bbbb-01"),
-        ToolCall(run_id, "s2", "cB", "list_files", args_present=False, traceparent="00-cccc-dddd-01"),
+        # wave_size 1: the selftest models the SEQUENTIAL shape, one call in flight, which is what
+        # makes its grade of CONTENT_MATCH_UNCONTESTED the correct expected output of the fixture.
+        ToolCall(run_id, "s1", "cA", "search", args_present=True, traceparent="00-aaaa-bbbb-01",
+                 wave_size=1),
+        ToolCall(run_id, "s2", "cB", "list_files", args_present=False,
+                 traceparent="00-cccc-dddd-01", wave_size=1),
     ]
     args_digests = {
         "cA": redactor.kgram_digest_set(args_a),
@@ -119,6 +123,9 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
         # Two different answered revisions on purpose, so the selftest exercises number 3's
         # segmentation rather than collapsing to a single bucket and proving nothing about it.
         server_protocol_versions={"s1": "2025-11-25", "s2": "2024-11-05"},
+        # Labelled, like every other run. "selftest" is its own pass value precisely so a synthetic
+        # figure can never be mistaken for either phase B condition (docs/PHASES.md).
+        pass_name=PASS_SELFTEST,
         notes="Synthetic selftest run. Not a measurement.",
     )
 
