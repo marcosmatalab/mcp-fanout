@@ -479,10 +479,15 @@ gate rule 6. Each names the threat and what it does to the numbers.
     what left the machine, is present in that single behaviour, and it was found by instrumenting
     an edge rather than by reading documentation.
 
-    **Where it goes.** Above number 3 as the leading candidate for the paper's headline result.
-    Number 3 measures a property of a population; this is a reproducible mechanism with a named
-    causal chain, and it generalises beyond MCP: any tool that lazily installs a dependency at
-    call time has it.
+    **Where it goes. SUPERSEDED 2026-09-19: threat 19 leads and this is second.** It held the lead
+    for a few hours, and the reason it lost it is itself the argument. This is a finding about one
+    package's behaviour: sharp, reproducible, and something a reader fixes by pinning a dependency.
+    Threat 19 is a finding about how the measurement must be BUILT, which every reader who repeats
+    this work will hit before they can observe anything at all. A defect in the instrument outranks
+    a defect in a subject, because it invalidates the observations of the subject. This one still
+    goes above number 3: number 3 measures a property of a population, while this is a mechanism
+    with a named causal chain that generalises beyond MCP to any tool lazily installing a
+    dependency at call time.
 
     **Disclosure.** Gate rule 7 applies and, unlike threat 15's browser, both maintainers are
     reachable: `alan-turing-institute/ReadabiliPy` and the `mcp-server-fetch` maintainers. Draft
@@ -544,8 +549,12 @@ gate rule 6. Each names the threat and what it does to the numbers.
     belongs in the write-up next to the numbers rather than in a footnote under them.
 
 19. **A terminating proxy configured by environment variables does not observe a modern Node
-    client, and the measurement looks clean while it happens. Candidate headline, above threat
-    17.** Threat 6 recorded proxy blind spots as a general caveat. This is the specific,
+    client, and the measurement looks clean while it happens. THE HEADLINE RESULT, above threat
+    17 and above every number.**
+
+    Stated as a claim before the evidence, because it is the sentence the paper opens with: **an
+    environment-variable proxy does not observe an agent's egress. It observes the subset of
+    clients that opted in, and that subset is not knowable in advance.** Threat 6 recorded proxy blind spots as a general caveat. This is the specific,
     reproducible, named instance, and it is a defect of METHOD rather than of any server: anyone
     who repeats this measurement the obvious way will make it.
 

@@ -604,3 +604,78 @@ benefit was invisible, not absent. With the proxy fixed, the same credential mov
 denominator from 21 to 38 and the content fraction from 0.8095 to 0.6579, which is the single
 largest correction any decision in this project has produced. A credentialed server was not worth
 nothing; it was worth the thing that most needed measuring.
+
+## 17. The product claim this measurement actually supports
+
+Stated as a claim a reader can apply to their own tool inventory, not as an explanation of why a
+threshold was missed. It is the most transferable thing in this work.
+
+> **Content-based attribution works on tools whose arguments carry structure, and does not work
+> on tools whose arguments are free text. No matching rule changes this without manufacturing
+> false strong attributions.**
+
+**How to apply it without running anything.** Take a tool's schema and ask what its arguments
+decompose into under `structure.split_string`: a host, path segments, query values, JSON string
+leaves. A tool taking a URL, a file path, a repository coordinate or a resource identifier yields
+four or five structural tokens and its calls attribute uniquely under concurrency. A tool taking
+one free-text string yields ONE token, whatever its length.
+
+**The measured evidence, both halves of it.**
+
+- Positive: on the run this was pre-registered against, every call with a URL argument attributed
+  uniquely, 15 of 17 on one server and 2 of 2 on another, the two misses being subset re-reads
+  (threat 18) rather than shape.
+- Negative: on the corrected run, 6 of 17 calls on a search-shaped server could not rise above
+  CONTENT_AMBIGUOUS. `{"query": "modelcontextprotocol servers"}` is 29 bytes and one token;
+  `{"query": "logs"}` is four bytes and one token. The rule treats them identically because token
+  COUNT is what it measures.
+- And the price of relaxing it, which is why this is a limit rather than a to-do: allowing a
+  single token to earn the strongest grade was measured in section 4 and produced **9 false
+  strong attributions out of 20 flows**, every one of them a constant client path credited to
+  whichever call happened to own a single generic token. A rule that attributes free-text calls
+  is a rule that attributes `/robots.txt` to a site-root call, with full confidence.
+
+**What this means for a product.** Runtime provenance by content matching is not a general
+capability over an agent's tool surface; it is a capability over the STRUCTURED part of it. A
+deployment can know in advance which part that is, by reading its own tool schemas, before
+installing anything. That is a useful thing to be able to tell someone, and it is the opposite of
+what a demo on URL-shaped tools would have suggested.
+
+**What it does not say.** It does not say free-text calls are unattributable in general: a
+propagated trace context attributes them exactly, which is what number 3 measures and what 0 of 3
+observed servers currently do. The claim is about the content channel alone.
+
+## 18. Declared amendment A2: F3, formulated AFTER the failure
+
+**Written 2026-09-19, after seeing 0.6579. It may not replace that figure and does not.** Recorded
+here, outside the sealed block, with its own date, for the same reason A1 is: a method changed to
+one devised after seeing a result is the substitution this apparatus exists to prevent.
+
+**The hypothesis.** The one-token floor counts tokens where it should weigh improbability. A
+single token of 29 bytes and a single token of 4 bytes are treated identically, and they are not
+equivalent evidence. A token longer than `w + k - 1` is in the regime where the k-gram matcher's
+own false-positive rate was measured at zero (F1.2, 0 of 224 pairs at k = 22), so such a token
+arguably qualifies as strong evidence on its own, by an instrument this repository has already
+calibrated rather than by a new one.
+
+**Why it is not obviously right, which is why it needs measuring rather than adopting.** The
+length of a token is not its improbability. A 29-byte free-text query is long and may still be
+the commonest phrase in a corpus, and F1.3 already measured that rarity weighting did not help
+where it was expected to, for a reason that would apply again: in the background corpus every
+colliding k-gram appeared in at most one document, so nothing could be weighted down. The honest
+prediction is that this recovers some of the six and not all, and its cost is a new false-positive
+surface on exactly the calls it is meant to rescue.
+
+**What it would have to demonstrate, pre-registered now so it cannot be relaxed later.**
+
+1. A NEW reserved half. `corpus/negative/reserved.json` has now been measured and is spent, the
+   same way `held-out.json` was. A third reserve must be generated before any F3 figure exists.
+2. The `containment_subset` family extended with the case this rule creates: two calls whose
+   single tokens are both long, both free text, and share their language structure.
+3. False strong attributions stay at 0 on the corrected run. This is the binding condition: the
+   rule exists to rescue CONTENT_AMBIGUOUS calls, and a rescue that credits one constant client
+   path is worse than the ambiguity it removed.
+4. The threshold for adopting it is stated before measuring, not after.
+
+**It changes nothing about the current verdict.** The instrument's figure is 0.6579 against 0.80,
+measured with the rule as sealed, and it stays the published result whatever F3 later shows.

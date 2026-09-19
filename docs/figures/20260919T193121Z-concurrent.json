@@ -98,12 +98,28 @@
         }
       },
       "command": "make n3",
+      "fraction_of_observed": 0.0,
+      "fraction_of_observed_note": "THE FIGURE TO READ. Denominator: servers with at least one flow the proxy actually saw. A server the proxy never saw is not a server that declined to propagate; see the observability block and docs/THREATS.md threat 19",
       "name": "servers_propagating_traceparent",
       "number": 3,
+      "observability": {
+        "command": "make n3",
+        "egress_expectation_note": "this run did not record which servers the registry expects to egress, so every server that completed a call and produced no flow is counted as unobserved. That over-counts local servers, which egress nothing by design. Re-run to get the distinction; it is not inferred here",
+        "egress_expectation_recorded": false,
+        "egress_unobserved": 7,
+        "no_egress_expected": 1,
+        "proxy_observed": 2,
+        "servers_driven_or_seen": 10,
+        "warning": "7 server(s) completed calls and produced NO observed flow. Their egress, if any, is invisible to the proxy. Run `make backstop` on this run's pcap: outbound SYNs to a destination that is not the proxy are the evidence that traffic left the machine unobserved. No figure below may treat those servers as having egressed nothing",
+        "what_this_measures": "how many servers the CAPTURE LAYER could see, which is not how many were driven. A server whose client ignores HTTP(S)_PROXY is driven, answers and egresses while leaving nothing in flows.jsonl, so counting it as a measured zero would state a fact about our instrument as a fact about the server (docs/THREATS.md threat 19)"
+      },
       "pooled_fraction": 0.0,
+      "pooled_fraction_is_not_comparable": "its denominator counts servers whose egress was never observed, so it reports NOT MEASURED as a zero. Kept because withholding it would hide how much of the set was invisible, and never to be quoted on its own",
       "pooled_note": "read the segments; SEP-414 is a 2026-07-28 change, so a server answering an earlier revision predates the convention",
       "servers_propagating": 0,
-      "servers_total": 10
+      "servers_propagating_of_observed": 0,
+      "servers_total": 10,
+      "servers_with_observed_egress": 2
     },
     {
       "body_matched_bytes": 0,
@@ -156,9 +172,16 @@
       },
       "command": "make n5",
       "concurrent_driving_note": "flows were seen with up to 10 calls in flight, so the grades below are a measurement rather than a restatement of the driving regime. There is NO ground truth in this pass: nothing here says a strong attribution was correct. Attribution precision has a denominator only on the phase A bench, where we caused every transfer, and it was measured there (docs/PHASES.md, sensor gate). What this pass measures is how the grades are DISTRIBUTED over real traffic",
-      "content_attributable_fraction": null,
-      "content_denominator": null,
-      "content_denominator_note": "registry/client-constant-paths.json was not loaded, so the content denominator was NOT computed. It is never assumed empty: an empty list and a missing list would produce the same number and mean opposite things",
+      "content_attributable_fraction": 0.8095,
+      "content_denominator": 21,
+      "content_denominator_list": {
+        "entry_count": 3,
+        "host_level_entries": 1,
+        "list_name": "client-constant-paths",
+        "path": "registry/client-constant-paths.json",
+        "sha256": "6150f9c722c317c4ec2ab123dac35f8222404ad0172d65755e093778b5da5a79",
+        "version": "2026-09-19"
+      },
       "content_match_by_channel": {
         "body": 0,
         "both": 0,
@@ -245,7 +268,19 @@
       "command": "make n6",
       "distinct_nodes": 4,
       "name": "selfhostable_third_parties",
+      "node_set_is_truncated": "7 server(s) completed calls and produced no observed flow, so their destinations are absent from these 4 nodes. This fraction describes the third parties the capture layer could see, not the third parties that were touched. See docs/THREATS.md threat 19",
       "number": 6,
+      "observability": {
+        "command": "make n3",
+        "egress_expectation_note": "this run did not record which servers the registry expects to egress, so every server that completed a call and produced no flow is counted as unobserved. That over-counts local servers, which egress nothing by design. Re-run to get the distinction; it is not inferred here",
+        "egress_expectation_recorded": false,
+        "egress_unobserved": 7,
+        "no_egress_expected": 1,
+        "proxy_observed": 2,
+        "servers_driven_or_seen": 10,
+        "warning": "7 server(s) completed calls and produced NO observed flow. Their egress, if any, is invisible to the proxy. Run `make backstop` on this run's pcap: outbound SYNs to a destination that is not the proxy are the evidence that traffic left the machine unobserved. No figure below may treat those servers as having egressed nothing",
+        "what_this_measures": "how many servers the CAPTURE LAYER could see, which is not how many were driven. A server whose client ignores HTTP(S)_PROXY is driven, answers and egresses while leaving nothing in flows.jsonl, so counting it as a measured zero would state a fact about our instrument as a fact about the server (docs/THREATS.md threat 19)"
+      },
       "selfhostable_fraction": 0.0
     }
   ],

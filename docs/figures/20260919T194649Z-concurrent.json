@@ -171,9 +171,16 @@
       },
       "command": "make n5",
       "concurrent_driving_note": "flows were seen with up to 10 calls in flight, so the grades below are a measurement rather than a restatement of the driving regime. There is NO ground truth in this pass: nothing here says a strong attribution was correct. Attribution precision has a denominator only on the phase A bench, where we caused every transfer, and it was measured there (docs/PHASES.md, sensor gate). What this pass measures is how the grades are DISTRIBUTED over real traffic",
-      "content_attributable_fraction": null,
-      "content_denominator": null,
-      "content_denominator_note": "registry/client-constant-paths.json was not loaded, so the content denominator was NOT computed. It is never assumed empty: an empty list and a missing list would produce the same number and mean opposite things",
+      "content_attributable_fraction": 0.6579,
+      "content_denominator": 38,
+      "content_denominator_list": {
+        "entry_count": 3,
+        "host_level_entries": 1,
+        "list_name": "client-constant-paths",
+        "path": "registry/client-constant-paths.json",
+        "sha256": "6150f9c722c317c4ec2ab123dac35f8222404ad0172d65755e093778b5da5a79",
+        "version": "2026-09-19"
+      },
       "content_match_by_channel": {
         "body": 0,
         "both": 0,

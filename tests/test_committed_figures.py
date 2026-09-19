@@ -13,7 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from mcpfanout.classify import PACKAGE_INFRASTRUCTURE_PATH, ExclusionList
+from mcpfanout.classify import (CONSTANT_PATHS_PATH, PACKAGE_INFRASTRUCTURE_PATH,
+                                ConstantPathList, ExclusionList)
 
 REPO = Path(__file__).resolve().parent.parent
 FIGURES = REPO / "docs" / "figures"
@@ -151,10 +152,18 @@ def test_the_artifact_names_nothing(path):
     for suffix in exclusions.suffixes:
         assert suffix not in path.read_text(), f"{suffix} leaked into a committed figure"
 
-    # No payload digests. The run holds those; the aggregate must not. The single exemption is
-    # the exclusion list's OWN sha256, which rule 2 requires so the list that produced a figure
-    # can be identified, and which is a digest of a committed file rather than of any payload.
+    # No payload digests. The run holds those; the aggregate must not. The exemptions are the
+    # DECLARED LISTS' own sha256s, which rule 2 requires so the lists that produced a figure can
+    # be identified, and which are digests of committed files rather than of any payload. They are
+    # read from the files here rather than pinned, so a list that is legitimately revised does not
+    # fail this test while a payload digest still does.
+    constant_paths = ConstantPathList.load(REPO / CONSTANT_PATHS_PATH)
     allowed = {exclusions.sha256}
+    if constant_paths is not None:
+        # The one that defines number 5's content denominator, and the one quoted inside the
+        # pre-registered block: publishing it is how a reader checks that the denominator of a
+        # frozen verdict is the list that was frozen.
+        allowed.add(constant_paths.sha256)
     for candidate in re.findall(r"\b[0-9a-f]{32,}\b", numbers_text):
         assert candidate in allowed, f"an unexplained digest is published: {candidate[:12]}..."
 
