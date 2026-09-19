@@ -5,7 +5,8 @@
 # We set RECIPEPREFIX to '>' so recipe lines do not depend on literal tabs.
 .RECIPEPREFIX = >
 .PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
-        bench-verify disclosure fp fp-calibration ksweep positive rarity inventory clean
+        bench-verify disclosure control control-publish fp fp-calibration ksweep positive rarity \
+        inventory clean
 
 RUN ?= latest
 
@@ -106,6 +107,28 @@ rarity:
 # Operator-only output: it names servers and hosts, so it stays in the run directory.
 disclosure:
 > python3 -m mcpfanout.cli disclosure-check --run $(RUN)
+
+# The browser control for gate rule 7: launch a bare headless browser through the same proxy, with
+# NO MCP server in the process tree, and compare where it goes against where the server went. This
+# is what turns "that destination is the embedded browser's" from a plausible reading of a hostname
+# into a measured attribution of cause. Needs Docker + network.
+#
+# A NON-ZERO EXIT IS A RESULT: it means the bare browser did NOT reach a host the server was
+# flagged for, so the browser does not explain the finding. Do not wrap it in `|| true`.
+CONTROL_SERVER ?= puppeteer
+AGAINST ?= latest-sequential
+CONTROL_RUN ?= latest-control
+control:
+> python3 -m mcpfanout.cli run --control --against $(AGAINST) --out runs/
+
+# Commit the comparison as a figure that NAMES the instance. Separate from `make control` on
+# purpose: gate rule 7 allows naming a server only after the finding has been disclosed, so the
+# authorisation record is a required argument and the command refuses without it.
+#   make control-publish AUTH="Marcos Mata, 2026-09-19, docs/DISCLOSURE-LOG.md#2026-09-19-puppeteer"
+control-publish:
+> @test -n "$(AUTH)" || { echo "AUTH= is required: gate rule 7 (see docs/DISCLOSURE-LOG.md)"; exit 2; }
+> python3 -m mcpfanout.cli control-compare --run $(CONTROL_RUN) --against $(AGAINST) \
+>   --server $(CONTROL_SERVER) --publish docs/figures/control --authorisation "$(AUTH)"
 
 # Write the latest run's normalized aggregate into docs/figures/ as a committed artifact.
 # This is what makes a figure quoted in a document re-derivable without committing the run
