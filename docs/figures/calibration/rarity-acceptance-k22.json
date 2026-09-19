@@ -1,0 +1,167 @@
+{
+  "background": {
+    "distinct_kgrams": 63859,
+    "documents": 32,
+    "k": 22,
+    "sources": [
+      "registry/probes/brave-search.json",
+      "registry/probes/brave-search.without-credentials.json",
+      "registry/probes/everything.json",
+      "registry/probes/fetch.json",
+      "registry/probes/filesystem.json",
+      "registry/probes/git.json",
+      "registry/probes/github.json",
+      "registry/probes/memory.json",
+      "registry/probes/puppeteer.json",
+      "registry/probes/sequential-thinking.json",
+      "registry/probes/time.json",
+      "corpus/calls/brave-search.json",
+      "corpus/calls/everything.json",
+      "corpus/calls/fetch.json",
+      "corpus/calls/filesystem.json",
+      "corpus/calls/git.json",
+      "corpus/calls/github.json",
+      "corpus/calls/memory.json",
+      "corpus/calls/puppeteer.json",
+      "corpus/calls/sequential-thinking.json",
+      "corpus/calls/time.json",
+      "corpus/concurrent/brave-search.json",
+      "corpus/concurrent/everything.json",
+      "corpus/concurrent/fetch.json",
+      "corpus/concurrent/filesystem.json",
+      "corpus/concurrent/git.json",
+      "corpus/concurrent/github.json",
+      "corpus/concurrent/memory.json",
+      "corpus/concurrent/puppeteer.json",
+      "corpus/concurrent/sequential-thinking.json",
+      "corpus/concurrent/time.json",
+      "corpus/negative/calibration.json"
+    ],
+    "sources_sha256": "0c3f88c4d719ccb33f316a324152b30923d11b82819c07d0b104a8fdec1812c8"
+  },
+  "command": "make rarity",
+  "criterion": "the F1.1 rate is re-measured with weighting on and must FALL. If it does not, the weighting is reverted and why is documented; it is not kept for being more sophisticated",
+  "mechanism_probe": {
+    "calibration": {
+      "unweighted_rate": 0.2768,
+      "weighted_rate": 0.2589
+    },
+    "colliding_kgrams": {
+      "background_documents": 32,
+      "colliding_kgram_instances": 356,
+      "instances_by_document_frequency": {
+        "0": 180,
+        "1": 176
+      },
+      "matched_kgrams_per_colliding_pair": {
+        "max": 7,
+        "median": 6,
+        "min": 1,
+        "pairs": 62
+      }
+    },
+    "held_out": {
+      "unweighted_rate": 0.2946,
+      "weighted_rate": 0.2946
+    },
+    "k": 16,
+    "mass_ladder": [
+      {
+        "bench_recall": 1.0,
+        "false_positive_rate": 0.2589,
+        "false_positives": 58,
+        "min_rarity_mass": 1.0,
+        "self_match_recall": 0.5
+      },
+      {
+        "bench_recall": 1.0,
+        "false_positive_rate": 0.25,
+        "false_positives": 56,
+        "min_rarity_mass": 2.0,
+        "self_match_recall": 0.5
+      },
+      {
+        "bench_recall": 1.0,
+        "false_positive_rate": 0.25,
+        "false_positives": 56,
+        "min_rarity_mass": 3.0,
+        "self_match_recall": 0.5
+      },
+      {
+        "bench_recall": 1.0,
+        "false_positive_rate": 0.25,
+        "false_positives": 56,
+        "min_rarity_mass": 4.0,
+        "self_match_recall": 0.4688
+      },
+      {
+        "bench_recall": 1.0,
+        "false_positive_rate": 0.0536,
+        "false_positives": 12,
+        "min_rarity_mass": 5.0,
+        "self_match_recall": 0.4062
+      },
+      {
+        "bench_recall": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positives": 0,
+        "min_rarity_mass": 6.0,
+        "self_match_recall": 0.375
+      },
+      {
+        "bench_recall": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positives": 0,
+        "min_rarity_mass": 8.0,
+        "self_match_recall": 0.2812
+      },
+      {
+        "bench_recall": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positives": 0,
+        "min_rarity_mass": 10.0,
+        "self_match_recall": 0.25
+      },
+      {
+        "bench_recall": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positives": 0,
+        "min_rarity_mass": 12.0,
+        "self_match_recall": 0.25
+      },
+      {
+        "bench_recall": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positives": 0,
+        "min_rarity_mass": 16.0,
+        "self_match_recall": 0.25
+      }
+    ],
+    "true_match_kgrams": {
+      "max": 30,
+      "median": 30,
+      "min": 25,
+      "transfers": 60
+    },
+    "why": "at the shipped k the unweighted rate is already zero on this corpus, so no mechanism can lower it. This k is where false positives still exist, which is the only place the mechanism itself can be observed working or failing"
+  },
+  "name": "rarity_weighting_acceptance",
+  "published_comparison": {
+    "fell": false,
+    "half": "held_out",
+    "k": 22,
+    "min_rarity_mass": 1.0,
+    "pairs": 224,
+    "unweighted_false_positives": 0,
+    "unweighted_rate": 0.0,
+    "weighted_false_positives": 0,
+    "weighted_rate": 0.0
+  },
+  "verdict": "reverted",
+  "what_a_working_threshold_would_be_doing": {
+    "cheapest_mass_that_clears_all_false_positives": 6.0,
+    "note": "compare the last two. If the k the sweep chose reaches the same zero with HIGHER recall on realistic material, then the threshold is buying nothing that the k choice has not already bought, and what it is thresholding is match length rather than rarity",
+    "self_match_recall_at_the_shipped_k_without_weighting": 0.5,
+    "self_match_recall_there": 0.375
+  }
+}

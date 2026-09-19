@@ -190,17 +190,91 @@ which does not error, it just silently stops matching, and a capture would have 
 published figure describes. `run.sh` now reads the constant, the addon defaults to it, and a test
 pins the registry to it.
 
-## F1.3: rarity weighting
+## F1.3: rarity weighting. Measured, and REVERTED
 
-Pending. Sixteen bytes of `{"query": "` appear in every call of an API and are worth nothing;
-sixteen bytes of a token are worth everything. Today they weigh the same, which is what the
-`json_post` row above measures. Weighting each k-gram by its frequency in a background corpus and
-requiring a minimum rarity mass before affirming a match is frequency counting, not semantics, so
-it does not touch negative 3 (`docs/DOCTRINE.md`): counting how often a byte sequence occurs is a
-fact about occurrence.
+Command: `make rarity` (exit 0 if the rate fell, 1 if it did not, so the verdict is the exit code
+and not a reading of this prose). Artifact:
+`docs/figures/calibration/rarity-acceptance-k22.json`. Implementation: `src/mcpfanout/rarity.py`,
+which is **not in the matching path** and is not imported by `match.py` or by the capture addon.
 
-The acceptance criterion is a number, not a story: the F1.1 rate is re-measured with weighting on
-and **must fall**. If it does not, the weighting is reverted and why it failed is written here.
+The idea is sound and was worth measuring. Twenty-two bytes of `{"locale": "en-US", ` appear in
+every call of an API and are worth nothing; twenty-two bytes of a token are worth everything. Today
+they weigh the same, which is exactly what the `json_post` row of the F1.1 table measures. Weighting
+each k-gram by its document frequency in a background corpus and requiring a minimum **rarity mass**
+before affirming a match is frequency counting, not semantics, so it does not touch negative 3
+(`docs/DOCTRINE.md`): how many documents a byte sequence occurs in is a fact about occurrence.
+
+**The acceptance criterion was a number, and the number says no.** On the reserved half at the
+shipped k = 22: unweighted 0 of 224,
+weighted 0 of 224. It did not fall, so **the weighting is
+reverted**: the matcher ships without it.
+
+### Why it did not fall, in three measurements rather than an excuse
+
+**1. At the shipped k there was nothing left to remove.** F1.2 took the false-positive rate on this
+corpus to zero. No mechanism lowers zero, and reporting only that would let "it did not help" hide
+"there was nothing to help with". So the mechanism was probed at k = 16, where false
+positives still exist: reserved half 0.2946 unweighted against
+0.2946 weighted, calibration half
+0.2768 against 0.2589. Four of
+sixty-two removed on the half it was allowed to see, none at all on the half that counts.
+
+**2. The background corpus cannot see that an API envelope is boilerplate.** Of the
+356 colliding k-gram instances at the probe k, **180
+appear in zero background documents and 176 appear in
+exactly one**, out of 32. Nothing collides on a k-gram this background
+considers common, because with thirty-two found documents almost nothing IS common. Every colliding
+k-gram therefore carries a weight of 1.0 or 0.5, and a threshold of one unseen k-gram is met by any
+of them. That is a property of the background, not a refutation of the technique.
+
+**3. A threshold that does work is thresholding length, not rarity.** False positives match between
+1 and 7
+k-grams (median 6); the phase A true matches match
+25 to 30. With every weight at 1.0 or
+0.5, requiring more mass is requiring more matched k-grams, which is requiring a longer shared run.
+It works, and it costs more than the k choice does:
+
+| minimum rarity mass | false positives (k = 16) | self-match recall | bench recall |
+| --- | --- | --- | --- |
+| 1.0 | 0.2589 | 0.5 | 1.0 |
+| 2.0 | 0.25 | 0.5 | 1.0 |
+| 4.0 | 0.25 | 0.4688 | 1.0 |
+| 5.0 | 0.0536 | 0.4062 | 1.0 |
+| 6.0 | 0.0 | 0.375 | 1.0 |
+| 8.0 | 0.0 | 0.2812 | 1.0 |
+| 16.0 | 0.0 | 0.25 | 1.0 |
+
+The cheapest threshold that clears every false positive is
+6.0, and self-match recall on realistic material
+there is 0.375. **The k the sweep chose reaches the same zero with
+0.5.** Same false positives, better recall,
+one parameter instead of two. The k choice strictly dominates, which is the whole argument for
+reverting rather than a preference about complexity.
+
+### What would make it necessary again
+
+The condition is specific and worth writing down, because this result does not generalise to every
+API. Weighting becomes the only available answer when a collision is **both** long and common: a
+shared envelope longer than k, so a length threshold cannot separate it from a true match, and
+frequent enough in a real background corpus that its weight collapses. A body that echoes a
+forty-byte constant preamble in front of every payload is exactly that shape, and nothing in this
+corpus has it.
+
+Two honest limits on this verdict:
+
+- **The technique is not refuted, our test of it is bounded.** A background of thirty-two found
+  documents is a coarse proxy for "common in the world". A deployment building this index from its
+  own traffic, where an envelope appears in ten thousand requests, would be testing something this
+  measurement cannot reach.
+- **The background is not independent of its author.** The same person wrote the negative corpus and
+  chose the background sources (`corpus/background/README.md` says what they are and why the
+  calibration half is among them while the reserved half may never be). A background built from real
+  traffic is the genuinely independent test.
+
+The mechanism, the measurement and the verdict all stay in the repository: the code in
+`rarity.py`, the figure under `docs/figures/calibration/`, and this section. What does not stay is
+the weighting switched on. A test fails if `match.py` or the capture addon ever import it while this
+verdict reads `reverted`.
 
 ## Threats to this measurement
 

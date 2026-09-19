@@ -151,6 +151,18 @@ def build_reference_index(references: dict[str, bytes], redactor: Redactor) -> d
     return {ref_id: redactor.kgram_digest_set(data) for ref_id, data in references.items()}
 
 
+def argument_kgrams_present(data: bytes, args_digests: frozenset[str],
+                            redactor: Redactor) -> frozenset[str]:
+    """WHICH of the call's argument k-grams appear in these bytes, not merely whether any does.
+
+    The shipped matcher needs only the boolean, and used to compute it inline. It is exposed as the
+    set because the rarity experiment (mcpfanout.rarity, F1.3) has to weigh exactly the k-grams that
+    matched, and a second implementation of "which ones matched" would let the published
+    false-positive figure describe a different matcher from the one that ships.
+    """
+    return args_digests & frozenset(redactor.kgram_digests(data))
+
+
 def _match_channel(
     data: bytes,
     context_index: dict[str, frozenset[str]],
@@ -174,6 +186,7 @@ def _match_channel(
     # direction: the flow grades TEMPORAL_ONLY rather than being falsely credited with a
     # content match it did not have.
     return matched, refs, bool(args_digests & present)
+
 
 
 def match_request(
