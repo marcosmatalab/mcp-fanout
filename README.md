@@ -5,11 +5,15 @@ Protocol) servers: **when an agent makes a single tool call, how many third part
 that call actually touch, and can each of those outbound connections be tied causally back
 to the call that caused it?**
 
-This repository is a **measurement**, not a product. It exists to produce six numbers.
-Those numbers decide whether a runtime tracing product is worth building and, if so, which
-of two very different architectures it should have. The rationale for measuring before
-building is in [`docs/METHOD.md`](docs/METHOD.md): you cannot design the causal-union layer
-without knowing the fan-out, and choosing blind means building the wrong one.
+This repository is a **measurement**, not a product. It was built to produce six numbers that
+would decide whether a runtime tracing product is worth building and, if so, which of two
+architectures it should have. **The numbers were produced and the stop criteria fired**: see
+[What it found](#what-it-found). The measuring apparatus did not meet the threshold sealed before
+it was built, so the product verdict was left unfrozen on purpose rather than answered by an
+instrument that had just failed. The rationale for measuring before building is in
+[`docs/METHOD.md`](docs/METHOD.md): you cannot design the causal-union layer without knowing the
+fan-out, and choosing blind means building the wrong one. That rationale held, and the thing it
+protected us from turned out to be our own first two figures.
 
 ## What it found
 
@@ -268,7 +272,7 @@ container and starts no server against real credentials. The stop criteria in
 
 ## Status
 
-Tagged **`v1.0.0`** at the preprint. The honest state of each part:
+**`v1.0.0` on release, 19 October 2026.** Not tagged yet: the disclosure window runs to that date and minting a DOI before it would break a commitment we made in writing ([`docs/paper/RELEASE-CHECKLIST.md`](docs/paper/RELEASE-CHECKLIST.md)). The honest state of each part:
 
 | Part | State |
 | --- | --- |
@@ -278,7 +282,9 @@ Tagged **`v1.0.0`** at the preprint. The honest state of each part:
 | Server registry (10 servers), pinned and probed | Every server's tool schemas measured and committed under `registry/probes/` |
 | Per-server call corpora, sequential and concurrent | Both aligned against the real schemas and gated by tests |
 | Phase A bench (the instrument) | Built, run, and passing its pre-registered sensor gate |
-| Matcher calibration on structured language (`make fp`, `make ksweep`, `make rarity`) | Complete. False-positive rate measured over 224 held-out pairs, k chosen by the curve rather than by judgement (0 of 224 at k = 22 against 66 of 224 at k = 16), and rarity weighting measured and reverted because it did not lower the rate |
+| F1: k-gram calibration on structured language (`make fp`, `make ksweep`, `make rarity`) | Complete, and it is NOT where the story ends. False-positive rate measured over 224 pairs, k chosen by the curve rather than by judgement (0 of 224 at k = 22 against 66 of 224 at k = 16), rarity weighting measured and reverted because it did not lower the rate |
+| F2: the structural matcher that replaced the k-gram for number 5 (`make f2`) | Complete and **failed its own sealed threshold**. The k-gram missed 0.4615 of the calls that had literally caused the requests in front of it, because a call's arguments are structure and not prose. Structural containment over keyed token digests replaced it for number 5; number 4 kept the k-gram and its figures did not move by a byte. Pre-registered at 0.80, measured **0.6579** ([`docs/PREREG-F2.md`](docs/PREREG-F2.md)) |
+| The negative corpora that gate both | Two halves retired after measurement and replaced, because a reserve loaded once is spent. A family built specifically to attack the structural matcher, since the original four were authored against the k-gram and cannot falsify it |
 | eBPF SSL uprobe capture (product-grade, catches pinned TLS) | Out of scope for the measurement, documented as the next layer |
 
 ## Citing this
