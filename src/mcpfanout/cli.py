@@ -158,6 +158,92 @@ def _cmd_calibrate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_prep_positive(args: argparse.Namespace) -> int:
+    """Distil the phase A positive control out of a bench run's own ledger. Run once per bench change.
+
+    Why the fixture is committed rather than read from the run. Gate rule 4 refuses to track runs,
+    so a curve computed straight off runs/<id> would be re-derivable only by someone with Docker,
+    a network, and the patience to reproduce a capture. The material here is the BENCH's own
+    synthetic payloads, keyed from a published constant, with no third-party content in it at all,
+    so committing it costs nothing the doctrine protects and makes `make ksweep` reproducible
+    anywhere, including CI. The alternative, re-running the bench once per value of k, is 57 Docker
+    runs to answer a question the sender already knows the answer to.
+    """
+    import base64
+    run_dir = _resolve_run(args.run)
+    truth_path = Path(args.truth) if args.truth else run_dir / "bench_truth.jsonl"
+    if not truth_path.is_file():
+        sys.exit(f"error: {truth_path} not found; --run must be a bench run")
+
+    rows = [json.loads(line) for line in truth_path.read_text().splitlines() if line.strip()]
+    missing = [r for r in rows if "request_body_b64" not in r]
+    if missing:
+        sys.exit(f"error: {len(missing)} ledger rows carry no request bytes. This run predates "
+                 f"bench/server.py recording them; re-run `make bench`.")
+
+    transfers = []
+    for i, r in enumerate(rows):
+        if r.get("error"):
+            continue  # a transfer that failed to send carried nothing; it is not a positive
+        transfers.append({
+            "transfer_id": f"t{i:03d}",
+            "channel": r["channel"],
+            "arguments": r.get("call_arguments") or {},
+            "target": r.get("request_target", r.get("path", "")),
+            "body_b64": r.get("request_body_b64", ""),
+            # The bench's own design decides this, not the matcher, and there are THREE cases and
+            # not two. A transfer is detectable only if it went through a channel the matcher reads
+            # AND carried something to find. Collapsing the other two would put 17 transfers that
+            # carried nothing at all in the same bucket as the 8 that carried material through a
+            # channel byte-literal matching cannot read, and only the second bucket is what
+            # negative 3 costs.
+            "detectable_by_design": r["channel"] in ("target", "body") and bool(r.get("fragment")),
+            "not_detectable_reason": (
+                "" if (r["channel"] in ("target", "body") and r.get("fragment"))
+                else "channel_not_read" if r["channel"] == "header"
+                else "re_encoded" if r["channel"].startswith("body:")
+                else "nothing_carried"),
+        })
+    payload = {
+        "_what_this_is": ("Phase A positive control: every transfer the bench actually made, with "
+                          "the bytes it sent and the arguments of the call that caused it. Distilled "
+                          "from the bench's OWN ledger, which it writes from inside its handler. "
+                          "Used by the k sweep as the truth pattern (docs/CALIBRATION.md)."),
+        "_why_committed": ("the bench's payloads are synthetic and keyed from a published constant, "
+                           "so this file carries no third-party content and makes the sweep "
+                           "reproducible without Docker. It is not a run: gate rule 4 still holds"),
+        "source_run": run_dir.name,
+        "transfers": transfers,
+    }
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    detectable = sum(1 for t in transfers if t["detectable_by_design"])
+    print(f"wrote {out}: {len(transfers)} transfers, {detectable} detectable by design")
+    return 0
+
+
+def _cmd_ksweep(args: argparse.Namespace) -> int:
+    """F1.2: the false-positive and recall curves against k, and the k the rule picks.
+
+    Runs on the calibration half only, and says so in two places: the loader is asked for that half
+    by name, and sweep_k refuses any other. Choosing a parameter is calibration by definition.
+    """
+    from .calibrate import (CALIBRATION, PURPOSE_CALIBRATION, load_negative, load_positive,
+                            sweep_k)
+    corpus = load_negative(CALIBRATION, purpose=PURPOSE_CALIBRATION)
+    transfers = load_positive(args.positive)
+    out = sweep_k(corpus, transfers, k_min=args.k_min, k_max=args.k_max)
+    print(json.dumps(out, indent=2, sort_keys=True))
+    if args.out:
+        dest = Path(args.out)
+        dest.mkdir(parents=True, exist_ok=True)
+        path = dest / "ksweep-calibration.json"
+        path.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"wrote {path}", file=sys.stderr)
+    return 0
+
+
 def _cmd_disclosure_check(args: argparse.Namespace) -> int:
     """Gate rule 7 as a command. Exit 0 if clear, 1 if anything needs reviewing or is unknown.
 
@@ -344,6 +430,20 @@ def build_parser() -> argparse.ArgumentParser:
     cal.add_argument("--out", default=None,
                      help="directory to write the figure into, e.g. docs/figures/calibration")
     cal.set_defaults(func=_cmd_calibrate)
+
+    pp = sub.add_parser("prep-positive",
+                        help="distil the phase A positive control from a bench run's ledger")
+    pp.add_argument("--run", default="latest", help="'latest' or a path to a BENCH runs/<id>")
+    pp.add_argument("--truth", default=None, help="the ledger (default: <run>/bench_truth.jsonl)")
+    pp.add_argument("--out", default="corpus/positive/bench-transfers.json")
+    pp.set_defaults(func=_cmd_prep_positive)
+
+    ks = sub.add_parser("ksweep", help="F1.2: false positives and recall against k, and the choice")
+    ks.add_argument("--positive", default="corpus/positive/bench-transfers.json")
+    ks.add_argument("--k-min", type=int, default=8)
+    ks.add_argument("--k-max", type=int, default=64)
+    ks.add_argument("--out", default=None, help="directory for the committed curve")
+    ks.set_defaults(func=_cmd_ksweep)
 
     dc = sub.add_parser("disclosure-check",
                         help="gate rule 7: destinations of a run that nobody declared")

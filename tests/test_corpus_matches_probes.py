@@ -27,7 +27,7 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-CANARY = "CANARY_QRY_ab12cd34ef56"
+CANARY = "CANARY_QRY_ab12cd34ef56789a0b1c2d"
 
 # Keys in a corpus entry that are documentation, not protocol. drive_all.load_corpus reads only
 # "tool" and "arguments", so "why" rides along ignored; the test requires it, because a corpus
@@ -198,6 +198,32 @@ def test_launch_command_is_pinned_to_an_exact_version(server):
     pkg = [a for a in server["launch"] if not a.startswith("-")][1:]
     assert pkg, f"{server['id']}: no package in launch command"
     assert "@" in pkg[0].lstrip("@"), f"{server['id']}: {pkg[0]} is not pinned to a version"
+
+
+def test_every_planted_canary_is_comfortably_longer_than_k():
+    """A bait token shorter than k + 8 is a false negative waiting for a reason that is ours.
+
+    The canary exists to be findable on the wire. At k = 16 the old token was 23 bytes, which gave
+    it eight k-grams; when the sweep moved k to 22 (docs/CALIBRATION.md, F1.2) the same token had
+    two, so a single percent-encoded character anywhere in it would have removed the only evidence
+    the corpus plants, and the run would have reported "nothing of ours travelled". The margin is
+    eight bytes so that detection never hinges on one k-gram surviving.
+
+    Checked over every CANARY_ token in corpus/, not only the one the corpus arguments use: the
+    context bait files carry their own, and one of those was 24 bytes for the same reason.
+    """
+    import re
+    from mcpfanout.shingle import DEFAULT_K
+
+    floor = DEFAULT_K + 8
+    short = []
+    for path in sorted((ROOT / "corpus").rglob("*")):
+        if not path.is_file() or path.suffix not in (".json", ".md", ".py", ".env", ""):
+            continue
+        for token in set(re.findall(r"CANARY_[A-Za-z0-9_.-]+", path.read_text(errors="replace"))):
+            if len(token) < floor:
+                short.append((str(path.relative_to(ROOT)), token, len(token)))
+    assert not short, f"canaries shorter than k + 8 = {floor}: {short}"
 
 
 def test_probe_files_are_machine_independent():

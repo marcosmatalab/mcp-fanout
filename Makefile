@@ -5,7 +5,7 @@
 # We set RECIPEPREFIX to '>' so recipe lines do not depend on literal tabs.
 .RECIPEPREFIX = >
 .PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
-        bench-verify disclosure fp fp-calibration clean
+        bench-verify disclosure fp fp-calibration ksweep positive clean
 
 RUN ?= latest
 
@@ -74,6 +74,17 @@ fp:
 # and the loader refuses it (docs/CALIBRATION.md).
 fp-calibration:
 > python3 -m mcpfanout.cli calibrate --half calibration --out docs/figures/calibration
+
+# F1.2, the k sweep: false positives and recall against k over 8..64, and the k the written rule
+# picks. Calibration half only, and sweep_k refuses any other. Needs no Docker: the positive control
+# is the bench's own transfers, distilled once into corpus/positive/ by `make positive`.
+ksweep:
+> python3 -m mcpfanout.cli ksweep --out docs/figures/calibration
+
+# Re-distil the phase A positive control from a bench run. Run this after `make bench` if the bench
+# changes what it sends; the k sweep reads the committed fixture, not the run.
+positive:
+> python3 -m mcpfanout.cli prep-positive --run $(RUN)
 
 # Gate rule 7: which of a run's destinations nobody declared. Exits non-zero if any server needs
 # reviewing, or if the declaration file is missing (unevaluated is not the same as satisfied).

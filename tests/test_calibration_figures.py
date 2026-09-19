@@ -134,3 +134,73 @@ def test_no_calibration_figure_leaks_corpus_content():
                 for call in fam["calls"]:
                     for item in call["information"]:
                         assert item not in text, f"{path.name} quotes corpus content: {item!r}"
+
+
+# --- F1.2: the curve, the choice, and the prose that quotes both.
+
+def _curve() -> dict:
+    return json.loads((CALIB_FIGURES / "ksweep-calibration.json").read_text())
+
+
+def test_the_committed_curve_covers_the_whole_swept_range_every_integer():
+    """A coarse step can step straight over a knee, and the knee is the result."""
+    from mcpfanout.calibrate import K_MAX, K_MIN
+    curve = _curve()
+    ks = [r["k"] for r in curve["curve"]]
+    assert ks == list(range(K_MIN, K_MAX + 1)), (ks[0], ks[-1], len(ks))
+    assert curve["half"] == "calibration"
+    assert curve["command"] == "make ksweep"
+
+
+def test_every_row_of_the_curve_carries_all_three_quantities():
+    """Any one of them alone picks a different k, so a row missing one is unusable."""
+    for row in _curve()["curve"]:
+        assert set(row["false_positives"]) >= {"rate", "count", "pairs", "wilson_95"}
+        assert "recall" in row["self_match"]
+        assert {"recall", "known_negatives_detected"} <= set(row["bench"])
+
+
+def test_the_curve_never_detects_a_known_negative_at_any_k():
+    """A k that "detects" a header or a gzipped body is counting a collision as a success."""
+    offenders = [(r["k"], r["bench"]["known_negatives_detected_by_reason"])
+                 for r in _curve()["curve"] if r["bench"]["known_negatives_detected"]]
+    assert not offenders, offenders
+
+
+def test_the_document_quotes_the_curve_rows_verbatim():
+    """The F1.2 table is rebuilt from the artifact, the same way the F1.1 figures are."""
+    rows = {r["k"]: r for r in _curve()["curve"]}
+    text = " ".join(DOC.read_text().split())
+    quoted = re.findall(r"\| (\d+) \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \|", text)
+    assert len(quoted) >= 8, f"the k table has {len(quoted)} rows; the document lost its curve"
+    for k, fp, bench, self_match in quoted:
+        row = rows[int(k)]
+        assert float(fp) == row["false_positives"]["rate"], (k, fp)
+        assert float(bench) == row["bench"]["recall"], (k, bench)
+        assert float(self_match) == row["self_match"]["recall"], (k, self_match)
+
+
+def test_the_document_quotes_the_holdout_confirmation_at_the_chosen_k():
+    """The point of reserving a half is that the choice is confirmed somewhere it was not tuned."""
+    from mcpfanout.shingle import DEFAULT_K
+    chosen = _curve()["choice"]["chosen_k"]
+    assert chosen == DEFAULT_K
+    d = json.loads((CALIB_FIGURES / f"fp-held-out-k{chosen}-unweighted.json").read_text())
+    text = " ".join(DOC.read_text().split())
+    assert (f"**{d['false_positives']} false positives in {d['pairs']} pairs, a rate of "
+            f"{d['rate']}, Wilson 95% [{d['wilson_95'][0]}, {d['wilson_95'][1]}]**") in text
+    assert f"It picks k = {chosen}.**" in text
+
+
+def test_the_document_prices_the_cost_of_the_larger_k():
+    """A sweep that reports only what it gained is an argument, not a measurement."""
+    # Whitespace collapsed: the prose is hard-wrapped, so a claim can be split across a line break
+    # without changing. Matching raw text would fail on reflowing, which is failing for the wrong
+    # reason (the same fix threat 10's test needed).
+    text = " ".join(DOC.read_text().split())
+    section = text.split("## F1.2")[1].split("## F1.3")[0]
+    assert "What it cost" in section
+    assert "false negative" in section
+    # And the claim that the bench column must be read last, because its cliff is an artefact of
+    # the bench's own fragment length rather than evidence about real material.
+    assert "by design" in section or "BY DESIGN" in section

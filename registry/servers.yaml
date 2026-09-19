@@ -46,7 +46,11 @@
 # nicer number. The ladder driven is 2, 5 and 10, the same levels as the phase A bench, limited by
 # this cap and by the length of the concurrent corpus.
 
-k: 16
+# k is the matcher's k-gram length and it is NOT a preference: it was chosen by the sweep in
+# docs/CALIBRATION.md (F1.2) and must equal src/mcpfanout/shingle.DEFAULT_K, which a test enforces.
+# Changing it here alone would give a capture a different matcher from the one the calibration
+# figures describe.
+k: 22
 w: 8
 
 servers:

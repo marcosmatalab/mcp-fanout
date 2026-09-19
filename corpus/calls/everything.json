@@ -1,5 +1,5 @@
 [
-  {"tool": "echo", "arguments": {"message": "probe CANARY_QRY_ab12cd34ef56 end"},
+  {"tool": "echo", "arguments": {"message": "probe CANARY_QRY_ab12cd34ef56789a0b1c2d end"},
    "why": "Local control. The canary is here on purpose even though this server is not expected to egress: if it ever appears on the wire, that IS the finding (expects_egress: false)."},
   {"tool": "get-sum", "arguments": {"a": 40, "b": 2},
    "why": "Both required args, both numbers. Was 'add' in the guessed corpus; no such tool exists."},

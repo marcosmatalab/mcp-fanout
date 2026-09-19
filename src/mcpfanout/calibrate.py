@@ -225,3 +225,201 @@ def false_positive_rate(corpus: NegativeCorpus, redactor: Redactor) -> dict:
                            "representative the corpus is (docs/CALIBRATION.md)"),
         "command": "make fp" if corpus.half == HELD_OUT else "make fp-calibration",
     }
+
+
+# =================================================================================================
+# F1.2: the k sweep.
+#
+# k = 16 was chosen by judgement. This section replaces the judgement with a curve, over three
+# quantities that have to be read together, because each one alone picks a different k:
+#
+#   FALSE POSITIVES, on the calibration half. Falls as k grows: a longer run is harder to share by
+#   accident. Alone it would choose the largest k available.
+#
+#   BENCH DETECTION RECALL, on the phase A transfers the bench designed to be detectable. This is
+#   the truth pattern F1.2 was told to protect. It holds until k passes the length of the bench's
+#   fragments and then collapses. Alone it would choose the smallest k available.
+#
+#   SELF-MATCH RECALL, on the negative corpus itself: can the matcher still find a call's own
+#   arguments in that call's OWN request? It is the same question as bench recall asked of realistic
+#   material instead of keyed digests, and it is here because the bench's fragments are forty bytes
+#   BY DESIGN. "Recall does not sink until k > 40" is a fact about the bench, not evidence that a
+#   large k is safe: a real fragment shorter than k is invisible at that k, and this curve is the
+#   only place that cost shows up.
+#
+# The choice rule is written before the numbers (choose_k) so the constant is the output of a rule
+# rather than a preference: among the k values that keep bench recall at its maximum, take those
+# with the lowest false-positive rate, and break the tie toward the SMALLEST k, because every byte
+# of k is a false negative on some real fragment.
+# =================================================================================================
+
+# The sweep range F1.2 was given. Every integer, not a coarse step: the interesting behaviour is a
+# knee, and a step of four can step straight over it.
+K_MIN, K_MAX = 8, 64
+
+POSITIVE_PATH = "corpus/positive/bench-transfers.json"
+
+# Channels the matcher reads. A transfer in any other channel is a known negative by design
+# (negative 3): a header or a re-encoded body carries no literal run to find.
+READABLE_CHANNELS = ("target", "body")
+
+
+@dataclass(frozen=True)
+class PositiveTransfer:
+    """One transfer the phase A bench actually made, with the bytes it sent."""
+    transfer_id: str
+    channel: str
+    arguments: dict
+    target: bytes
+    body: bytes
+    detectable_by_design: bool
+    not_detectable_reason: str
+
+
+def load_positive(path: str | Path = POSITIVE_PATH, root: str | Path = ".") -> list[PositiveTransfer]:
+    """Load the phase A positive control: what the bench sent, distilled from its own ledger."""
+    data = json.loads((Path(root) / path).read_text(encoding="utf-8"))
+    import base64
+    return [PositiveTransfer(
+        transfer_id=t["transfer_id"], channel=t["channel"], arguments=t["arguments"],
+        target=t["target"].encode(), body=base64.b64decode(t["body_b64"]),
+        detectable_by_design=t["detectable_by_design"],
+        not_detectable_reason=t.get("not_detectable_reason", ""),
+    ) for t in data["transfers"]]
+
+
+def detection_recall(transfers: list[PositiveTransfer], redactor: Redactor) -> dict:
+    """Of the transfers the bench MEANT to be detectable, how many does the matcher find at this k.
+
+    Reported with the mirror figure, how many known negatives it found, which must stay zero: a
+    sweep that improved recall by starting to "detect" a gzipped payload would be reporting a
+    collision as a success.
+    """
+    detectable = [t for t in transfers if t.detectable_by_design]
+    negatives = [t for t in transfers if not t.detectable_by_design]
+
+    def found(t: PositiveTransfer) -> bool:
+        digests = frozenset(redactor.kgram_digest_set(args_bytes(t.arguments)))
+        return _match.match_request(t.target, t.body, {}, digests, redactor).causal
+
+    detected = sum(1 for t in detectable if found(t))
+    leaked_by_reason: dict[str, int] = {}
+    for t in negatives:
+        if found(t):
+            leaked_by_reason[t.not_detectable_reason or "unclassified"] = \
+                leaked_by_reason.get(t.not_detectable_reason or "unclassified", 0) + 1
+    by_reason: dict[str, int] = {}
+    for t in negatives:
+        by_reason[t.not_detectable_reason or "unclassified"] = \
+            by_reason.get(t.not_detectable_reason or "unclassified", 0) + 1
+    return {
+        "detectable_by_design": len(detectable),
+        "detected": detected,
+        "recall": round(detected / len(detectable), 4) if detectable else 0.0,
+        # Split by WHY a transfer could not be detected. "channel_not_read" and "re_encoded" are
+        # what negative 3 costs; "nothing_carried" is a transfer with no material in it, which is a
+        # different fact and would inflate the known-negative figure if pooled with them.
+        "not_detectable": by_reason,
+        "known_negatives_detected": sum(leaked_by_reason.values()),
+        "known_negatives_detected_by_reason": leaked_by_reason,
+    }
+
+
+def self_match_recall(corpus: NegativeCorpus, redactor: Redactor) -> dict:
+    """Can the matcher find a call's own arguments in that call's own request, on realistic material.
+
+    The true-positive question asked of the same corpus the false-positive rate comes from, so the
+    two curves are over identical material and the trade-off between them is real rather than an
+    artefact of two different fixtures.
+    """
+    per_family: dict[str, dict] = {}
+    for call in corpus.calls:
+        fam = per_family.setdefault(call.family, {"calls": 0, "matched": 0})
+        fam["calls"] += 1
+        if claims_match(call, call, redactor):
+            fam["matched"] += 1
+    for fam in per_family.values():
+        fam["recall"] = round(fam["matched"] / fam["calls"], 4) if fam["calls"] else 0.0
+    total = sum(f["calls"] for f in per_family.values())
+    matched = sum(f["matched"] for f in per_family.values())
+    return {"calls": total, "matched": matched,
+            "recall": round(matched / total, 4) if total else 0.0,
+            "by_family": per_family}
+
+
+def choose_k(rows: list[dict]) -> dict:
+    """The rule, written before the numbers were looked at. Returns the chosen k and the reasoning.
+
+    1. Keep only the k values whose bench detection recall equals the best recall observed anywhere
+       in the sweep. That is "without sinking the phase A recall", read strictly: not "close to",
+       equal to the best the truth pattern allows.
+    2. Among those, keep the lowest false-positive rate.
+    3. Break the remaining tie toward the SMALLEST k. Every additional byte of k is a false negative
+       on some real fragment shorter than it, and a false negative is the safe direction only as long
+       as it is not bought for nothing.
+
+    A k that lets a known negative be "detected" is disqualified outright, whatever its rate: that
+    would be a collision counted as a success.
+    """
+    eligible = [r for r in rows if r["bench"]["known_negatives_detected"] == 0]
+    if not eligible:
+        return {"chosen_k": None, "reason": "every k detected a known negative; the sweep is broken"}
+    best_recall = max(r["bench"]["recall"] for r in eligible)
+    keep = [r for r in eligible if r["bench"]["recall"] == best_recall]
+    best_fp = min(r["false_positives"]["rate"] for r in keep)
+    keep = [r for r in keep if r["false_positives"]["rate"] == best_fp]
+    chosen = min(keep, key=lambda r: r["k"])
+    return {
+        "chosen_k": chosen["k"],
+        "rule": ("keep the k values at the best observed bench recall, take the lowest "
+                 "false-positive rate among them, break ties toward the smallest k"),
+        "bench_recall_at_choice": best_recall,
+        "false_positive_rate_at_choice": best_fp,
+        "self_match_recall_at_choice": chosen["self_match"]["recall"],
+        "candidates_at_the_same_rate": sorted(r["k"] for r in keep),
+    }
+
+
+def sweep_k(corpus: NegativeCorpus, transfers: list[PositiveTransfer],
+            k_min: int = K_MIN, k_max: int = K_MAX, salt: bytes | None = None) -> dict:
+    """The F1.2 curve. Refuses the held-out half: choosing k is calibration.
+
+    The guard is here as well as in the loader, deliberately. A caller could load the held-out half
+    for publication, legitimately, and then hand it to this function, and the loader would never
+    know. Two checks because there are two ways in.
+    """
+    if corpus.half != CALIBRATION:
+        raise HeldOutViolation(
+            f"sweep_k is calibration: it may not run on the {corpus.half} half. The reserved half "
+            f"is measured once, at the end, and never used to choose a parameter")
+
+    rows = []
+    for k in range(k_min, k_max + 1):
+        redactor = Redactor(salt=salt, k=k) if salt else Redactor(k=k)
+        fp = false_positive_rate(corpus, redactor)
+        rows.append({
+            "k": k,
+            "false_positives": {"pairs": fp["pairs"], "count": fp["false_positives"],
+                                "rate": fp["rate"], "wilson_95": fp["wilson_95"],
+                                "by_family": {f: d["rate"] for f, d in fp["by_family"].items()}},
+            "self_match": self_match_recall(corpus, redactor),
+            "bench": detection_recall(transfers, redactor),
+        })
+    return {
+        "name": "k_sweep",
+        "half": corpus.half,
+        "k_range": [k_min, k_max],
+        "curve": rows,
+        "choice": choose_k(rows),
+        "what_each_curve_is": {
+            "false_positives": ("pairs of concurrent calls sharing structure and no information "
+                                "where the matcher claims a match anyway; lower is better"),
+            "self_match": ("whether a call's own arguments are found in its own request, on the "
+                           "same realistic material; the cost of a larger k, and the curve the "
+                           "bench cannot show because its fragments are 40 bytes by design"),
+            "bench": ("phase A transfers the bench designed to be detectable; the truth pattern. "
+                      "known_negatives_detected must stay at zero, or a collision is being counted "
+                      "as a success"),
+        },
+        "command": "make ksweep",
+    }

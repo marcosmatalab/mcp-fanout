@@ -175,7 +175,7 @@ This is `v0.1`: the honest state of each part.
 | Server registry (10 servers), pinned and probed | Every server's tool schemas measured and committed under `registry/probes/` |
 | Per-server call corpora, sequential and concurrent | Both aligned against the real schemas and gated by tests |
 | Phase A bench (the instrument) | Built, run, and passing its pre-registered sensor gate |
-| Matcher calibration on structured language (`make fp`) | False-positive rate measured and published over 224 held-out pairs; the k sweep and rarity weighting are the open pieces |
+| Matcher calibration on structured language (`make fp`, `make ksweep`) | False-positive rate measured over 224 held-out pairs, and k chosen by the curve rather than by judgement: 0 of 224 at k = 22 against 66 of 224 at k = 16. Rarity weighting is the open piece |
 | eBPF SSL uprobe capture (product-grade, catches pinned TLS) | Out of scope for the measurement, documented as the next layer |
 
 ## License
