@@ -47,11 +47,12 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 332
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 369
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
-  `record`, `aggregate`, `disclosure`, `demo`, `cli` must not gain third-party dependencies. This is
+  `record`, `aggregate`, `disclosure`, `calibrate`, `demo`, `cli` must not gain third-party
+  dependencies. This is
   why every registry file the core reads is JSON and not YAML. The capture layer
   (`driver`, `capture_addon`, `harness/`) may use the `capture` extra (mitmproxy, PyYAML). This is
   deliberate: the core is what CI runs and what must be reproducible, and a transitive dependency
@@ -80,7 +81,9 @@ claim, add the command that measures it, or do not add the claim. This applies t
 Before any number from a run is reported, `docs/THE-GATE.md` must hold: reproducible, a command
 behind every number, no names in aggregate output, no content stored, container only and no real
 credentials, threats to validity written, responsible disclosure if a server egresses somewhere
-its documentation does not declare.
+its documentation does not declare, the instrument passing before the phenomenon is measured, and
+the matcher calibrated on real language before any volume is measured (rule 9,
+`docs/CALIBRATION.md`).
 
 ## Layout
 
@@ -91,6 +94,9 @@ corpus/context/  synthetic bait files with unique CANARY_ tokens (never real sec
 corpus/calls/    the SEQUENTIAL per-server corpus: one call at a time, carries the canary
 corpus/concurrent/  the CONCURRENT per-server corpus: realistic arguments that SHARE structure,
                  no canary, driven as waves of N. Read its README before editing one
+corpus/negative/ the negative control for F1: call pairs that share language structure and NO
+                 information, split into a calibration half and a RESERVED half. Never tune
+                 against the reserved half; the loader refuses it (docs/CALIBRATION.md)
 bench/           phase A: our own MCP server, our own HTTP sink, the wave plan.
                  server.py and sink.py import NOTHING from mcpfanout, by test
 registry/        servers.yaml (what to measure, with max_concurrency per server),
@@ -106,13 +112,15 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 332 tests, no Docker, no network
+make verify      # 369 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
 make run         # phase B SEQUENTIAL pass: real capture, one call in flight. Docker + network
 make run-concurrent  # phase B CONCURRENT pass: waves of N = 2, 5, 10. A separate run, separate figure
 make disclosure  # gate rule 7: destinations nobody declared. Non-zero exit means stop
+make fp          # gate rule 9: the matcher's false-positive rate on the RESERVED half (published)
+make fp-calibration  # the same rate on the calibration half: this is the one to look at while working
 make bench       # phase A bench capture
 make bench-verify    # the instrument block from a bench run
 ```
@@ -146,6 +154,25 @@ Verified on 2026-09-18 against the live registries:
   wrong spec: it removed the `initialize` handshake (SEP-2575), which this driver is built on, so
   the harness announced a protocol it does not speak. It is now `"2025-11-25"`, the wire it
   actually implements. See `docs/METHOD.md`, "The protocol revision we speak".
+
+## F1: the calibration block, which gates phase B
+
+Phase A measured false attribution over keyed digests, the most favourable input the matcher will
+ever see. Real arguments are natural language and URLs that share structure, and there was no
+measurement over those at all. Three pieces, in `docs/CALIBRATION.md`:
+
+- **F1.1, done.** The negative control and the rate: 66 false positives in 224 held-out pairs,
+  0.2946, Wilson 95% [0.2388, 0.3574], at k = 16 with no weighting. The spread across families is
+  the result, not the pooled figure: one family fails every pair (the server echoes the argument
+  envelope), two fail none.
+- **F1.2, open.** Sweep k from 8 to 64 and choose it with the curve, not with a judgement. The
+  constant cites the curve beside it in code.
+- **F1.3, open.** Weight each k-gram by its frequency in a background corpus and require a minimum
+  rarity mass. Frequency counting, not semantics, so negative 3 holds. It stays only if the F1.1
+  rate falls; if it does not, it is reverted and why is written down.
+
+**Never tune against the reserved half.** `calibrate.load_negative` raises on it, the CLI derives
+the purpose from the half, and tests fail if either guard is bypassed.
 
 ## Pending work, in order
 

@@ -4,6 +4,9 @@ Subcommands:
   aggregate  Compute the six numbers from a run (the rule-6 commands behind the Makefile).
   figures    Write a run's normalized aggregate to docs/figures/ as a committed artifact.
   bench-verify  Phase A instrument metrics (recall, precision, false provenance).
+  calibrate  F1.1: the matcher's false-positive rate on structured language that shares no
+             information. `--half held_out` is the published figure; the calibration half is for
+             tuning and the two may not be swapped (docs/CALIBRATION.md).
   disclosure-check  Gate rule 7: which of a run's destinations nobody declared. Operator-only
              output: it names servers and hosts, so it is written into the run and never published.
   selftest   Build a synthetic run and compute its numbers, with no Docker and no network.
@@ -43,6 +46,12 @@ def _resolve_run(run_arg: str, runs_root: Path = Path("runs")) -> Path:
     # Newest by modification time. Deterministic given the filesystem; ties are vanishingly rare
     # and never affect a published number (a number is tied to a specific run directory).
     return max(candidates, key=lambda d: d.stat().st_mtime)
+
+
+def _shingle_default_k() -> int:
+    """The shipped k, read from where it is defined rather than repeated as a literal here."""
+    from .shingle import DEFAULT_K
+    return DEFAULT_K
 
 
 def _load_registry() -> Registry:
@@ -119,6 +128,34 @@ def _cmd_bench_verify(args: argparse.Namespace) -> int:
     out = compute(_resolve_run(args.run), args.truth)
     print(json.dumps(out, indent=2, sort_keys=True))
     return 0 if out.get("ok") else 1
+
+
+def _cmd_calibrate(args: argparse.Namespace) -> int:
+    """F1.1: measure how often the matcher claims a coincidence that does not exist.
+
+    The purpose is derived from the half rather than taken as a flag, and that is the whole safety
+    property: the held-out half is only ever loaded for publication, the calibration half only for
+    calibration. A `--purpose` flag would put the choice in the hands of whoever is in a hurry.
+    """
+    from .calibrate import (CALIBRATION, HELD_OUT, PURPOSE_CALIBRATION, PURPOSE_PUBLICATION,
+                            false_positive_rate, load_negative)
+    from .redact import Redactor
+
+    purpose = PURPOSE_PUBLICATION if args.half == HELD_OUT else PURPOSE_CALIBRATION
+    corpus = load_negative(args.half, purpose=purpose)
+    out = false_positive_rate(corpus, Redactor(k=args.k))
+    print(json.dumps(out, indent=2, sort_keys=True))
+    if args.out:
+        # Committed alongside the prose that quotes it, so the figure cannot drift from the text.
+        # Named by half, k and weighting, because those three are what make two of these figures
+        # incomparable, and a single file would quietly overwrite the baseline with a tuned run.
+        weight = "weighted" if out.get("rarity_weighting") else "unweighted"
+        name = f"fp-{args.half.replace('_', '-')}-k{args.k}-{weight}.json"
+        dest = Path(args.out)
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / name).write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"wrote {dest / name}", file=sys.stderr)
+    return 0
 
 
 def _cmd_disclosure_check(args: argparse.Namespace) -> int:
@@ -297,6 +334,16 @@ def build_parser() -> argparse.ArgumentParser:
     bv.add_argument("--truth", default=None,
                     help="the bench's own ledger (default: <run>/bench_truth.jsonl)")
     bv.set_defaults(func=_cmd_bench_verify)
+
+    cal = sub.add_parser("calibrate",
+                         help="F1.1: the matcher's false-positive rate on structured language")
+    cal.add_argument("--half", required=True, choices=["calibration", "held_out"],
+                     help="held_out is the published figure and is measured once, at the end")
+    cal.add_argument("--k", type=int, default=_shingle_default_k(),
+                     help="k-gram length to measure at (default: the shipped constant)")
+    cal.add_argument("--out", default=None,
+                     help="directory to write the figure into, e.g. docs/figures/calibration")
+    cal.set_defaults(func=_cmd_calibrate)
 
     dc = sub.add_parser("disclosure-check",
                         help="gate rule 7: destinations of a run that nobody declared")

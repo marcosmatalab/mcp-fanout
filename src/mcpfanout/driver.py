@@ -299,12 +299,22 @@ def _write_active_calls(control_dir, payload: dict) -> None:
     _os.replace(tmp, control_dir / "active_calls.json")
 
 
+def args_bytes(arguments: dict) -> bytes:
+    """The exact bytes a call's arguments are matched as. ONE definition, on purpose.
+
+    Sorted keys so two runs over the same call produce the same digests (gate rule 1). Exposed
+    because the calibration measurement (mcpfanout.calibrate) has to ask the matcher the same
+    question the capture addon asks, and two places serialising arguments their own way is how a
+    published false-positive rate comes to describe a matcher nobody ships.
+    """
+    return json.dumps(arguments, sort_keys=True).encode()
+
+
 def args_digests_for(spec: CallSpec, redactor) -> list[str]:
     """The sorted digest set of one call's arguments, or empty when it carries none."""
     if not spec.arguments:
         return []
-    args_bytes = json.dumps(spec.arguments, sort_keys=True).encode()
-    return sorted(redactor.kgram_digest_set(args_bytes))
+    return sorted(redactor.kgram_digest_set(args_bytes(spec.arguments)))
 
 
 def publish_active_calls(control_dir, run_id: str, server_id: str,
