@@ -97,4 +97,9 @@ for anyone to fix anything. The reason for the departure: the write-up names the
 full, and giving maintainers a date in advance is better than letting them find out from the
 paper. It does not make this a vulnerability process and nothing is embargoed.
 
-**Not yet answered.** Responses are recorded in the draft file as they arrive.
+**Not yet answered, as of 2026-09-19.** Responses are recorded in the draft file as they
+arrive. If the publication date arrives with no reply, that is recorded here as
+`no response as of the publication date` and publication proceeds: the window was a courtesy
+notice of our own timing and never a condition either maintainer accepted or owed us. The absence
+of a reply is also data, and a log that only records answers would quietly overstate how often
+these reports are read.

@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+title: "What Your Proxy Cannot See: Measuring Tool-Call Provenance for Autonomous Agents"
+message: >-
+  If you use this work, cite the archived release rather than the repository's default branch.
+  The argument depends on the sealed pre-registration block and on the signed history, and only a
+  tagged release fixes both.
+type: software
+authors:
+  - family-names: "Mata García"
+    given-names: "Marcos"
+    email: "matagarciamarcos@gmail.com"
+repository-code: "https://github.com/marcosmatalab/mcp-fanout"
+abstract: >-
+  An HTTP proxy selected by the HTTP_PROXY and HTTPS_PROXY environment variables does not observe
+  an autonomous agent's outbound traffic. It observes the subset of the agent's clients that chose
+  to honour two environment variables, and that subset is not knowable in advance: here it
+  silently excluded one of the three components that reached a third party at all, because Node.js
+  ignores those variables in its global fetch unless a flag that is off by default is enabled.
+  Across ten of the most-installed Model Context Protocol servers, driven under packet and proxy
+  capture with 130 tool calls in concurrent waves of 2, 5 and 10 plus a 26-call sequential pass,
+  the attributable share of call-caused, content-eligible outbound flows is 0.6579 against a
+  threshold of 0.80 sealed by digest before any measurement existed. The instrument does not meet
+  its own bar, and every repair to its observability lowered the headline. No fragment of any
+  planted context file ever appeared in a request toward a third party. Attribution is shown to
+  depend on how many structural tokens a call's arguments commit: over 87 probed tool schemas, 38%
+  are attributable from the schema alone, 22% never can be, and 40% are undecided until a value is
+  seen.
+keywords:
+  - autonomous agents
+  - Model Context Protocol
+  - MCP
+  - provenance
+  - egress
+  - observability
+  - supply chain
+  - pre-registration
+  - negative result
+license: Apache-2.0

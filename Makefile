@@ -6,7 +6,7 @@
 .RECIPEPREFIX = >
 .PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
         bench-verify disclosure control control-publish fp fp-calibration ksweep positive rarity \
-        inventory f2 f2-reserved corpus-check backstop honesty-curve clean
+        inventory f2 f2-reserved corpus-check backstop honesty-curve argument-shapes clean
 
 RUN ?= latest
 
@@ -63,6 +63,11 @@ backstop:
 # Every observability fix lowered it. That shape is the write-up's argument about method.
 honesty-curve:
 > python3 tools/honesty_curve.py
+
+# The argument-shape distribution over every probed tool schema. Turns the paper's most
+# actionable claim from qualitative into measured. Reads registry/probes/ only, no run needed.
+argument-shapes:
+> python3 tools/argument_shapes.py
 
 # All six numbers from a run (default: the latest run under runs/).
 numbers:
