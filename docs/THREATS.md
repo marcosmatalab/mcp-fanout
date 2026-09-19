@@ -472,3 +472,56 @@ gate rule 6. Each names the threat and what it does to the numbers.
     in `docs/disclosure/2026-09-19-readabilipy-npm-install-at-call-time.md`, to be sent before
     anything is published. Nothing about this is a vulnerability claim against either project;
     it is a report of behaviour whose consequences change when the caller is an agent.
+
+18. **A call whose tokens are a proper subset of a concurrent call's cannot be uniquely
+    attributed by containment. Ever, by any implementation. This is a limit of the method, not
+    a property of one rule.** Found while measuring F2 and named here rather than left inside
+    the discussion of a matching rule, because filing it there would file a limitation of the
+    technique as a quirk of one decision.
+
+    **The statement.** Containment attributes a flow to a call when every structural token of the
+    call is present in the request. If call A's tokens are a proper subset of call B's, then every
+    request that contains B's tokens also contains A's. A is therefore a candidate for B's flow as
+    well as its own, and A's own flow, which contains only A's tokens, has A as a candidate and
+    nothing that separates it from any other subset of A. No implementation of containment can
+    escape this: it follows from subset being transitive over the same token vocabulary, not from
+    how candidates are scored, thresholded or tie-broken. A rule may choose to lose A (give up its
+    attribution) or to guess (attribute A's flow to A while B is also live, which is unfalsifiable
+    in the same window). There is no third option inside the method.
+
+    **Why it matters more than it looks.** The case is not pathological. It is an agent re-reading
+    its own document with more precision, and that is one of the most common things an agent does:
+    fetch a page, then fetch the same page with a section anchor, a line range, a filter, a page
+    number, a narrower query. Every one of those produces a second call whose token set is a strict
+    superset of the first. The pattern that defeats attribution is not an attack, it is an agent
+    working carefully.
+
+    **Measured instance.** Run `20260919T130847Z-concurrent`, fetch wave at N = 10.
+    `{"url": ".../docs/deploy/runbook"}` has tokens {example.net, docs, deploy, runbook}.
+    `{"url": ".../docs/deploy/runbook?section=rollback-steps"}` has the same four plus
+    `rollback-steps`. The first call's own flow goes UNATTRIBUTED, and it is the only flow in that
+    wave lost to this cause. At N = 2 and N = 5, where the superset call is not in the wave, the
+    same call attributes cleanly, which is the point: the loss is created by concurrency, not by
+    the call.
+
+    **What it does to the numbers.** It puts a ceiling on attributable share that falls as an
+    agent's concurrent calls become more nested, and the ceiling is invisible in the grade
+    distribution alone: a lost subset call looks exactly like a flow that never matched. That is
+    why `number_5` publishes `non_discriminating_calls` as a figure rather than keeping it as
+    bookkeeping (docs/PREREG-F2.md section 4). Without it, this threat is unobservable in the
+    published output, and an unobservable limitation is one that gets mistaken for a bad matcher.
+
+    **What does not fix it.** Not a token-count floor: the subset call's tokens are all real and
+    may be numerous. Not rarity weighting: every token it owns is owned by the superset too, so
+    there is nothing to weight down (the same reason F1.3 was reverted, arriving from a different
+    direction). Not evaluating candidates per flow instead of globally: see the declared amendment
+    in docs/PREREG-F2.md, which predicts that variant trades this loss for a worse one.
+
+    **What would fix it, and why it is not free.** Only information from outside the content
+    channel separates A from B: ordering, timing at a resolution finer than the window, a
+    connection identity, or a propagated trace context. The last is the one this project already
+    has, and it is the one negative 1 restricts to our own edge: we may read a traceparent we
+    emitted, and we may not plant one in a call toward a third party. So the honest statement is
+    that per-call provenance for nested concurrent calls is achievable where the agent runtime
+    cooperates and is not achievable by observing egress alone. That is a product boundary, and it
+    belongs in the write-up next to the numbers rather than in a footnote under them.
