@@ -59,6 +59,10 @@ def classify(tool: dict) -> dict:
         shape = "no_string"
     return {"name": tool.get("name", ""), "shape": shape,
             "required_string_properties": n,
+            # A DECLARED enum is the author writing down that a value identifies a class rather
+            # than an instance. Counted because it is machine-readable, and reported as a lower
+            # bound because a low-entropy field need not declare one.
+            "declared_enum": any((props[r] or {}).get("enum") for r in req_strings),
             "optional_properties": len(props) - len(required)}
 
 
@@ -81,6 +85,7 @@ def main() -> int:
 
     total = len(rows)
     structured = tally.get("structured", 0)
+    declared_enum = sum(1 for r in rows if r["shape"] == "structured" and r["declared_enum"])
     single = tally.get("single_value", 0) + tally.get("single_value_declared_uri", 0)
     out = {
         "name": "argument_shape_distribution",
@@ -93,6 +98,17 @@ def main() -> int:
             "fraction": round(structured / total, 4) if total else None,
             "meaning": ("two or more required string properties, so at least two structural "
                         "tokens are committed whatever the caller passes"),
+            "this_is_a_CEILING_not_a_floor": (
+                "the rule counts structural COMMITMENTS, not their specificity. A required string "
+                "that is a locale, a status or a region code commits a token that identifies a "
+                "class rather than an instance, so the call effectively commits fewer "
+                "distinguishing tokens than the schema suggests. A schema declares a value's "
+                "shape and not its entropy, and no reading of schemas recovers the difference"),
+            "declared_low_entropy_visible_here": declared_enum,
+            "declared_low_entropy_note": (
+                "tools in this class with at least one required string property declared as an "
+                "enum. It is a lower bound on the problem and not a measure of it: a low-entropy "
+                "field is under no obligation to declare an enum, and most do not"),
         },
         "undecided_until_a_value_is_seen": {
             "count": single,

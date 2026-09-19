@@ -10,6 +10,11 @@ authors:
     given-names: "Marcos"
     email: "matagarciamarcos@gmail.com"
 repository-code: "https://github.com/marcosmatalab/mcp-fanout"
+version: "1.0.0"
+# doi: filled in from the Zenodo VERSION DOI after the release is published, in a follow-up
+# commit. The version DOI and not the concept one: a citation must resolve to the object the
+# reader actually read, and a concept DOI drifts to whatever is newest. The concept DOI lives in
+# README.md instead, where drifting to the current version is the desired behaviour.
 abstract: >-
   An HTTP proxy selected by the HTTP_PROXY and HTTPS_PROXY environment variables does not observe
   an autonomous agent's outbound traffic. It observes the subset of the agent's clients that chose

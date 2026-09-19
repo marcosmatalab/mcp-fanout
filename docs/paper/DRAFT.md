@@ -53,8 +53,9 @@ whose embedded browser reaches destinations the server's own documentation does 
 3. **A claim a reader can apply without running anything**, with a first measurement of how much
    it bites: attribution works on a call committing two or more structural tokens and fails on one
    committing a single token, under any rule that does not manufacture false attributions. Over 87
-   probed tool schemas, 38% are attributable from the schema alone, 22% never can be, and 40% are
-   undecided until a value is seen. We give the measured price of relaxing the rule, and the
+   probed tool schemas, at most 38% are attributable from the schema alone, 22% never can be, and
+   40% are undecided until a value is seen. The 38% is a ceiling: a schema declares a value's
+   shape and not its entropy. We give the measured price of relaxing the rule, and the
    procedure for classifying a tool inventory without capturing anything.
 4. **A pre-registration apparatus for systems measurement**, independent of the system measured: a
    digest-sealed prediction block, a verdict whose denominator is frozen by hash, held-out corpora
@@ -503,14 +504,34 @@ author stating it in machine-readable form.
 | **single value**: exactly one required string property | **35** | **0.402** | one token committed. Attributable only if that value itself decomposes, which the schema cannot say |
 | **no string input**: none required | **19** | **0.218** | nothing committed, so no content attribution is possible under any rule |
 
-Read it as a lower bound and an upper bound rather than a prediction. **At least 38% of this tool
-surface is attributable from its schemas alone**, before any value is seen. **At most 78% can ever
-be**, because 22% commits no structural token at all. The 40% in the middle is genuinely undecided
+Read it as a lower bound and an upper bound rather than a prediction. **At most 38% of this tool
+surface is attributable from its schemas alone**, before any value is seen, and the paragraph
+below explains why that is a ceiling rather than a floor. **At most 78% can ever be attributable
+at all**, because 22% commits no structural token whatever the caller passes. The 40% in the middle is genuinely undecided
 by a schema and is decided by what callers actually pass: component B's two search families sit in
 that class and landed on opposite sides of it.
 
 We report the middle class as undecided rather than assuming it fails. Assuming it fails would
 have produced a more dramatic number and a less honest one.
+
+**And the 38% is optimistic, by a route a schema cannot see.** The rule counts structural
+COMMITMENTS, not their specificity. `{"locale": "en-US", "text": "..."}` declares two required
+string properties and lands in the structured class, but `en-US` discriminates nothing: it is one
+of a handful of values every call to that tool will draw from, so the call effectively commits one
+distinguishing token and not two. A schema declares the SHAPE of a value and not its entropy, and
+no amount of reading schemas recovers the difference.
+
+Part of this is visible and we measured it: of the 33 tools in the structured class, **1 declares
+one of its required string properties as an `enum`**, with three permitted values. That single
+instance is itself a lower bound on the problem rather than a measure of it, because a
+low-entropy field is under no obligation to declare an enum. A status, a locale, a region code or
+a two-letter language is low-entropy whether or not its author wrote the constraint down, and
+those are invisible to this classification by construction.
+
+So 38% is an upper bound on the lower bound: at most 38% of this surface is attributable from
+schemas alone, and the true figure is lower by however many structured tools commit a token that
+identifies a class rather than an instance. Settling that needs values, which is the same thing
+the undecided middle class needs, and it is the same day of call logs that would settle both.
 
 **The procedure for a reader**, which needs no capture and no code from us: take each tool's
 schema, count its required string properties, and read off which of the three classes it is in.
@@ -686,8 +707,9 @@ like acted on: it converts the unattributable class into the attributable one wi
 matching machinery here.
 
 **A larger estimate of the argument-shape distribution.** Section 5.4.1 gives a first one: over
-87 probed tools, 38% are attributable from their schemas alone, 22% never can be, and 40% are
-undecided until a value is seen. That distribution, not our attribution figure, is what determines
+87 probed tools, at most 38% are attributable from their schemas alone, 22% never can be, and 40%
+are undecided until a value is seen. Both the ceiling and the undecided middle are resolved by the
+same input, a day of real call logs, which is the cheapest next measurement in this paper. That distribution, not our attribution figure, is what determines
 the attributable share of any specific deployment, and ours is a small N drawn from the head of
 the distribution (7.2).
 

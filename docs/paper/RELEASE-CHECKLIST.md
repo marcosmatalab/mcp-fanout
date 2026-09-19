@@ -19,8 +19,11 @@ archives nothing retroactively.
       back-signing history replaces real provenance with manufactured provenance.
 - [ ] Connect Zenodo to the repository (github.com settings, toggle on `marcosmatalab/mcp-fanout`).
       Nothing is minted by connecting.
-- [ ] Decide the version string. Suggested `v1.0.0-preprint`, so later corrections are visibly
-      corrections rather than silent replacements.
+- [x] Version decided: **`v1.0.0`**, no suffix. A pre-release suffix announces something
+      provisional on its way to a version that does not exist, and this is not a draft. Semver
+      alone already makes a later correction visible as one (`v1.0.1`). **Editorial status is not
+      a property of the artifact**: "preprint" belongs in the release TITLE, not in the tag. If a
+      venue later publishes it with changes, that is `v1.1.0` and the history reads itself.
 
 ## On or after 2026-10-19
 
@@ -28,11 +31,23 @@ archives nothing retroactively.
       maintainers' responses, or `no response as of the publication date`. The absence of a reply
       is itself data and the log is the procedure.
 - [ ] `make verify` green, and the count in `CLAUDE.md` matching.
-- [ ] Tag, signed: `git tag -s v1.0.0-preprint -m "..."` and push the tag.
+- [ ] Tag, signed: `git tag -s v1.0.0 -m "..."` and push the tag.
+- [ ] Title the GitHub release with the editorial status, for example
+      "v1.0.0 preprint". The tag stays clean.
 - [ ] Publish the GitHub release from the tag. Zenodo mints the DOI on detection.
-- [ ] Put the DOI into `CITATION.cff` and into the draft's header, then commit that as a
-      follow-up. The DOI cannot be in the artifact it names; this is the ordinary circularity and
-      the follow-up commit is how it is resolved.
+- [ ] **Record both DOIs, in different places, because they answer different questions.** Zenodo
+      mints two: a VERSION DOI, which resolves to this exact deposit, and a CONCEPT DOI, which
+      always resolves to the latest version.
+
+      - The **version DOI** goes in `CITATION.cff`, because a citation must point at the object
+        the person actually read. A citation that drifts to a later version is a citation to
+        something the author never saw, and in a paper whose argument is provenance that is not a
+        small inconsistency.
+      - The **concept DOI** goes in `README.md`, because someone arriving through a link should
+        land on the current version rather than on a frozen one.
+
+      Then commit both as a follow-up. The DOI cannot be inside the artifact it names; that is the
+      ordinary circularity and the follow-up commit is how it is resolved.
 
 ## What is deliberately not in the release
 
