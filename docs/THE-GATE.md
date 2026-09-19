@@ -155,7 +155,7 @@ screen on purpose: it is where credibility is won or lost.
     announces itself. It produces a clean run, a passing suite and an empty result that reads as a
     finding.
 
-    **The class is established by three instances, not argued from one.**
+    **The class is established by four instances, not argued from one.**
 
     - `capture_addon.py` used a relative import. mitmproxy loads an addon by path under a synthetic
       package name, so the import raised, mitmdump logged it and carried on proxying. The run
@@ -170,6 +170,11 @@ screen on purpose: it is where credibility is won or lost.
       synthetic path does not run the addon's request hook. A passing selftest was fully consistent
       with a capture layer that never called the structural matcher at all. Caught by writing the
       test in this rule, not by the suite.
+    - `make figures` wrote `content_denominator: null` into every committed artifact, because
+      `compute_all` was called without the constant-path list. The published artifact omitted the
+      quantity the published verdict is measured against, and it validated, diffed and committed
+      cleanly. Four instances is not an anecdote: the class is that an ABSENT input produces a
+      well-formed output, and well-formed output is what gets reviewed.
 
     **What the test has to do, since "we have tests" is what was true in all three cases.** It must
     exercise the instrument's real entry point, with the real loader where there is one, and it

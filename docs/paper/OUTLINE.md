@@ -1,7 +1,30 @@
 # Paper outline. Sections and one line of intent each. NOT yet written.
 
-Status: skeleton for review. Nothing below is drafted, and the order is the argument, so the
-order is the thing to object to first.
+Status: decisions taken 2026-09-19, recorded below. Sections 1 and 3 are drafted in
+`docs/paper/DRAFT.md`; the rest is still outline.
+
+## Decisions
+
+**Venue: a preprint with a DOI, minted by a GitHub release wired to Zenodo.** Not a conference,
+and arXiv is off the critical path (cs.CR requires endorsement for an author with no prior
+submissions, which is a negotiation with a person rather than a step). **The cited object is the
+repository**, with its signed history and the sealed block inside it, which is the only venue
+choice consistent with the paper's own argument about provenance.
+
+**Length: ten to fourteen page equivalents.** Therefore section 4 is ONE section with four
+subsections. Four top-level method sections would make the table of contents misstate where the
+weight is, and the weight is in section 5.
+
+**Section 3 stays first**, and the reason is operational rather than rhetorical: every figure in
+section 5 is conditional on it, so a reader who reaches 0.6579 without knowing about Node reads
+it wrongly and has to come back. It closes on the CONSEQUENCE FOR THE READER and not on a
+confession: if you are measuring MCP egress with a proxy, your figures are a subset of unknown
+size.
+
+**6.1 and 6.2 are a short section, not an appendix**, but space is not what controls their
+weight. The abstract subordinates them grammatically, as what the corrected instrument then
+found, and the title names the instrument's blindness rather than the npm install. Threat 19 does
+not compete with section 6: threat 19 IS section 3, and section 6 is a coda.
 
 **What the paper is.** A measurement of whether an autonomous agent's outbound traffic can be tied
 to the tool call that caused it, and a negative result about the instrument everyone would reach
@@ -16,7 +39,12 @@ server is named in any figure (gate rule 3); the two named findings are disclose
 
 Intent: state the headline in the first two sentences (an environment-variable proxy observes the
 subset of clients that opted in, not the agent), then the measured attribution figure and that it
-is below its own pre-registered threshold.
+is below its own pre-registered threshold. The two environment findings appear subordinated, as
+what the corrected instrument then found. Contributions are listed explicitly, and the
+PRE-REGISTRATION APPARATUS is named as one of them: it is a methodological contribution
+independent of MCP, and buried in section 4.4 it is not findable.
+
+DRAFTED. See `docs/paper/DRAFT.md`.
 
 ## 2. Introduction: what an agent's egress is, and why nobody has the number
 
@@ -33,6 +61,12 @@ Intent, second half: generalise it. Interception by environment variable is opt-
 observed, the opt-in set is not knowable in advance, and therefore transparent interception or
 eBPF is a requirement rather than an engineering preference. This is the section a reader who
 repeats this work needs before anything else.
+
+Intent, closing: the consequence for the reader, not the confession. If you are measuring MCP
+egress with a proxy, your figures are a subset of unknown size, and `make backstop` is the cheapest
+way to find out how big.
+
+DRAFTED. See `docs/paper/DRAFT.md`.
 
 ## 4. Method
 
@@ -130,6 +164,11 @@ that evolve.
 Intent: the instrument does not meet its bar on the structured-argument share of a real tool
 surface, the product question is not answered and was deliberately never frozen, and the most
 useful output is the method result at the front.
+
+Intent, and it must not stay buried in section 7: state the lesson in general form. **When a
+measurement shows less than expected, the first hypothesis reached for is sampling, and here the
+correct one was the instrument.** Threats 5 and 8 were blamed for a gap that threat 19 explained.
+Left in a threats section, a third of readers see it; in the conclusion, everyone does.
 
 ---
 
