@@ -199,6 +199,17 @@ No published figure exists without a command that measures it. Every one of the 
 a `make` target and an `aggregate` subcommand behind it. A claim in a README that cannot be
 reproduced by running a command is not allowed to ship. See `docs/THE-SIX-NUMBERS.md`.
 
+## Rule 10: an absent instrument must fail, not pass quietly
+
+A test that only catches a WRONG instrument leaves the dangerous case uncovered, because a wrong
+number gets investigated and a green gets published. This repository has produced that failure
+three times: an addon that did not load and finished green with zero flows, a k constant that
+diverged and silently stopped matching, and a selftest that serialised the structural fields
+without ever populating one. Full statement and the three instances in `docs/THE-GATE.md`, rule 10.
+
+The rule applies to itself: a detector must be shown to detect a planted instance, in the same
+run, through the same code path, before its clean report means anything.
+
 ## Responsible disclosure
 
 If a server egresses to a destination its own documentation does not declare, the run stops and

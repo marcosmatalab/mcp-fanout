@@ -452,3 +452,44 @@ and not a lock. The figure was demoted to calibration, a new reserve was built, 
 is now documented as one. A paper that describes a held-out set should describe what keeps it
 held out, and "a function that callers may decline to use" is the honest answer for any corpus
 that ships in the same repository as the code.
+
+## 14. The credential the next capture runs with, for whoever repeats it
+
+Reproducibility (gate rule 1) means a third party has to be able to mint the same access, not
+guess at it. So the exact scope is recorded here rather than described.
+
+**GitHub, and only GitHub.** A fine-grained personal access token:
+
+| property | value |
+|---|---|
+| resource owner | `marcosmatalab` |
+| repository access | Public repositories (read-only) |
+| repository permissions | none granted |
+| account permissions | none granted |
+| expires | 2026-10-19 |
+| verified against | `GET /rate_limit`, authenticates |
+
+Zero scopes is not a shortcut, it is the argued minimum: every call in
+`corpus/calls/github.json` and `corpus/concurrent/github.json` is a read of public data, and the
+server ships `push_files` and `merge_pull_request` in the same schema a corpus bug could reach.
+
+The value lives in `~/.mcp-fanout-lab.env`, mode 600, deliberately outside the repository and
+deliberately NOT at the root: `corpus/context/.env` already exists there as synthetic bait, and
+two files with that name in one project is a confusion waiting to happen.
+`tests/test_credentials_never_persisted.py` fails if the value reaches any artifact this
+repository produces or tracks, and proves its own scanner against a planted canary first.
+
+**The baseline this replaces, measured on run `20260919T130847Z-concurrent` and worth keeping
+because it is the counterfactual.** Without credentials:
+
+- **github**: starts and handshakes, then 4 of 17 driven calls fail, every one of them
+  `search_code`, with `Authentication Failed: Requires authentication`. The rest of the corpus
+  works unauthenticated at 60 requests/hour.
+- **brave-search**: never reaches the handshake.
+  `Error: BRAVE_API_KEY environment variable is required`, and both calls die with
+  `EOFError: server closed stdout`.
+
+**brave-search stays uncredentialed, on purpose.** Its free tier requires a credit card (checked
+2026-09-19), which is the same reason Google Maps was rejected, and consistency beat convenience.
+So the next capture still contains one server that fails at launch, and that is a recorded
+condition of the run rather than a defect in it (`docs/LAB-ACCOUNTS.md` section 2).

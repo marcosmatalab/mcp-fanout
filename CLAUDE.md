@@ -40,6 +40,17 @@ These are not style preferences. They are the product thesis. Violating one inva
 
 Full text in `docs/DOCTRINE.md`.
 
+## Rule 10: an absent instrument must fail, not pass quietly
+
+Every instrument needs a test that goes red when the instrument is ABSENT, not only when it is
+wrong. A wrong number gets investigated; a green gets published. This repo has produced that
+failure three times: an addon that did not load and finished green with zero flows, a k constant
+that diverged and silently stopped matching, and a selftest that serialised the structural fields
+without ever populating one. Asserting a field is PRESENT is not enough, all three had their
+fields. Assert the value only a working instrument could compute, through its real entry point.
+The rule applies to itself: a detector must catch a planted instance in the same run before its
+clean report counts. Full text in `docs/THE-GATE.md` rule 10.
+
 ## Rule 6: no number without a command
 
 Every published figure has a `make` target and an `aggregate` subcommand behind it. If you add a
@@ -47,7 +58,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 534
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 551
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
@@ -126,7 +137,7 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 534 tests, no Docker, no network
+make verify      # 551 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
