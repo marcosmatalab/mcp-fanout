@@ -1,7 +1,8 @@
 # Paper outline. Sections and one line of intent each. NOT yet written.
 
-Status: decisions taken 2026-09-19, recorded below. Sections 1 and 3 are drafted in
-`docs/paper/DRAFT.md`; the rest is still outline.
+Status: decisions taken 2026-09-19, recorded below. **ALL TEN SECTIONS ARE NOW DRAFTED** in
+`docs/paper/DRAFT.md`, roughly 7,100 words. This file is kept as the record of the structural
+decisions and what was deliberately excluded; the draft supersedes it as the text.
 
 ## Decisions
 

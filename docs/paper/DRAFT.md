@@ -61,6 +61,63 @@ whose embedded browser reaches destinations the server's own documentation does 
 
 ---
 
+## 2. Introduction: what an agent's egress is, and why nobody has the number
+
+An autonomous agent calls tools. Each call may cause the tool to reach a third party, and the
+agent's operator is accountable for what leaves the machine, not for what the agent intended. The
+question this paper measures is whether those two things can be connected after the fact: given a
+request observed leaving a host, can it be tied to the tool call that caused it?
+
+The question has a practical shape. An incident review asks which call sent a value to a
+destination. A data-protection assessment asks which categories of data leave and under whose
+instruction. A procurement review asks what a tool actually contacts, as opposed to what its
+documentation says it contacts. All three need attribution of an outbound request to a specific
+call, and none of them is served by a list of destinations.
+
+The environment we measure is the Model Context Protocol, because it is where the question is
+currently concrete: an MCP server is a separate process, launched by the agent's runtime, speaking
+a documented protocol, and free to reach anything it likes while serving a call. MCP is the first
+environment here and not the category. The unit of the design is an agent's action and its
+egress, so a second environment is an adapter rather than a rewrite, and we take care throughout
+to state results in those terms.
+
+**Why the number does not already exist.** Attribution is not a property one can read off a
+capture. It requires knowing what each call contained at the moment it was in flight, which means
+instrumenting the caller as well as the wire; it requires a matching rule whose false-positive
+rate has been measured rather than assumed, because a rule that attributes generously produces
+confident nonsense; and it requires concurrency, because with one call in flight every match is
+trivially unique and the figure restates the experimental setup. Work on MCP to date catalogues
+destinations and permissions. We found none that reports an attributable share under concurrency
+with a calibrated matcher.
+
+**What this paper reports, in order of how much we think it matters.**
+
+The first result is about the instrument, and it is why section 3 comes before the method. A
+proxy configured through environment variables does not observe an agent's egress; it observes
+the clients that chose to honour a convention, and the subset is not knowable in advance. We found
+this after the measurement had already produced two publishable-looking figures.
+
+The second is the attribution figure itself, which does not meet the threshold we fixed before
+measuring, and the decomposition of why it does not.
+
+The third is a claim a reader can apply to their own tool inventory from schemas alone, without
+running anything: content attribution works on structured arguments and fails on free text.
+
+The fourth is methodological and independent of MCP: an apparatus for pre-registering systems
+measurements, including what it cost us when one of our own sealed predictions turned out to be
+false.
+
+We also report two behaviours of the measured environment, disclosed to their maintainers before
+publication, in section 6. They are the most quotable material here and the least central to the
+argument, and we have placed them accordingly.
+
+**What we do not claim.** We do not claim a security result: nothing here is a vulnerability, and
+the two disclosed behaviours are documented or deliberate on their authors' part. We do not claim
+generality beyond the head of the server distribution we sampled. And we do not claim the
+instrument is now complete; section 3.6 states precisely what it still cannot see.
+
+---
+
 ## 3. The headline: a terminating proxy does not observe a modern Node client
 
 ### 3.1 What we were doing, and what we believed
@@ -451,3 +508,202 @@ suppressing it would hide how much of the set was invisible.
 Zero of three is a small denominator and we do not dress it up. What it establishes is that the
 mechanism which would attribute free-text calls exactly, and which 5.4 identifies as the only
 thing that can, is not in use by anything we were able to watch.
+
+---
+
+## 6. Two behaviours of the measured environment
+
+Reported here because the corrected instrument found them, and kept short because they are not
+this paper's argument. Both were disclosed to their maintainers, with a stated publication window,
+before this text existed. Neither is framed as a vulnerability and neither was treated as one.
+
+### 6.1 A tool call that installs and executes third-party code while it runs
+
+One component is a Python package that retrieves a URL and converts HTML to text. Serving a call,
+it opened **82 connections to a package registry** against 4 to the host the call had named. The
+package caches are warmed before the capture starts, so these are not our own installer.
+
+The chain, read from the installed package rather than inferred from a hostname: the component
+depends on a library whose HTML-conversion path checks for a `node_modules` directory and, finding
+none, calls a helper that runs `npm install` in the library's own directory. That directory ships
+a manifest with **no lockfile** and three dependencies declared as open-ended ranges. The install
+pulls **41 packages**, and the subprocess output is not captured, so the package manager's
+progress lines are written to the component's standard output, which is the protocol channel.
+
+The property that matters is not the volume. It is that **the code executed is resolved at the
+moment of the call**. Pinning the component pins the Python distribution and says nothing about
+the JavaScript that runs inside it. Our own records make this concrete: the same pinned component,
+driven through the same harness, produced **87 registry requests on one day and 82 on each of two
+runs the next**. Two runs agreeing on 82 rules out noise, and the difference from 87 is the
+instability measured rather than described. There is no version in our records for the code that
+actually ran.
+
+Disclosed as two separate reports, because there are two different asks and a single text would
+let each maintainer read it as the other's problem: a lockfile, captured subprocess output and an
+opt-out for the library that performs the install; a documentation note and an egress-allowlist
+consequence for the component that takes the dependency.
+
+### 6.2 A component that egresses because of what it embeds
+
+A second component drives a headless browser. During a single navigation call it reached two
+destinations its documentation does not mention. Rather than diagnose this from the hostnames, we
+ran a control: the same browser binary, the same flags, the same proxy, with no MCP server in the
+process tree, navigating to the same URL. The control reproduced both destinations.
+
+So the finding is not that the component egresses somewhere undeclared. It is that **the
+component's egress is not the component's**, and the difference is only visible with a control
+that removes the component and keeps everything else. We report this as a method note as much as a
+finding: a destination attributed to a server on the strength of a time window and a hostname can
+belong to something the server merely contains.
+
+---
+
+## 7. Threats to validity
+
+Ranked, not listed. The ranking is itself a result, because we got it wrong: for most of this
+work we attributed a gap in our numbers to sampling, and the cause was the instrument.
+
+### 7.1 Instrument limits, which bound everything else
+
+**Non-cooperating clients (section 3).** Interception by environment variable is opt-in by the
+observed. One of three egressing components was invisible until repaired, and we cannot prove
+none remain. The packet capture bounds this: any connection to a destination that is not the
+proxy is traffic we are not reading. This threat dominates because it does not degrade a figure,
+it silently redefines the population.
+
+**Protocols and encryption the proxy cannot read.** Non-HTTP traffic and certificate-pinned
+clients bypass a terminating proxy entirely. Our fan-out counts are floors.
+
+**Evidence that cannot be re-derived.** Records written before a matcher's fields existed cannot
+be re-graded under it. This bit us directly: the run our threshold was pre-registered against is
+not re-gradable from what was persisted, and the figure for it had to be derived from the corpus
+with a published cross-check. We state it as general: **adding a field to an evidence record makes
+every earlier record un-re-gradable under the new rule.**
+
+### 7.2 Sampling, which we over-blamed
+
+**Ten curated servers are the head of a distribution.** The tail, where small and unaudited
+implementations live, is where supply-chain risk concentrates and is not sampled here.
+
+**Absent credentials change behaviour.** Components requiring a token were mostly driven without
+one. A failed call egresses less than a successful one. We credentialed one component to test
+exactly this, and the result was instructive in an unexpected way: it changed no published number
+while the instrument was blind, and changed the headline figure substantially once it was not.
+
+**Our corpus is ours.** We wrote the arguments and chose the concurrency levels. Section 5.4's
+claim about argument shape is the part of this paper most exposed to that choice, and it is the
+part we would most want replicated on somebody else's tool inventory.
+
+### 7.3 Method limits, which are honest and bounded
+
+**Subset calls cannot be uniquely attributed (5.5).** A limit of containment, not of our code.
+
+**Re-encoding defeats byte-literal matching.** A component that transforms a value before sending
+it is a miss, by design. Misses understate our result.
+
+**No ground truth on real servers.** Attribution precision has a denominator only on a controlled
+bench where we caused every transfer. On real components we measure how grades are distributed,
+not whether a given attribution was correct.
+
+### 7.4 The ranking error itself
+
+For most of this work, the gap between what we expected to attribute and what we did was
+attributed to the two sampling threats above: uncredentialed components, and a curated sample. Both
+were real and neither was the cause. The cause was an instrument that could not see a third of the
+components that egressed at all, and it was invisible precisely because a blind component and a
+silent component produce identical records.
+
+We keep this in the paper because the reasoning error is more transferable than the finding.
+
+---
+
+## 8. What would change the answer
+
+Three things, in order of how much they would move the number.
+
+**Interception that does not ask the client.** A redirect at the network layer, or instrumentation
+at the TLS library, removes the opt-in on which section 3 turns. Everything in section 5 is a
+lower bound until this exists, and we do not know by how much. This is the single change that
+would most alter the result, and it is the one whose effect we can least predict.
+
+**Trace-context propagation.** A propagated context attributes a call exactly, including the
+free-text calls that section 5.4 shows content matching cannot reach. **Zero of the three
+components we could observe propagate one.** The mechanism is standardised, cheap, and in use
+nowhere we could watch, so the ceiling described in 5.4 is a property of current implementations
+rather than of the problem. Of everything in this paper, this is the recommendation we would most
+like acted on: it converts the unattributable class into the attributable one without any of the
+matching machinery here.
+
+**A tool population whose argument shapes are actually estimated.** Section 5.4 says attribution
+depends on whether a tool's arguments carry structure. Nothing here estimates the distribution of
+that property across a real deployment's tool surface, and that distribution, not our figure, is
+what determines the attributable share in any specific system. It is cheap to estimate from
+schemas alone and we have not done it.
+
+Two things we deliberately did not pursue, recorded so their absence is not mistaken for an
+oversight: a per-request candidate rule that would recover some lost attributions, which we
+predict reintroduces the false attributions of 4.3 and have declared as an amendment to be
+measured afterwards; and weighting a token by improbability rather than counting tokens, declared
+after seeing the failure and therefore unable to replace the figure it would improve.
+
+---
+
+## 9. Reproducibility
+
+Every figure in this paper has a command, and the commands are in the repository rather than in
+this text. The cited object is the repository itself, at a tagged release with a DOI, including
+its signed history and the sealed pre-registration block.
+
+**What is committed:** the normalized aggregates of each run, which are counts, ratios and
+category breakdowns with no hostname, no component identifier, no tool name and no payload digest;
+the corpora, pinned by content hash in each run's manifest; the registries that define every
+exclusion, each cited in the output by name, version and SHA-256; and the test suite, including the
+tests that fail when an instrument is absent.
+
+**What is not committed, and why:** the runs. A run holds per-flow records and salted digests tied
+to specific components, so committing one would both name components and ship digests our own
+constraints forbid publishing. The aggregate is committed instead, which resolves the tension
+between "a figure must be re-derivable from the repository" and "a run must not be tracked".
+
+**Reproducing a figure exactly** requires re-running the capture, which contacts live third
+parties and will not reproduce byte for byte: the measured environment changes between days, which
+is itself one of our findings (6.1). What reproduces exactly is the normalized aggregate of a
+given run, the calibration figures, and every derived quantity in sections 4 and 5.
+
+**The honest gap.** Runs captured before the structural matcher existed are not re-gradable under
+it (7.1). The three points of the honesty curve therefore come from three runs and not from three
+gradings of one, and the first is derived from the corpus with its cross-check against the real
+run published alongside it.
+
+---
+
+## 10. Conclusion
+
+The instrument does not meet its bar. On the head of a real tool distribution, with a matcher
+calibrated on real language and a threshold fixed before any measurement existed, 0.6579 of
+content-eligible outbound flows could be attributed to the single tool call that caused them,
+against a pre-registered 0.80.
+
+The product question this measurement was built to answer is not answered, and was deliberately
+never frozen. That refusal is inside the sealed block, so it could not be replaced by a verdict
+once a result existed.
+
+What we would carry away is not the figure.
+
+**Content attribution is a capability over the structured part of a tool surface, not over the
+surface.** A deployment can know in advance which part that is, from schemas alone, before
+installing anything. The free-text remainder is not attributable by content under any rule that
+does not manufacture false attributions, and the mechanism that would attribute it exactly is
+standardised, cheap, and in use by none of the components we could observe.
+
+**And the reasoning error, which generalises past this paper.** When a measurement shows less than
+expected, the first hypothesis reached for is sampling: the sample was too small, too curated, too
+constrained. Those hypotheses were available, plausible, true as statements, and not the cause.
+The cause was that the instrument could not see a third of what it was pointed at, and it was
+invisible because an instrument that sees nothing and a subject that does nothing produce the same
+record. We reached for sampling first, and we were wrong for longer than we should have been.
+
+The discipline that eventually caught it was not cleverness. It was a second instrument that did
+not depend on the first one's cooperation, and a rule that every instrument carry a test which
+fails when the instrument is absent rather than merely wrong. We wrote that rule after being
+caught three times. It caught the fourth.
