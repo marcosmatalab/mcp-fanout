@@ -314,6 +314,48 @@ def _attributing_candidates(flow: Flow) -> int:
     return flow.matching_calls_in_window
 
 
+def structural_instrument_state(run: Run) -> dict:
+    """Did the structural matcher actually run, or is number 5 quietly reading the old one.
+
+    GATE RULE 10, applied to the instrument this function is part of. `_attributing_match` falls
+    back to the k-gram signal when a flow carries no structural fields, which is right for a run
+    captured before F2 and is a TRAP for one captured after: if the driver stopped publishing
+    `token_digests`, every flow would carry zero structural evidence, every one would fall back,
+    and number 5 would report k-gram grades under the structural instrument's name without a
+    single test going red. That is the third failure mode in gate rule 10's list, waiting to
+    happen a fourth time.
+
+    So the state is DERIVED AND PUBLISHED rather than assumed. A run with calls in flight that
+    carried arguments, and not one flow anywhere showing a call's tokens were even considered, is
+    reported as `absent`. That is not proof of a defect: a run where no request ever contained any
+    argument material looks the same. It is a claim that the instrument left no trace, which is
+    the thing a reader must be told before reading a zero as a finding.
+    """
+    had_calls = any(f.active_calls_in_window > 0 for f in run.flows)
+    considered = sum(f.structural_contained for f in run.flows)
+    matched = sum(1 for f in run.flows if f.structural_match)
+    if not run.flows:
+        state = "no_flows"
+    elif considered or matched:
+        state = "present"
+    elif had_calls:
+        state = "absent"
+    else:
+        state = "no_calls_in_flight"
+    out = {"state": state,
+           "flows_where_a_call_was_contained": considered,
+           "flows_attributed_structurally": matched}
+    if state == "absent":
+        out["warning"] = (
+            "calls were in flight and NO flow in this run shows the structural matcher "
+            "considering any of them. Either no request carried argument material at all, or the "
+            "instrument did not run: a driver that stopped publishing token_digests produces "
+            "exactly this, and number 5's grades would then come from the k-gram matcher under "
+            "the structural one's name. Check before reading any figure here as a finding "
+            "(docs/THE-GATE.md rule 10)")
+    return out
+
+
 def _content_eligible(flow: Flow) -> bool:
     """Call-caused, and not a target the client emits constantly whatever the call asked for."""
     return _call_caused_possible(flow) and not flow.constant_client_path
@@ -523,6 +565,7 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
            "strong_attribution_fraction": round((strong / total) if total else 0.0, 4),
            **_denominators(run, strong, total, constant_paths, exclusions),
            **_discrimination_summary(run),
+           "structural_instrument": structural_instrument_state(run),
            "strong_attribution_grades": list(_match.STRONG_ATTRIBUTION),
            # None, not False, when there are no flows: with nothing observed, "was this run
            # sequential" is unanswerable from the flows, and False would assert concurrency that

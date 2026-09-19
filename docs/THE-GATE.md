@@ -144,3 +144,41 @@ screen on purpose: it is where credibility is won or lost.
    the half the published figure comes from. `calibrate.load_negative` refuses the reserved half to
    a calibration purpose, and tests fail if that refusal is bypassed or if the halves stop being
    independent.
+
+10. **Every instrument needs a test that fails when the instrument is ABSENT, not only when it is
+    wrong.** No figure from an instrument may be published until a test exists that goes red if
+    that instrument silently does nothing.
+
+    This is a gate rather than a style note because it is the failure mode this repository keeps
+    producing, and because of what it does to the process rather than to the code: a wrong number
+    gets investigated, and **a green gets published**. An absent instrument is not a bug that
+    announces itself. It produces a clean run, a passing suite and an empty result that reads as a
+    finding.
+
+    **The class is established by three instances, not argued from one.**
+
+    - `capture_addon.py` used a relative import. mitmproxy loads an addon by path under a synthetic
+      package name, so the import raised, mitmdump logged it and carried on proxying. The run
+      completed, the suite was green, and `flows.jsonl` was empty, which reads exactly like a
+      server that egressed nothing. Guarded now by `tests/test_capture_addon_loads.py`, which loads
+      the file the way mitmproxy does.
+    - The addon carried its own `k = 16` after `calibrate.choose_k` moved the shipped constant to
+      22. A k mismatch does not error. It just stops matching, so the capture graded at a k no
+      published figure describes and nothing anywhere went red. Caught only because a fixture's own
+      token came back non-causal.
+    - `make selftest` serialised the structural fields and never populated one of them, because its
+      synthetic path does not run the addon's request hook. A passing selftest was fully consistent
+      with a capture layer that never called the structural matcher at all. Caught by writing the
+      test in this rule, not by the suite.
+
+    **What the test has to do, since "we have tests" is what was true in all three cases.** It must
+    exercise the instrument's real entry point, with the real loader where there is one, and it
+    must assert a POSITIVE result that only a working instrument can produce. Asserting that a
+    field is present is not enough: all three instances above had their fields present. Assert that
+    the field holds the value the instrument was supposed to compute.
+
+    **Applied to itself.** A detector whose job is to find something must be shown to find a planted
+    instance of that something, in the same run, through the same code path. A scanner that has
+    silently stopped scanning reports a clean result, which is this rule's own failure mode turned
+    on the rule. `tests/test_credentials_never_persisted.py` does this: it plants a canary and
+    fails if its own scanner misses it, before it reports that the artifacts are clean.

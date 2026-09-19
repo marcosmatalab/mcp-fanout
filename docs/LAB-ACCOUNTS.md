@@ -65,13 +65,25 @@ a wave of 10 is a meaningful fraction of the hour's budget.
 **Minimum permission.** The key is the whole credential; Brave's API has no scope model. Use a key
 minted for this and nothing else, so it can be revoked without collateral.
 
-**Cost: 0 euros on the free tier, about 15 minutes**, including the card-on-file step the free tier
-asks for. The corpus is 3 concurrent calls and 2 sequential, far inside any free allowance, but
-the free tier is rate limited to roughly one query per second, which matters: a wave of N = 5 or
-10 fired at once is exactly the shape a per-second limit rejects. Expect throttling to show up as
-errored calls and do not read those as the server refusing concurrency. If we drive brave
-concurrently at all, `max_concurrency` for it should be set to 1 with that reason written in the
-registry, which is what that field is for.
+**CORRECTED 2026-09-19, and the correction reverses the recommendation.** An earlier version of
+this section priced Brave at "0 euros, about 15 minutes" and treated the card-on-file step as a
+formality. It is not a formality: **Brave's free plan requires a credit card**, checked against
+their pricing page on 2026-09-19. That puts Brave in the same category as Google Maps, which this
+document rejected for exactly that reason, and consistency requires rejecting it too. Recording
+the date because this is a provider condition and providers change them; if the free tier stops
+requiring a card, the decision is worth revisiting on the merits.
+
+**Decision: not taken.** The argument that killed Google Maps applies unchanged. Attaching a
+payment instrument to an automated lab is a different risk category from an API key, the exposure
+is not bounded by our own volume, and Brave buys no new KIND of observation: it is an ordinary
+HTTPS API like GitHub.
+
+**What it costs us to skip it, stated so the loss is not hidden.** brave-search stays gagged, so
+the measured set loses a server that would have reached a real third party. It also removes the
+only server in the registry whose rate limit would have forced `max_concurrency: 1`, which is a
+measurement we now do not get to make. Threat 8 already notes that brave-search is marked
+deprecated upstream with its last release in 2024, so the server was the weakest candidate of the
+four on independent grounds.
 
 ## 3. Slack
 
@@ -138,23 +150,25 @@ ordinary API consumption at trivial volume and are very unlikely to be contentio
 workspace we own is equally unremarkable. Google Maps is the one where the terms interact with
 billing, and it is also the one we least need.
 
-## 6. Recommendation
+## 6. Recommendation, as decided
 
-**Do github and brave. Skip slack and google-maps for now.**
+**GitHub only.** Brave, Slack and Google Maps are all out, and two of the three for the same
+reason: a free tier gated behind a credit card is a payment instrument attached to an automated
+lab.
 
-Together they cost 0 euros and under half an hour, they need no repository work because both are
-already pinned, probed and have corpora, and they convert the two servers that are currently
-gagged into servers that reach their real third parties. That is the whole of what threats 5 and 8
-cost us in the measured set.
+GitHub costs 0 euros and about 10 minutes, needs no repository work because it is already pinned,
+probed and has both corpora, and converts the single most tool-rich server in the set from gagged
+to reaching its real third party. It is also the only one of the four that authenticates with a
+token carrying no scopes at all, which is the cleanest possible credential to put in a lab.
 
 Slack and google-maps each cost half a day of repository work before an account helps at all, and
 google-maps additionally attaches a payment instrument to an automated lab. Neither buys a new
 KIND of observation: both are ordinary HTTPS APIs like github and brave. If the paper needs a
 larger N later, they are the obvious next two, in that order, and google-maps last.
 
-**What the next capture should be, if you take that recommendation.** One concurrent pass with
-github and brave credentialed, brave capped at `max_concurrency: 1` with the rate limit as the
-written reason, everything else unchanged. That run produces number 5 from persisted structural
+**What the next capture is.** One concurrent pass with github credentialed and everything else
+unchanged, including brave-search left uncredentialed and failing at launch, which is recorded as
+a measured fact rather than hidden. That run produces number 5 from persisted structural
 fields rather than derived from the corpus, which is what closes threat 16 properly, and it does
 it on a set where two servers can actually reach their destinations.
 
