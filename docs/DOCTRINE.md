@@ -29,6 +29,92 @@ comment says "negativa 3" or "rule 6", this is the referent.
    enforcement. It is the negative that shapes everything: it forces the edge-observer design
    and forbids the marker.
 
+## The boundary of negative 3: structure is decomposed, meaning is not
+
+Negative 3 forbids inference. It does not forbid PARSING, and the difference needs a line rather
+than a habit, because F2 moves the matcher from literal k-grams to structural tokens and a reader
+is owed the rule that separates the two.
+
+**Allowed, because it is deterministic and reversible in principle:** splitting a URL into host,
+path segments and query values per RFC 3986; percent-decoding and plus-decoding those; walking a
+JSON document to its scalar leaves. Each of these recovers a structure the sender put there, with
+a published algorithm, and a second implementation of the same rule gets the same answer.
+
+**Forbidden, because each one guesses what the sender meant:** case folding, stemming or
+lemmatising, edit distance or any fuzzy comparison, synonym expansion, embeddings or any learned
+representation, and tokenising prose into words. A miss is a false negative, which is the safe
+direction, and it stays the safe direction only while nothing in the matcher is allowed to
+"nearly" match.
+
+The test of a proposed step is not whether it improves recall. It is whether two independent
+implementations of the written rule must agree on every input. Percent-decoding must. Stemming
+need not.
+
+## Digests of short tokens are obfuscation, not control
+
+Negative 2 says only salted digests and references survive memory. That is still true, and it is
+no longer sufficient on its own, because F2 changes what gets digested.
+
+A keyed digest of a 22-byte window of natural language is a fingerprint: the space of inputs is
+too large to enumerate. A keyed digest of a structural token is not. `docs`, `deploy`, `warn`,
+`acme`, `en-US`, a status, a ref name, a four-digit code: these are dictionary words and enums of
+three to six bytes, and anyone holding the key recovers them by enumeration in seconds. This is
+not a new discovery, it is `redact.py` PENDING gap 2 arriving on the main path: that note already
+names the class it cannot protect, and structural tokens ARE that class. The 22-byte window had
+been acting as an accidental privacy floor, and decomposing to tokens removes it.
+
+**So: for short tokens, a keyed digest is obfuscation, not access control.** It raises the cost of
+a casual read and it does not bound a determined one. Anything built on it must be built as if the
+tokens were recoverable by whoever holds the evidence file.
+
+And the key does not close it, because of where the threat is. A per-installation key protects the
+evidence from an OUTSIDER who obtains the file without the key. The people who read an evidence
+file in the normal course of their work are insiders, and they hold the key by construction. An
+audit trail whose threat model is "somebody inside reads what the agent sent" is not protected by
+a key that same person holds. PENDING gap 1 is therefore necessary and not sufficient, and both
+PENDING gaps in `redact.py` are promoted here from pre-deployment to-dos to PRECONDITIONS of
+deploying the structural matcher outside a measurement.
+
+### The option this leaves open, and it is not chosen here
+
+There is a design that keeps most of the evidence value while persisting far less: store the
+digest of the ORDERED TUPLE of a call's structural tokens, plus the token count, and never persist
+the individual token digests at all. The individual digests would exist in memory during the
+matching pass and be discarded with it, exactly as raw payloads already are.
+
+What it buys: a tuple digest over four tokens is not enumerable the way four separate three-byte
+tokens are, so the dictionary attack above stops working against the stored artifact.
+
+What it costs, and this is the trade-off that has to be weighed rather than waved at: containment
+is a SUBSET test, and a tuple digest only supports an EQUALITY test. A call whose tokens are all
+present in a request plus one more would no longer match, so partial containment becomes
+invisible. That is a recall cost of unknown size, and it is unknown because nobody has measured
+it.
+
+**It also collides with threat 16 and that collision is the real decision.** Threat 16 asks
+whether a match that enters the numbers can be re-derived from what was persisted, which is the
+first property an external auditor presses. Persisting only a tuple digest makes a match
+LESS re-derivable, not more: an auditor handed a tuple digest and a count can confirm that two
+token sets were identical and can confirm nothing about which tokens they were or why the matcher
+called it a match. Persisting individual token digests makes the match fully re-derivable and
+makes the tokens recoverable by anyone holding the key. Privacy and auditability are pulling in
+opposite directions here, and the honest statement is that this repository has measured neither
+side of it.
+
+This option is recorded, not adopted. Choosing it is a decision for whoever owns the deployment,
+made with threat 16 open on the desk, and it is deliberately left unmade here.
+
+### The legal status of what we store, stated plainly
+
+A keyed hash of a personal data item is **pseudonymised data, not anonymised data**, under
+recital 26 of the GDPR, and it remains within the scope of the Regulation.
+
+This sentence is in the doctrine rather than in a compliance appendix because it changes what may
+be claimed. "We only store hashes" is not a statement that the regulation stops applying. A
+fingerprint that can be matched back to a call, by a party holding the key, is data relating to an
+identifiable person whenever the underlying fragment was. Every retention, access and erasure
+obligation that would apply to the fragment applies to the digest of it.
+
 ## The evidence model: three separate claims
 
 This replaces the single `EFECTIVO` / `DECLARADO` / `INDETERMINADO` column. That column asked
