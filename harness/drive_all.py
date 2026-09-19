@@ -36,9 +36,11 @@ from pathlib import Path
 
 import yaml  # from the 'capture' extra
 
-from mcpfanout.driver import CallSpec, StdioMCPClient, drive, drive_wave
-from mcpfanout.record import (PASS_CONCURRENT, PASS_SEQUENTIAL, RunManifest, ToolCall,
-                              read_manifest, write_jsonl, write_manifest)
+from mcpfanout.driver import (CallSpec, StdioMCPClient, drive, drive_wave,
+                              publish_active_calls)
+from mcpfanout.record import (PASS_CONCURRENT, PASS_SEQUENTIAL, PHASE_HANDSHAKE,
+                              PHASE_LAUNCHER, RunManifest, ToolCall, read_manifest, write_jsonl,
+                              write_manifest)
 from mcpfanout.redact import DEFAULT_SALT, Redactor
 from mcpfanout.shingle import DEFAULT_K, DEFAULT_W
 
@@ -177,8 +179,18 @@ def _drive_ladder(srv: dict, levels: list[int], corpus: list[CallSpec], *, run_i
     """
     sid = srv["id"]
     index = 0
+    # The lifecycle phases, published exactly as driver._drive_corpus publishes them for the
+    # sequential pass. This path had neither, and the effect was not a missing label: the control
+    # file still held the PREVIOUS server's id with phase `drained`, so `npx -y pkg@ver` resolving
+    # THIS server's package was recorded as the previous server's call-caused egress. Measured on
+    # the first ten-server concurrent capture, which flagged four servers under gate rule 7 for a
+    # package registry none of them contacted, plus one flow attributed to nobody at all (the
+    # first server's launcher, before anything had been published). Same defect the sequential
+    # path was fixed for; this one was left behind because the two paths publish independently.
+    publish_active_calls(control_dir, run_id, sid, [], phase=PHASE_LAUNCHER)
     with StdioMCPClient(list(srv["launch"]), server_env(srv, proxy_env),
                         read_timeout=WAVE_TIMEOUT_S) as client:
+        publish_active_calls(control_dir, run_id, sid, [], phase=PHASE_HANDSHAKE)
         client.initialize(timeout=300.0)
         client.list_tools()  # listed for realism and to let servers lazily wire up their tools
         for n in levels:

@@ -237,3 +237,72 @@ def test_the_concurrent_ladder_leaves_the_control_file_drained(tmp_path):
                    redactor=Redactor(salt=b"t"), control_dir=control)
     d = json.loads((control / "active_calls.json").read_text())
     assert d["phase"] == PHASE_DRAINED and d["active_calls"] == []
+
+
+def test_the_concurrent_ladder_publishes_the_launcher_phase_before_the_process_exists(
+        tmp_path, monkeypatch):
+    """The third way the same defect came back, and the reason this test is not a duplicate.
+
+    The sequential path was fixed for this and the concurrent path was not, because the two publish
+    independently: `drive_wave` publishes DRIVING and DRAINED, and nothing published LAUNCHER or
+    HANDSHAKE for a ladder. The consequence was not a missing label. The control file still held the
+    PREVIOUS server's id with phase `drained`, so `npx -y pkg@ver` resolving the NEXT server's
+    package was recorded as the previous server's call-caused egress, and the first ten-server
+    concurrent capture flagged four servers under gate rule 7 for a package registry none of them
+    contacted, plus one flow attributed to nobody at all.
+
+    Asserted on the ORDER of the payloads rather than on the final state, because the final state
+    was already correct while the run was wrong.
+    """
+    sys.path.insert(0, str(REPO / "harness"))
+    import drive_all
+
+    seen: list[str] = []
+    real_popen = __import__("subprocess").Popen
+    original_publish = drive_all.publish_active_calls
+
+    def spy(control_dir, run_id, server_id, entries, phase=""):
+        seen.append(phase)
+        return original_publish(control_dir, run_id, server_id, entries, phase)
+
+    def spy_popen(*a, **kw):
+        seen.append("<spawn>")
+        return real_popen(*a, **kw)
+
+    import mcpfanout.driver as driver_mod
+    monkeypatch.setattr(drive_all, "publish_active_calls", spy)
+    monkeypatch.setattr(driver_mod, "publish_active_calls", spy)
+    monkeypatch.setattr(driver_mod.subprocess, "Popen", spy_popen)
+
+    corpus = tmp_path / "concurrent.json"
+    corpus.write_text(json.dumps([
+        {"tool": "search", "arguments": {"q": f"fragment-{i}-padded-out-to-length"}}
+        for i in range(2)]), encoding="utf-8")
+    srv = {"id": "s", "launch": _mock_cmd(), "concurrent_corpus_ref": str(corpus),
+           "max_concurrency": 2}
+
+    drive_all.drive_server_concurrent(srv, run_id="t", control_dir=tmp_path / "control",
+                                      redactor=Redactor(salt=b"t"), proxy_env={})
+
+    assert seen[0] == PHASE_LAUNCHER, seen
+    assert seen.index(PHASE_LAUNCHER) < seen.index("<spawn>"), seen
+    assert seen.index("<spawn>") < seen.index(PHASE_HANDSHAKE), seen
+    assert seen.index(PHASE_HANDSHAKE) < seen.index(PHASE_DRIVING), seen
+    assert seen[-1] == PHASE_DRAINED, seen
+
+
+def test_both_driving_paths_publish_the_same_lifecycle_phases():
+    """Neither path may know a phase the other does not.
+
+    The defect above existed because one path was fixed and the other was not, and a test that
+    checked only the fixed one would have passed throughout. This compares the SETS, so a phase
+    added to either path without the other fails here rather than in a capture six months later.
+    """
+    sys.path.insert(0, str(REPO / "harness"))
+    sequential = (REPO / "src" / "mcpfanout" / "driver.py").read_text(encoding="utf-8")
+    concurrent = (REPO / "harness" / "drive_all.py").read_text(encoding="utf-8")
+    for phase_const in ("PHASE_LAUNCHER", "PHASE_HANDSHAKE", "PHASE_DRIVING", "PHASE_DRAINED"):
+        assert phase_const in sequential, phase_const
+        assert phase_const in concurrent or phase_const in ("PHASE_DRIVING", "PHASE_DRAINED"), (
+            f"{phase_const} is published by the sequential path and not by the concurrent one; "
+            f"DRIVING and DRAINED are exempt only because drive_wave publishes them")
