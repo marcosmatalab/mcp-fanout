@@ -5,7 +5,7 @@
 # We set RECIPEPREFIX to '>' so recipe lines do not depend on literal tabs.
 .RECIPEPREFIX = >
 .PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
-        bench-verify disclosure fp fp-calibration ksweep positive clean
+        bench-verify disclosure fp fp-calibration ksweep positive rarity clean
 
 RUN ?= latest
 
@@ -85,6 +85,15 @@ ksweep:
 # changes what it sends; the k sweep reads the committed fixture, not the run.
 positive:
 > python3 -m mcpfanout.cli prep-positive --run $(RUN)
+
+# F1.3: does weighting a k-gram by how common it is lower the false-positive rate? Exit 0 if it
+# does (keep it), 1 if it does not (revert it, document why). Needs no Docker.
+#
+# A NON-ZERO EXIT HERE IS THE RESULT, not a broken build. It currently exits 1, and the verdict and
+# the numbers behind it are in docs/CALIBRATION.md, F1.3. Do not wrap this in `|| true` to make it
+# quiet: the exit code is the only part of the measurement that cannot be misread.
+rarity:
+> python3 -m mcpfanout.cli rarity --out docs/figures/calibration
 
 # Gate rule 7: which of a run's destinations nobody declared. Exits non-zero if any server needs
 # reviewing, or if the declaration file is missing (unevaluated is not the same as satisfied).

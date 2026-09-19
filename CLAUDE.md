@@ -47,12 +47,12 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 400
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 414
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
-  `record`, `aggregate`, `disclosure`, `calibrate`, `demo`, `cli` must not gain third-party
-  dependencies. This is
+  `record`, `aggregate`, `disclosure`, `calibrate`, `rarity`, `demo`, `cli` must not gain
+  third-party dependencies. This is
   why every registry file the core reads is JSON and not YAML. The capture layer
   (`driver`, `capture_addon`, `harness/`) may use the `capture` extra (mitmproxy, PyYAML). This is
   deliberate: the core is what CI runs and what must be reproducible, and a transitive dependency
@@ -97,6 +97,10 @@ corpus/concurrent/  the CONCURRENT per-server corpus: realistic arguments that S
 corpus/negative/ the negative control for F1: call pairs that share language structure and NO
                  information, split into a calibration half and a RESERVED half. Never tune
                  against the reserved half; the loader refuses it (docs/CALIBRATION.md)
+corpus/positive/ the phase A positive control: what the bench actually sent, distilled from its own
+                 ledger by `make positive`, so the k sweep needs no Docker
+corpus/background/  the documents whose k-gram frequencies define "common" for F1.3. Found material
+                 plus the calibration half, never the reserved half. Read its README
 bench/           phase A: our own MCP server, our own HTTP sink, the wave plan.
                  server.py and sink.py import NOTHING from mcpfanout, by test
 registry/        servers.yaml (what to measure, with max_concurrency per server),
@@ -112,7 +116,7 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 400 tests, no Docker, no network
+make verify      # 414 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
@@ -121,6 +125,8 @@ make run-concurrent  # phase B CONCURRENT pass: waves of N = 2, 5, 10. A separat
 make disclosure  # gate rule 7: destinations nobody declared. Non-zero exit means stop
 make fp          # gate rule 9: the matcher's false-positive rate on the RESERVED half (published)
 make fp-calibration  # the same rate on the calibration half: this is the one to look at while working
+make ksweep      # F1.2: the false-positive and recall curves against k, and the k the rule picks
+make rarity      # F1.3: the rarity-weighting verdict. Non-zero exit IS the result, not a failure
 make bench       # phase A bench capture
 make bench-verify    # the instrument block from a bench run
 ```
@@ -172,9 +178,15 @@ measurement over those at all. Three pieces, in `docs/CALIBRATION.md`:
   direction. The constant in `shingle.py` cites the curve beside it. **Do not re-tune k by hand**:
   it is the output of `calibrate.choose_k`, and the registry, the addon and run.sh all read it now
   instead of keeping copies.
-- **F1.3, open.** Weight each k-gram by its frequency in a background corpus and require a minimum
-  rarity mass. Frequency counting, not semantics, so negative 3 holds. It stays only if the F1.1
-  rate falls; if it does not, it is reverted and why is written down.
+- **F1.3, done and REVERTED. Do not switch it back on without new evidence.** `make rarity`, which
+  exits non-zero because the rate did not fall: 0 of 224 unweighted against 0 of 224 weighted on the
+  reserved half at k = 22. Probed at k = 16, where false positives still exist, it removed 4 of 62 on
+  the calibration half and 0 of 66 on the reserved one. The diagnosis is measured, not guessed: every
+  colliding k-gram appears in at most ONE of the 32 background documents, so nothing can be weighted
+  down, and a mass threshold high enough to clear the false positives (6.0) is thresholding match
+  LENGTH and costs recall the k choice does not (0.375 against 0.5). The code stays in
+  `rarity.py`, out of the matching path; a test fails if `match.py` or the addon ever import it while
+  the committed verdict reads `reverted`.
 
 **Never tune against the reserved half.** `calibrate.load_negative` raises on it, the CLI derives
 the purpose from the half, and tests fail if either guard is bypassed.
