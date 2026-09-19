@@ -34,15 +34,23 @@ the entry's command and verdict in `docs/figures/control/`, and threat 15 in `do
 to. The POST body was 1 byte. This is background traffic, not the phenomenon the six numbers
 measure.
 
-**Raised.** An issue was opened with the maintainers of the reference server set, phrased as a
+**Raised: 2026-09-19, https://github.com/modelcontextprotocol/servers/issues/4829.** Phrased as a
 documentation gap and not as a security report: the tool's description says it navigates to the
 URL it is given, and does not mention the background traffic an embedded browser carries with it,
 which is material for anyone deploying it in a regulated environment. No severity, no identifier,
-no deadline. Draft text kept at `docs/disclosure/2026-09-19-puppeteer-docs-gap.md`.
+no deadline. Text as sent: `docs/disclosure/2026-09-19-puppeteer-docs-gap.md`.
+
+**Where it was filed, and why not where the code is.** `src/puppeteer` is no longer in
+`modelcontextprotocol/servers`; it is in `modelcontextprotocol/servers-archived`, which is
+archived, and GitHub does not accept new issues on an archived repository. So the issue went to
+the active repository, raising the point as a convention for any server that embeds a browser
+engine and naming the archived package as the concrete case rather than as the addressee. The
+alternative, filing nothing, would have left this entry without the date gate rule 7 exists to be
+able to show.
 
 **Authorisation to name the instance.** Marcos Mata, 2026-09-19. The finding is published as class
 AND instance together with the cause in the same sentence, per threat 15: naming only the class is
 unverifiable, and naming only the package accuses a maintainer of something the maintainer did not
 write.
 
-**Status.** Raised 2026-09-19. No response yet.
+**Status.** Raised 2026-09-19 as issue 4829. No response yet.
