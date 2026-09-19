@@ -11,11 +11,75 @@ of two very different architectures it should have. The rationale for measuring 
 building is in [`docs/METHOD.md`](docs/METHOD.md): you cannot design the causal-union layer
 without knowing the fan-out, and choosing blind means building the wrong one.
 
+## What it found
+
+Measured on run `20260919T194649Z-concurrent`: ten of the most-installed MCP servers, 130 tool
+calls in concurrent waves of 2, 5 and 10, plus a 26-call sequential pass. Full write-up in
+[`docs/paper/DRAFT.md`](docs/paper/DRAFT.md).
+
+**The headline is about the instrument, not about MCP.**
+
+> **A proxy selected by `HTTP_PROXY` and `HTTPS_PROXY` does not observe an agent's egress. It
+> observes the subset of its clients that chose to honour two environment variables, and that
+> subset is not knowable in advance.**
+
+Node's global `fetch` ignores those variables unless `NODE_USE_ENV_PROXY=1` is set, and the
+capability only exists from Node 22.21 and 24.5. Our image shipped Node 20, so no configuration
+could have made that traffic visible. One of the three components that reached a third party was
+invisible: it completed 16 of 17 calls, returned the API's own answers, and recorded **zero
+flows**. The packet capture is what caught it, ten connections going straight past the proxy.
+Full chain in [`docs/THREATS.md`](docs/THREATS.md) threat 19; count them yourself with
+`make backstop`.
+
+| result | value | command |
+| --- | --- | --- |
+| Connections per tool call, median | **0** | `make n1` |
+| Context leakage: bait-file fragments in outbound requests | **zero bytes, across every run** | `make n4` |
+| `traceparent` propagation | **0 of 3** observable components | `make n3` |
+| **Attribution of a flow to its causing call** | **0.6579** against a sealed threshold of **0.80**: **not met** | `make n5` |
+| Third parties that are themselves self-hostable | **0.0**: the recursion buys nothing | `make n6` |
+| Tool schemas attributable from the schema alone | at most **38%** of 87 tools; 22% never can be | `make argument-shapes` |
+
+**Three things worth knowing before reading any of those numbers.**
+
+1. **Every repair to the instrument lowered the headline**: 0.8947, then 0.8095, then 0.6579, as
+   blind spots were removed. A measurement whose headline improves as its instrument improves is
+   measuring the instrument. `make honesty-curve`.
+2. **Attribution depends on the shape of a call's arguments, not on the tool.** A call committing
+   two or more structural tokens attributes uniquely; a call committing one does not, under any
+   rule that does not manufacture false attributions. Measured inside a single component:
+   repository reads attributed 3 of 3, searches whose query embedded a `repo:owner/name`
+   qualifier 5 of 5, searches whose query was a bare phrase **0 of 6**.
+3. **One of our own sealed predictions was false**, and it is still in the seal, unedited, with
+   the correction beside it: [`docs/PREREG-F2.md`](docs/PREREG-F2.md).
+
+**Two behaviours found in the measured environment**, both disclosed to their maintainers on
+2026-09-19 with a publication window, before any of this was written:
+
+- A tool call that runs `npm install` while it is running, pulling **41 packages** from unpinned
+  ranges with no lockfile, in 82 registry requests one day and 87 the day before
+  ([issue](https://github.com/alan-turing-institute/ReadabiliPy/issues/122),
+  [issue](https://github.com/modelcontextprotocol/servers/issues/4830), threat 17).
+- A server whose embedded browser reaches destinations its documentation never declares,
+  established by a control run rather than by reading a hostname (threat 15).
+
 ## What the eventual product would be, and what category it is not in
 
-The harness measures. If the numbers support building something, that something is:
+The harness measured, and the stop criteria fired. The question it was built to inform was
+whether to build:
 
 > **Runtime provenance and evidence for autonomous agents.**
+
+**The answer is not in this README, and that is deliberate.** The instrument failed its own
+pre-registered threshold (0.6579 against 0.80), which says the measuring apparatus is not good
+enough to settle the product question, not that the product question is settled. The product
+verdict was therefore **left unfrozen on purpose**, and that refusal is itself inside the sealed
+pre-registration block so it could not be replaced by a verdict once a result existed: see
+[`docs/PREREG-F2.md`](docs/PREREG-F2.md) section 8, which names the two threats that made a
+verdict from this sample unsound. Development stopped there.
+
+The positioning below is what the product WOULD be, and it survives the negative result because
+nothing measured here bears on the category choice.
 
 MCP is the **first supported environment**, not the category. That distinction is the whole
 positioning, and both of the obvious alternative framings are wrong in a way that costs money:
@@ -56,17 +120,22 @@ Each number has exactly one command that computes it (doctrine rule 6: no publis
 without a command that measures it). Full definitions in
 [`docs/THE-SIX-NUMBERS.md`](docs/THE-SIX-NUMBERS.md).
 
-| # | Number | What it decides | Command |
-| --- | --- | --- | --- |
-| 1 | Outbound connections per tool call | Whether the causal union is trivial or is the product | `make n1` |
-| 2 | Distinct domains per tool call | The size of the publishable finding | `make n2` |
-| 3 | Fraction of servers that propagate `traceparent` | Whether the cooperative path (SEP-414) is worth anything today | `make n3` |
-| 4 | Outbound bytes that literally match context files | Whether content matching has signal at all | `make n4` |
-| 5 | Fraction of connections causally unifiable by content match | **Whether the whole product works** | `make n5` |
-| 6 | Fraction of touched third parties that are themselves self-hostable | How far the edge can advance before the chain breaks | `make n6` |
+These were questions. They now have answers, so the answers are in the table rather than the
+questions.
 
-Number 5 is the decisive one and the one nobody has measured. Numbers 1 to 4 are the paper;
-number 5 is the viability. Number 6 sizes the recursion described in `docs/METHOD.md`.
+| # | Number | What it was asked to decide | Answer | Command |
+| --- | --- | --- | --- | --- |
+| 1 | Outbound connections per tool call | Whether the causal union is trivial or is the product | median **0**, p95 **1**: on this sample the union is not the hard part | `make n1` |
+| 2 | Distinct domains per tool call | The size of the publishable finding | median **0**, max **1** | `make n2` |
+| 3 | Servers propagating `traceparent` | Whether the cooperative path is worth anything today | **0 of 3** observable. The cheap fix nobody has adopted | `make n3` |
+| 4 | Outbound bytes matching context files | Whether content matching has signal at all | **zero bytes**. Nothing leaked, and the k-gram matcher is untouched by this work | `make n4` |
+| 5 | Flows attributable to their causing call | **Whether the whole product works** | **0.6579** against a sealed **0.80**. **Not met**, and the product verdict was left unfrozen on purpose | `make n5` |
+| 6 | Touched third parties that are self-hostable | How far the edge can advance before the chain breaks | **0.0**. The recursion buys nothing here | `make n6` |
+
+Number 5 was the decisive one and it is the one that failed. Numbers 1 to 4 are the paper; number
+6 sizes a recursion that turned out to have nothing to recurse into. The three denominators behind
+number 5 are published together and never one alone, because this project has caught a
+contaminated denominator three times; see [`docs/PREREG-F2.md`](docs/PREREG-F2.md) section 16.
 
 ## The evidence model: three separate claims
 
@@ -133,18 +202,41 @@ make numbers        # or make n1 ... n6 individually
 
 # 6. Gate rule 7: which destinations nobody declared. Non-zero exit means stop and review
 make disclosure
+
+# 7. What the proxy could NOT see: outbound SYNs per destination, from the pcap backstop.
+#    Anything going somewhere that is not the proxy is traffic the instrument is not reading.
+make backstop RUN=runs/<id>
+
+# 8. The headline figure at each stage of the instrument becoming less blind
+make honesty-curve
+
+# 9. How much of a tool surface is attributable, from committed schemas alone. No capture needed
+make argument-shapes
+
+# 10. The F2 matcher's pre-registered predictions, on calibration material
+make f2             # make f2-reserved measures the reserved half, ONCE, at the end
 ```
 
 See [`docs/METHOD.md`](docs/METHOD.md) for the observation model and the capture layers,
 [`docs/PHASES.md`](docs/PHASES.md) for the three phases and the two phase B passes, and
-[`docs/THE-GATE.md`](docs/THE-GATE.md) for the nine conditions a run must pass before any number
-is reported.
+[`docs/THE-GATE.md`](docs/THE-GATE.md) for the **ten** conditions a run must pass before any
+number is reported. Rule 10 was added last and earned its place by being violated: **every
+instrument needs a test that fails when the instrument is ABSENT, not only when it is wrong.** A
+wrong number gets investigated; a green gets published. There are five recorded instances, and the
+fifth was this README, which for four days stated a cost, a reproducibility claim and a version
+that the measurements contradicted.
 
 ## Reproducibility, privacy, disclosure
 
-- **Reproducible.** Two runs over the same corpus and the same pinned servers produce the same
-  six numbers. `make verify` proves the measurement core is deterministic byte for byte over
-  fixtures. Salt changes stored digests but never the numbers; see `docs/METHOD.md`.
+- **Reproducible, at two levels, and the distinction matters.** What reproduces byte for byte is
+  the measurement CORE over fixtures (`make verify`) and the **normalized aggregate of a given
+  run**, which is why aggregates are committed under `docs/figures/` while runs are not. What does
+  **not** reproduce is a new capture: it contacts live third parties, and the measured environment
+  changes between days. That is not a caveat, it is one of this project's findings, measured as 87
+  package-registry requests on one day and 82 on the next from the same pinned server
+  ([`docs/THREATS.md`](docs/THREATS.md) threat 17). An earlier version of this section claimed two
+  runs produce the same six numbers. They do not. Salt changes stored digests but never the
+  numbers; see `docs/METHOD.md`.
 - **Digest-only.** Payloads are never stored. The harness keeps salted shingle hashes and
   references. The sentence it can emit is: "the fragment with hash X, from reference Y, appeared
   in the output toward domain Z." See [`src/mcpfanout/redact.py`](src/mcpfanout/redact.py).
@@ -157,15 +249,26 @@ is reported.
   names hosts, so it stays in the untracked run directory. Nothing that locates a specific server is
   published until authorized. See [`docs/THE-GATE.md`](docs/THE-GATE.md) rule 7.
 
-## Cost
+## Cost, measured rather than estimated
 
-The measurement is one afternoon and roughly 10 EUR of compute. It touches nothing outside a
+An earlier version of this section said "one afternoon and roughly 10 EUR of compute". Both
+numbers were guesses and both were wrong, so here is what it actually cost.
+
+| item | measured |
+| --- | --- |
+| Cloud compute | **0 EUR.** Everything runs in Docker on one machine. Nothing is billed |
+| Paid APIs | **0 EUR.** One GitHub token on the free tier. Brave and Google Maps were rejected because their free tiers require a credit card ([`docs/LAB-ACCOUNTS.md`](docs/LAB-ACCOUNTS.md)) |
+| Capture time across 21 runs | **138 seconds** of actual driving, the longest single run 25 s |
+| Elapsed wall-clock | **two days**, not one afternoon |
+| Disk | 1.8 GB image, 292 MB of untracked runs |
+
+The money cost is genuinely zero and the honest cost is attention. It touches nothing outside a
 container and starts no server against real credentials. The stop criteria in
 [`docs/STOP-CRITERIA.md`](docs/STOP-CRITERIA.md) say when to stop spending.
 
 ## Status
 
-This is `v0.1`: the honest state of each part.
+Tagged **`v1.0.0`** at the preprint. The honest state of each part:
 
 | Part | State |
 | --- | --- |
@@ -177,6 +280,34 @@ This is `v0.1`: the honest state of each part.
 | Phase A bench (the instrument) | Built, run, and passing its pre-registered sensor gate |
 | Matcher calibration on structured language (`make fp`, `make ksweep`, `make rarity`) | Complete. False-positive rate measured over 224 held-out pairs, k chosen by the curve rather than by judgement (0 of 224 at k = 22 against 66 of 224 at k = 16), and rarity weighting measured and reverted because it did not lower the rate |
 | eBPF SSL uprobe capture (product-grade, catches pinned TLS) | Out of scope for the measurement, documented as the next layer |
+
+## Citing this
+
+Cite the archived release rather than the default branch: the argument depends on the sealed
+pre-registration block and on the signed commit history, and only a tag fixes both.
+
+```
+<!-- VERSION DOI: filled in from Zenodo in the commit that follows the release.
+     The version DOI resolves to the exact deposit someone read; it belongs here and in
+     CITATION.cff. -->
+<!-- CONCEPT DOI: filled in at the same time, and it belongs HERE ONLY.
+     It always resolves to the latest version, which is right for a reader arriving by link
+     and wrong for a citation, which must point at what the author actually saw. -->
+```
+
+Machine-readable metadata is in [`CITATION.cff`](CITATION.cff). The release procedure, including
+why Zenodo must be connected BEFORE the release is published, is in
+[`docs/paper/RELEASE-CHECKLIST.md`](docs/paper/RELEASE-CHECKLIST.md).
+
+## Where to read next
+
+| If you want | Read |
+| --- | --- |
+| The result, in full | [`docs/paper/DRAFT.md`](docs/paper/DRAFT.md) |
+| The instrument defect that outranks it | [`docs/THREATS.md`](docs/THREATS.md), threat 19 |
+| What was predicted before measuring, including the prediction that was false | [`docs/PREREG-F2.md`](docs/PREREG-F2.md) |
+| What was disclosed, to whom, and when | [`docs/DISCLOSURE-LOG.md`](docs/DISCLOSURE-LOG.md) |
+| Why every instrument needs an absence test | [`docs/THE-GATE.md`](docs/THE-GATE.md), rule 10 |
 
 ## License
 

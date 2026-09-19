@@ -155,7 +155,7 @@ screen on purpose: it is where credibility is won or lost.
     announces itself. It produces a clean run, a passing suite and an empty result that reads as a
     finding.
 
-    **The class is established by four instances, not argued from one.**
+    **The class is established by five instances, not argued from one.**
 
     - `capture_addon.py` used a relative import. mitmproxy loads an addon by path under a synthetic
       package name, so the import raised, mitmdump logged it and carried on proxying. The run
@@ -173,8 +173,14 @@ screen on purpose: it is where credibility is won or lost.
     - `make figures` wrote `content_denominator: null` into every committed artifact, because
       `compute_all` was called without the constant-path list. The published artifact omitted the
       quantity the published verdict is measured against, and it validated, diffed and committed
-      cleanly. Four instances is not an anecdote: the class is that an ABSENT input produces a
-      well-formed output, and well-formed output is what gets reviewed.
+      cleanly.
+    - `README.md` stated a compute cost, a reproducibility guarantee and a version number that the
+      measurements contradicted, and went on doing so for four days after each was disproved. It is
+      the page almost every reader sees, and nothing in the suite could tell that a sentence of
+      prose had stopped being true. Five instances is not an anecdote: the class is that an ABSENT
+      input produces a WELL-FORMED output, and well-formed output is what gets reviewed. The fifth
+      extends it past code: a document is an artifact, and a published artifact that omits or
+      contradicts the result it is measured against fails at the one job it has.
 
     **What the test has to do, since "we have tests" is what was true in all three cases.** It must
     exercise the instrument's real entry point, with the real loader where there is one, and it

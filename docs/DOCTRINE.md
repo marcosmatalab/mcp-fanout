@@ -203,10 +203,11 @@ reproduced by running a command is not allowed to ship. See `docs/THE-SIX-NUMBER
 
 A test that only catches a WRONG instrument leaves the dangerous case uncovered, because a wrong
 number gets investigated and a green gets published. This repository has produced that failure
-four times: an addon that did not load and finished green with zero flows, a k constant that
+five times: an addon that did not load and finished green with zero flows, a k constant that
 diverged and silently stopped matching, a selftest that serialised the structural fields without
-ever populating one, and a committed figure that omitted the very denominator its verdict is
-measured against. Full statement and the three instances in `docs/THE-GATE.md`, rule 10.
+ever populating one, a committed figure that omitted the very denominator its verdict is measured
+against, and a README that contradicted three measured facts for four days. The last extends the
+rule past code: a document is an artifact too. Full statement and the three instances in `docs/THE-GATE.md`, rule 10.
 
 The rule applies to itself: a detector must be shown to detect a planted instance, in the same
 run, through the same code path, before its clean report means anything.
