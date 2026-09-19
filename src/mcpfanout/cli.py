@@ -32,8 +32,15 @@ from .classify import PACKAGE_INFRASTRUCTURE_PATH, ExclusionList, Registry
 
 
 def _resolve_run(run_arg: str, runs_root: Path = Path("runs")) -> Path:
-    """Turn 'latest' or a path into a concrete run directory."""
-    if run_arg != "latest":
+    """Turn 'latest', 'latest-<pass>' or a path into a concrete run directory.
+
+    'latest-<pass>' exists because 'latest' became ambiguous the moment a run could be something
+    other than a measurement: a control run is newer than the pass it is the control FOR, so
+    `--against latest` after a control capture would compare a run with itself. The pass is read
+    from each manifest rather than from the directory name, which is a label we write and could
+    get wrong, while the manifest is what every other command reads the pass from.
+    """
+    if run_arg != "latest" and not run_arg.startswith("latest-"):
         p = Path(run_arg)
         if not (p / "manifest.json").exists():
             sys.exit(f"error: {p} is not a run directory (no manifest.json)")
@@ -41,11 +48,36 @@ def _resolve_run(run_arg: str, runs_root: Path = Path("runs")) -> Path:
     if not runs_root.exists():
         sys.exit("error: no runs/ directory yet. Run `make selftest` or `make run` first.")
     candidates = [d for d in runs_root.iterdir() if (d / "manifest.json").exists()]
+    wanted = run_arg[len("latest-"):] if run_arg.startswith("latest-") else ""
+    if wanted:
+        from .record import PASSES, read_manifest
+        if wanted not in PASSES:
+            sys.exit(f"error: unknown pass '{wanted}'. Known: {', '.join(PASSES)}")
+        candidates = [d for d in candidates
+                      if read_manifest(d / "manifest.json").pass_name == wanted]
+        if not candidates:
+            sys.exit(f"error: runs/ has no completed '{wanted}' run yet.")
     if not candidates:
         sys.exit("error: runs/ has no completed run yet.")
     # Newest by modification time. Deterministic given the filesystem; ties are vanishingly rare
     # and never affect a published number (a number is tied to a specific run directory).
     return max(candidates, key=lambda d: d.stat().st_mtime)
+
+
+def _refuse_a_control_run(run, what: str) -> None:
+    """Stop a control run being read as a measurement of a server.
+
+    A control run drives a component with no MCP server in the process tree, so it has no tool
+    calls: every per-call figure over it is a ratio whose denominator is zero, and `make numbers`
+    after a control capture would pick it up as 'latest' and print six of them. The label exists
+    precisely so this is a check rather than something an operator has to notice.
+    """
+    from .record import PASSES_MEASURING_A_SERVER
+    label = run.manifest.pass_name
+    if label and label not in PASSES_MEASURING_A_SERVER:
+        sys.exit(f"error: run {run.manifest.run_id} is a '{label}' run, and {what} is not defined "
+                 f"over it: it drove no tool call, so every per-call figure would divide by zero. "
+                 f"Its own command is `python -m mcpfanout.cli control-compare`.")
 
 
 def _shingle_default_k() -> int:
@@ -64,6 +96,7 @@ def _load_registry() -> Registry:
 
 def _cmd_aggregate(args: argparse.Namespace) -> int:
     run = Run.load(_resolve_run(args.run))
+    _refuse_a_control_run(run, "the six numbers")
     registry = _load_registry()
     # A declared exclusion list, loaded from registry/ and cited in the output. None is a
     # reported state, not a default: number_1 withholds the excluded figure and says why.
@@ -321,6 +354,92 @@ def _cmd_disclosure_check(args: argparse.Namespace) -> int:
     return 0 if report["verdict"] == VERDICT_CLEAR else 1
 
 
+def _cmd_control_compare(args: argparse.Namespace) -> int:
+    """Did a bare component, with no MCP server, reach the destinations the server was flagged for?
+
+    Exit 0 when every destination under review was reproduced by the control, 1 otherwise. A
+    non-zero exit here is not a broken build: it says the control did NOT explain the finding, and
+    that is the outcome that keeps a finding pointed at the server.
+
+    The hosts under review are read from `disclosure.check` against the subject run, not decided
+    here, so this command cannot widen or narrow gate rule 7's own list. The report names a server
+    and hostnames, so it lands in the run directory like the disclosure report does; `--publish`
+    is the only path that writes a named artifact into docs/, and it demands the authorisation
+    record that gate rule 7 requires before an instance may be named at all.
+    """
+    from .control import compare, publishable
+    from .disclosure import DECLARED_DESTINATIONS_PATH, DeclaredDestinations
+    from .disclosure import check as disclosure_check
+
+    control_dir = _resolve_run(args.run)
+    subject_dir = _resolve_run(args.against)
+    control_run, subject_run = Run.load(control_dir), Run.load(subject_dir)
+    if control_dir.resolve() == subject_dir.resolve():
+        sys.exit("error: the control run and the subject run are the same directory. A run cannot "
+                 "be its own control; pass --against runs/<the pass being explained>.")
+
+    declared = DeclaredDestinations.load(args.declared or DECLARED_DESTINATIONS_PATH)
+    report = disclosure_check(subject_run.flows, declared,
+                              ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH))
+    entry = report.get("servers", {}).get(args.server)
+    if entry is None:
+        sys.exit(f"error: {args.server} produced no call-caused destination in run "
+                 f"{subject_run.manifest.run_id}, so there is nothing for a control to explain.")
+
+    # How the control was actually driven, read from the run rather than from this command's
+    # flags: publishing from the host would otherwise describe a dwell nobody drove with.
+    driving_path = control_dir / "control-driving.json"
+    driving = (json.loads(driving_path.read_text(encoding="utf-8"))
+               if driving_path.is_file() else {})
+
+    # The hosts the control is asked to explain are every UNDECLARED one: the newly flagged and
+    # the already written up. Not `new` alone, and the reason is a bug this had for one afternoon.
+    # Recording a finding as a known exception (which is what publishing it does) empties `new`,
+    # so re-running the command that produced a published comparison would have found nothing to
+    # explain and returned the "nothing under review" verdict over the same data. A figure whose
+    # own command stops reproducing it the moment it is published is exactly what rule 6 exists to
+    # prevent. `declared` stays out: a destination the server's documentation does declare needs no
+    # control, because nobody was asking what caused it.
+    under_review = list(entry.get("new", [])) + list(entry.get("known", []))
+    out = compare(control_run.flows, subject_run.flows, args.server, under_review)
+    out["control_driving"] = driving
+    out["control_run_id"] = control_run.manifest.run_id
+    out["subject_run_id"] = subject_run.manifest.run_id
+    out["subject_pass"] = subject_run.manifest.pass_name or "unlabelled"
+    out["control_navigations"] = len(control_run.calls)
+    out["command"] = (f"python -m mcpfanout.cli control-compare --run runs/"
+                      f"{control_run.manifest.run_id} --against runs/"
+                      f"{subject_run.manifest.run_id} --server {args.server}")
+    print(json.dumps(out, indent=2, sort_keys=True))
+    # Printed before it is saved, and the save may fail: a run directory written by the container
+    # is root-owned, and losing the file must not lose the verdict. Same rule as disclosure-check.
+    try:
+        (control_dir / "control-compare.json").write_text(
+            json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"[control-compare] wrote {control_dir / 'control-compare.json'}", file=sys.stderr)
+    except OSError as exc:
+        print(f"[control-compare] report NOT saved ({exc.strerror}); the verdict above and the "
+              f"exit code still stand", file=sys.stderr)
+
+    if args.publish:
+        art = publishable(
+            out, control_run_id=control_run.manifest.run_id,
+            subject_run_id=subject_run.manifest.run_id,
+            repetitions=int(driving.get("repetitions", len(control_run.calls))),
+            dwell_seconds=float(driving.get("dwell_seconds", args.dwell)),
+            url_source=str(driving.get("navigation_url_source", args.corpus)),
+            authorisation=args.authorisation)
+        art["control_driving"] = driving
+        out_dir = Path(args.publish)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / f"{control_run.manifest.run_id}-vs-{args.server}.json"
+        path.write_text(json.dumps(art, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"[control-compare] published {path}", file=sys.stderr)
+
+    from .control import VERDICT_REPRODUCED
+    return 0 if out["verdict"] == VERDICT_REPRODUCED else 1
+
+
 def _cmd_figures(args: argparse.Namespace) -> int:
     """Write a run's NORMALIZED AGGREGATE to docs/figures/ as a committed artifact.
 
@@ -338,6 +457,7 @@ def _cmd_figures(args: argparse.Namespace) -> int:
     """
     run_dir = _resolve_run(args.run)
     run = Run.load(run_dir)
+    _refuse_a_control_run(run, "a normalized six-number aggregate")
     payload = {
         "normalized": True,
         "provenance": {
@@ -435,6 +555,12 @@ def _cmd_run(args: argparse.Namespace) -> int:
            "--pass", getattr(args, "pass_name", "sequential")]
     if getattr(args, "bench", False):
         cmd.append("--bench")
+    if getattr(args, "control", False):
+        cmd.append("--control")
+        cmd += ["--against", args.against,
+                "--repetitions", str(args.repetitions), "--dwell", str(args.dwell)]
+        if args.authorisation:
+            cmd += ["--authorisation", args.authorisation]
     for sid in args.only:
         cmd += ["--only", sid]
     return subprocess.call(cmd)
@@ -511,6 +637,30 @@ def build_parser() -> argparse.ArgumentParser:
                     help="the declaration file (default: registry/declared-destinations.json)")
     dc.set_defaults(func=_cmd_disclosure_check)
 
+    cc = sub.add_parser("control-compare",
+                        help="did a bare component reach the destinations a server was flagged "
+                             "for? Non-zero exit means the control did NOT explain the finding")
+    cc.add_argument("--run", default="latest-control",
+                    help="the CONTROL run: 'latest-control' or a path to runs/<id>")
+    cc.add_argument("--against", default="latest-sequential",
+                    help="the run being explained: 'latest-sequential' or a path to runs/<id>")
+    cc.add_argument("--server", required=True,
+                    help="the server id whose flagged destinations the control is to explain")
+    cc.add_argument("--declared", default=None,
+                    help="the declaration file (default: registry/declared-destinations.json)")
+    cc.add_argument("--publish", default=None, metavar="DIR",
+                    help="also write the committed, INSTANCE-NAMING artifact into DIR. Needs "
+                         "--authorisation: gate rule 7 allows naming only after a disclosure")
+    cc.add_argument("--authorisation", default="",
+                    help="the record of who authorised naming the instance, and where it is "
+                         "logged (docs/DISCLOSURE-LOG.md)")
+    cc.add_argument("--dwell", type=float, default=0.0,
+                    help="the dwell seconds the control was driven with, for the artifact's "
+                         "provenance block")
+    cc.add_argument("--corpus", default="corpus/calls/puppeteer.json",
+                    help="where the control read its navigation target, for the provenance block")
+    cc.set_defaults(func=_cmd_control_compare)
+
     f = sub.add_parser("figures", help="write a run's normalized aggregate to docs/figures/")
     f.add_argument("--run", default="latest", help="'latest' or a path to runs/<id>")
     f.add_argument("--out", default="docs/figures", help="directory for the committed artifact")
@@ -527,6 +677,21 @@ def build_parser() -> argparse.ArgumentParser:
                         "runs and separate published figures; see docs/PHASES.md, phase B.")
     r.add_argument("--bench", action="store_true",
                    help="phase A: drive concurrent waves against our own bench server and sink")
+    r.add_argument("--control", action="store_true",
+                   help="drive the BROWSER CONTROL instead of any server: a bare headless browser "
+                        "through the same proxy with no MCP server, to find out whether a flagged "
+                        "destination is the server's or the browser's it embeds")
+    r.add_argument("--against", default="latest-sequential",
+                   help="with --control: the run whose flagged destinations are to be explained")
+    r.add_argument("--repetitions", type=int, default=3,
+                   help="with --control: how many browser launches. More than one because the "
+                        "background destination set varies between launches")
+    r.add_argument("--dwell", type=float, default=12.0,
+                   help="with --control: seconds to leave each browser running. The traffic under "
+                        "investigation is background traffic, which does not happen at page load")
+    r.add_argument("--authorisation", default="",
+                   help="with --control: the disclosure record that authorises naming the "
+                        "instance, if the comparison is to be committed to docs/figures/control/")
     r.set_defaults(func=_cmd_run)
     return p
 

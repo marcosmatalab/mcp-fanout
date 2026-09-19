@@ -278,3 +278,129 @@ gate rule 6. Each names the threat and what it does to the numbers.
     count as a verified one. The pre-registered prediction in `docs/PHASES.md` names this asymmetry
     explicitly, because it is exactly the half of the prediction that the pass cannot falsify.
 
+
+15. **A server that embeds a browser produces egress the server never asked for, and attributing
+    it to the browser is a measurement here rather than a reading: `@modelcontextprotocol/server-puppeteer@2025.5.12`
+    reached `clients2.google.com` and `accounts.google.com` during a single `puppeteer_navigate`
+    call, and a bare headless Chromium launched with the same flags through the same proxy with no
+    MCP server in the process tree reached both of them too.** Any MCP server embedding a browser
+    engine will present the same property, whoever writes it.
+
+    The class and the instance are published together, deliberately, and the reason is that each
+    one alone is a different kind of wrong. The class alone ("browser-embedding servers carry
+    background traffic") is unverifiable: nobody can check it against anything. The package alone
+    reads as an accusation about code the maintainer did not write, because the traffic is
+    Chromium's. The cause has to sit in the same sentence as both.
+
+    **How it was measured, and why a control was needed at all.** Gate rule 7 flagged the two
+    hosts. The obvious diagnosis was that the embedded browser checks for updates on its own, and
+    an obvious diagnosis is still a guess: the same observation is equally consistent with the
+    server initiating those requests. So the diagnosis was tested against its own negative. `make
+    control` drives a CONTROL run (`src/mcpfanout/control.py`, `harness/control_browser.py`): the
+    same browser binary the package downloaded into its own cache, the same flags the package
+    passes in a container (`--no-sandbox --single-process --no-zygote`), the same proxy delivered
+    the same way (HTTP(S)_PROXY in the environment, not `--proxy-server`, because a browser does
+    not resolve the two identically), the same navigation target read out of
+    `corpus/calls/puppeteer.json`, and no MCP server anywhere in the process tree.
+
+    Three launches with a cold profile each, twelve seconds of dwell apiece, because the traffic
+    under investigation is background traffic and a control killed at page load would miss exactly
+    the class of request it exists to observe. Result: **both hosts under review reached in all
+    three launches**, plus two the server's own run did not produce (`redirector.gvt1.com` and a
+    `gvt1.com` edge node, which is a component download the longer dwell had time to reach). So
+    `only_under_the_server` is empty: there is no destination of that server's that the bare
+    browser fails to explain. Verdict `cause_reproduced`, exit 0, command and artifact in
+    `docs/figures/control/20260919T125335Z-control-vs-puppeteer.json`.
+
+    **What a reproduced control does and does not establish.** It establishes that the MCP server
+    is not a NECESSARY condition for that egress: remove it and the traffic still happens. It does
+    not establish that the server never initiates such a request, because no black-box observer can
+    prove a negative about a process it did not write. The direction of the evidence is the
+    publishable part, and the verdict string carries its own meaning inside the artifact so it
+    cannot be quoted as more than it is.
+
+    **Neither flow carried content, and that was checked rather than assumed. This is the question
+    that decides what the finding IS**, because a background beacon carrying nothing is a note and
+    the same host carrying a fragment of a call's arguments is the phenomenon the six numbers
+    exist to measure. Both channels read zero on both hosts, and they are two different
+    quantities: the ARGUMENT channel (a boolean per flow: did any k-gram of the driving call's
+    arguments appear) is false on both, and the CONTEXT channel (bytes of a planted bait file
+    covered) is zero bytes with `matched_refs` empty. The POST body to `accounts.google.com` was
+    **1 byte**, which makes that one floor-free: there is no room in one byte for a fragment of any
+    length, so it does not depend on the calibrated k at all. The GET to `clients2.google.com`
+    carried 143 bytes of request target and no body, and its zero IS at k = 22
+    (`docs/CALIBRATION.md`, F1.2), so what it says exactly is that nothing the sensor can see
+    travelled there.
+
+    **The control carries its own positive control, which is what makes those zeros mean
+    anything.** A run in which nothing matches is evidence only if something COULD have matched.
+    The control publishes the corpus call's own argument digests to the capture addon exactly as
+    the driver does for a real call, so its navigation to the corpus URL should be causal, and it
+    is: 3 of the control's 15 flows are causal, one per launch, all of them the navigation, and
+    the remaining 12 background flows carry nothing on either channel. Without that, "the
+    background requests carried nothing" and "the matcher saw nothing at all" would be the same
+    observation, in the direction that flatters the diagnosis. `is_the_sensor_alive` is in the
+    artifact for that reason and a test fails if threat 15 ever rests on a control whose matcher
+    never fired. If a browser's background request had carried our argument material, that would be
+    a far more
+    serious finding than this one, and this is the measurement that would have shown it.
+
+    **What it does to the numbers.** Nothing, and that is worth saying explicitly. These flows
+    grade `UNATTRIBUTED` and count in numbers 1 and 2 as what they are: outbound connections and
+    distinct domains produced while a call was in flight. They are not filtered out. A tracer whose
+    honest answer is "your agent's tool call caused five connections and two of them are the
+    browser's own housekeeping" is more useful than one that silently drops them, and the
+    `package-infrastructure` exclusion list is deliberately not extended to cover them
+    (`registry/package-infrastructure.json` says why: those are general-purpose CDNs that also
+    carry ordinary application traffic).
+
+    **Disclosure.** Raised with the maintainers as a documentation gap and not as a vulnerability:
+    the tool's description says it navigates to the URL it is given and does not mention the
+    background traffic an embedded browser carries, which is material to anyone deploying it where
+    egress is reviewed. No severity, no identifier, no deadline. Date and text in
+    `docs/DISCLOSURE-LOG.md`, and the instance is named here under the authorisation recorded
+    there. Consistent with how threat 10 treats the server that shells out to npm mid-call.
+
+16. **A match can enter numbers 4 and 5 and still be unreconstructible from the digests that were
+    persisted, which is the property an external auditor presses first.** Two thresholds, and they
+    are different guarantees: a shared run of at least **k = 22** bytes IS matched, because the
+    numbers count exact k-grams; a run of at least **w + k - 1 = 29** bytes is also guaranteed to
+    survive winnowing, which is what the digest-only fingerprints on disk keep. Between 22 and 28
+    bytes a match is counted and may not be re-derivable afterwards.
+
+    **This is measured, not feared.** `make inventory` decomposes it per family
+    (`docs/figures/calibration/inventory-k22.json`, and `docs/CALIBRATION.md`, "The self-match
+    ceiling"): **5 of the 8 `doc_url` calls share a run between 22 and 28 bytes**, which is the
+    band, and the `json_post` family sits entirely above 29 while `rest_path` and `search_query`
+    sit entirely below 22 and are invisible for a different reason.
+
+    **Why it is its own threat and not a line inside threat 12.** Threat 12 is about the numbers
+    being a lower bound, which is a statement about what the sensor sees at capture time and is
+    safe in the direction it errs. This is about what survives to disk, and it errs in the other
+    direction: the run REPORTS a match that a later audit of the stored digests cannot confirm. A
+    reviewer handed the persisted fingerprints and asked to re-derive a published attribution can
+    fail to, on material where the capture was correct. "Our numbers are floors" does not answer
+    that; it is the opposite failure mode.
+
+    **Two ways out, both with a real cost, and the decision is deferred on purpose.**
+
+    - *Persist the exact digests of the matched regions*, alongside the winnowed fingerprints.
+      Re-verification then always succeeds, because the auditor checks the same digests the match
+      was made from. The cost is that it widens the privacy surface negative 2 exists to bound: a
+      winnowed fingerprint is a lossy sample of a document, while a per-match digest set is a
+      targeted record of exactly the fragments that travelled, which is a stronger handle on the
+      content even though it is still a digest. Salted, so not directly invertible; but a holder of
+      the salt and a candidate corpus can confirm specific fragments, and "we keep only digests" is
+      a weaker promise once the digests are chosen for their relevance.
+    - *Raise the persisted floor to the matching floor*, by winnowing at a window that guarantees
+      every k-gram is kept (w = 1), or by matching only at or above w + k - 1. The privacy surface
+      does not move. The cost is paid in storage for the first option and in recall for the second:
+      a rule of 29 bytes drops the entire 22-to-28 band from the numbers, and every dropped match
+      pushes the attributable share down, which is the safe direction but a real loss on the exact
+      material (`doc_url`, ordinary document URLs) where realistic arguments do match.
+
+    **Not decided now, and not decided by whoever hits it first.** The choice is a trade between
+    negative 2 and external auditability, which is a product decision rather than a measurement
+    one, and phase B's results are part of its input: if the 22-to-28 band turns out to carry a
+    negligible share of real matches, the second option costs nothing and wins. Revisit after the
+    phase B concurrent pass, with the band's measured share in hand.

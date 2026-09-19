@@ -78,7 +78,18 @@ PASS_SEQUENTIAL = "sequential"
 PASS_CONCURRENT = "concurrent"
 PASS_BENCH = "bench"
 PASS_SELFTEST = "selftest"
-PASSES = (PASS_SEQUENTIAL, PASS_CONCURRENT, PASS_BENCH, PASS_SELFTEST)
+# A control run: a component driven WITHOUT the server under measurement, to find out whether the
+# server is a necessary condition for an egress attributed to it. It drives no tool call, so the
+# six numbers have no denominator in it and the aggregate refuses to compute them (cli._cmd_aggregate
+# and _cmd_figures). Labelled as a pass rather than kept outside the vocabulary because the label is
+# what stops a control run being read as a measurement: the run id carries it, the manifest carries
+# it, and both commands that could publish from it check it.
+PASS_CONTROL = "control"
+PASSES = (PASS_SEQUENTIAL, PASS_CONCURRENT, PASS_BENCH, PASS_SELFTEST, PASS_CONTROL)
+
+# The passes that measure a server. A run outside this set may not be read as one: it has no tool
+# calls, so every per-call figure would be a ratio over zero dressed as a finding.
+PASSES_MEASURING_A_SERVER = (PASS_SEQUENTIAL, PASS_CONCURRENT, PASS_BENCH, PASS_SELFTEST)
 
 
 @dataclass
