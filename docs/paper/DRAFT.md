@@ -1,4 +1,4 @@
-# Draft. Sections 1 and 3 only. Everything else is still `OUTLINE.md`.
+# Draft. All ten sections. `OUTLINE.md` is kept as the record of structural decisions.
 
 ---
 
@@ -50,9 +50,12 @@ whose embedded browser reaches destinations the server's own documentation does 
    measurement the obvious way will reproduce the defect before they reproduce anything else.
 2. **A negative attribution result**, with its denominators published together and its
    pre-registered threshold missed.
-3. **A claim a reader can apply without running anything**: content attribution works on tools
-   whose arguments carry structure and fails on free-text tools, under any rule that does not
-   manufacture false positives. We give the measured price of relaxing that rule.
+3. **A claim a reader can apply without running anything**, with a first measurement of how much
+   it bites: attribution works on a call committing two or more structural tokens and fails on one
+   committing a single token, under any rule that does not manufacture false attributions. Over 87
+   probed tool schemas, 38% are attributable from the schema alone, 22% never can be, and 40% are
+   undecided until a value is seen. We give the measured price of relaxing the rule, and the
+   procedure for classifying a tool inventory without capturing anything.
 4. **A pre-registration apparatus for systems measurement**, independent of the system measured: a
    digest-sealed prediction block, a verdict whose denominator is frozen by hash, held-out corpora
    that are retired once measured, and a rule that every instrument carry a test which fails when
@@ -432,43 +435,91 @@ what changing instruments bought.
 
 ### 5.3 Where the thirteen missing attributions went
 
-| cause | count |
-|---|---|
-| single-token floor | **6** |
-| contained but not discriminating | 5 |
-| never contained | 2 |
+The 38 content-eligible flows resolve as follows. Counts are FLOWS, one per outbound request,
+and the three components are distinguished throughout because two of them happen to contribute 17
+flows each.
 
-Every one of the six is on the component that became visible only after the instrument was fixed.
-Its arguments are single free-text queries. This is not a coincidence, and 5.4 is the reason.
+| component | content-eligible flows | attributed uniquely | ambiguous, single token | no candidate |
+|---|---|---|---|---|
+| A, retrieval, URL arguments | 17 | **15** | 0 | 2 |
+| B, API client, mixed arguments | 17 | **8** | **6** | 3 |
+| C, browser driver | 4 | **2** | 0 | 2 |
+| **total** | **38** | **25** | **6** | **7** |
+
+So the thirteen that are not attributed uniquely are 6 held at ambiguous by the single-token
+floor, 5 contained but not discriminating, and 2 that were never contained at all, the last being
+the browser's own background traffic rather than anything a call asked for.
+
+Every one of the six is on component B, and B is also where 8 of the 25 successful attributions
+come from. The split is inside one component, not between components, which is what 5.4 is
+about.
 
 ### 5.4 What content attribution is for: a claim about the shape of arguments
 
-> **Content attribution works on tools whose arguments carry structure, and does not work on tools
-> whose arguments are free text. No matching rule changes this without manufacturing false
+> **Content attribution works on a call whose arguments commit two or more structural tokens, and
+> fails on a call that commits one. No matching rule changes this without manufacturing false
 > attributions.**
 
-`{"query": "modelcontextprotocol servers"}` is 29 bytes and **one** structural token.
-`{"query": "logs"}` is four bytes and **one** structural token. The rule treats them identically,
-because what it measures is how many independent structural commitments a call makes, and both
-make one.
+The determinant is the token count, not the tool's category, and stating it as a claim about
+*search tools* would have been wrong. `{"query": "modelcontextprotocol servers"}` is 29 bytes and
+**one** token. `{"query": "logs"}` is four bytes and **one** token. But
+`{"q": "tools/call repo:modelcontextprotocol/servers"}` is also a free-text search, and it
+decomposes into **two** tokens because the qualifier contains a slash. The rule counts independent
+structural commitments, and it does not care what the field is named.
 
-The evidence runs both ways. Where arguments are URLs, attribution is near-total: 15 of 17 on one
-component, the two misses being subset re-reads rather than shape (5.5), and on a second component
-both of the requests its calls actually caused, its two remaining flows being its embedded
-browser's own background traffic rather than anything a call asked for. Where arguments are free
-text, 6 of 17 could not rise above ambiguous. And the price of relaxing the
-rule is measured, not assumed: permitting a single token to earn the strongest grade produced nine
-false attributions in twenty flows (4.3).
+**The evidence is inside one component, which removes the obvious confound.** Component B in 5.3
+drove two families of tool against the same API in the same waves:
 
-**A reader can apply this to their own deployment without running anything.** Take each tool's
-schema and ask what its arguments decompose into: a hostname, path segments, query values, JSON
-string leaves. Four or five tokens means its calls are attributable under concurrency. One token
-means they are not, and no configuration will change that. This is the opposite of what a
-demonstration on URL-shaped tools would suggest, which is why we state it as a claim rather than
-as an explanation of our own shortfall.
+| tool family driven on component B | argument keys | flows | attributed uniquely |
+|---|---|---|---|
+| repository reads | `owner`, `repo`, `path`, `state` | 3 | **3** |
+| search whose query embeds a `repo:owner/name` qualifier | `q` | 5 | **5** |
+| search whose query is a bare phrase | `query` | 6 | **0** |
 
-It is a claim about the content channel alone. A propagated trace context attributes a free-text
-call exactly, which is what 5.6 measures.
+Same component, same credential, same concurrency, same matcher. What separates the last row from
+the first two is how many structural tokens the argument value commits. A claim about components
+or about tool categories would not have survived this table; a claim about argument shape does.
+
+Where arguments are URLs throughout, attribution is near-total: 15 of 17 flows on component A, the
+two misses being subset re-reads rather than shape (5.5). And the price of relaxing the rule is
+measured, not assumed: permitting a single token to earn the strongest grade produced nine false
+attributions in twenty flows (4.3).
+
+#### 5.4.1 How much of a real tool surface is affected
+
+The claim is only useful if a reader can apply it before installing anything, so we measured the
+distribution over every tool schema we probed. The rule is derived from the committed
+`inputSchema` and from no value: a REQUIRED property of type string commits at least one
+structural token whatever the caller passes. We deliberately do not guess from a property's name
+or description that it holds a URL, because suggestion is inference and this paper forbids
+inference in the matcher; a schema that DECLARES `format: uri` is counted, because that is the
+author stating it in machine-readable form.
+
+**N = 87 tools across 10 servers**, every one probed and committed:
+
+| class | tools | share | meaning |
+|---|---|---|---|
+| **structured**: two or more required string properties | **33** | **0.379** | at least two tokens committed by the schema itself, whatever the values. Attributable under concurrency |
+| **single value**: exactly one required string property | **35** | **0.402** | one token committed. Attributable only if that value itself decomposes, which the schema cannot say |
+| **no string input**: none required | **19** | **0.218** | nothing committed, so no content attribution is possible under any rule |
+
+Read it as a lower bound and an upper bound rather than a prediction. **At least 38% of this tool
+surface is attributable from its schemas alone**, before any value is seen. **At most 78% can ever
+be**, because 22% commits no structural token at all. The 40% in the middle is genuinely undecided
+by a schema and is decided by what callers actually pass: component B's two search families sit in
+that class and landed on opposite sides of it.
+
+We report the middle class as undecided rather than assuming it fails. Assuming it fails would
+have produced a more dramatic number and a less honest one.
+
+**The procedure for a reader**, which needs no capture and no code from us: take each tool's
+schema, count its required string properties, and read off which of the three classes it is in.
+Two or more means its calls are attributable under concurrency. Zero means they never are. One
+means it depends on what your agent actually passes, and you can settle it by looking at a day of
+your own call logs.
+
+This is a claim about the content channel alone. A propagated trace context attributes a
+single-token call exactly, which is what 5.6 measures.
 
 ### 5.5 A limit in the method, not in the implementation
 
@@ -634,11 +685,19 @@ rather than of the problem. Of everything in this paper, this is the recommendat
 like acted on: it converts the unattributable class into the attributable one without any of the
 matching machinery here.
 
-**A tool population whose argument shapes are actually estimated.** Section 5.4 says attribution
-depends on whether a tool's arguments carry structure. Nothing here estimates the distribution of
-that property across a real deployment's tool surface, and that distribution, not our figure, is
-what determines the attributable share in any specific system. It is cheap to estimate from
-schemas alone and we have not done it.
+**A larger estimate of the argument-shape distribution.** Section 5.4.1 gives a first one: over
+87 probed tools, 38% are attributable from their schemas alone, 22% never can be, and 40% are
+undecided until a value is seen. That distribution, not our attribution figure, is what determines
+the attributable share of any specific deployment, and ours is a small N drawn from the head of
+the distribution (7.2).
+
+Extending it is unusually cheap, which is why we single it out. It needs no capture, no proxy and
+no credentials: the classification reads committed tool schemas and counts required string
+properties, and it runs against any registry of MCP servers as it stands. The two obvious
+extensions are breadth, several hundred servers from a public registry rather than ten curated
+ones, and resolving the undecided middle, which needs one day of a real deployment's call logs
+rather than its schemas. We expect the tail to be worse than the head here: small servers tend to
+expose one broad tool with one free-text argument, which is the shape that does not attribute.
 
 Two things we deliberately did not pursue, recorded so their absence is not mistaken for an
 oversight: a per-request candidate rule that would recover some lost attributions, which we
