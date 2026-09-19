@@ -291,3 +291,32 @@ and nothing here says containment survives them.
 Rule 6. The tables in sections 4 and 5 are re-derived by scripts that land as `make` targets in
 the implementation commit. Until they do, this document states figures whose command does not
 exist yet, which is a debt and is named as one.
+
+## 10. Declared amendments, measured AFTER the seal
+
+Anything in this section was thought of after the block above was frozen and committed. Each entry
+says so, carries its own date, and is measured after that date. The block is not edited: changing
+the registered method to one measured afterwards is precisely the substitution a pre-registration
+exists to prevent, and the integrity of the block is worth more than any figure an amendment could
+recover.
+
+### A1. Per-flow candidate evaluation, instead of global exclusion (2026-09-19, after the seal)
+
+**The idea.** Rule C excludes a non-discriminating call from the candidate set of the whole wave.
+An alternative is to evaluate candidates per flow: for a given request, discard a call only if
+another candidate for THAT request explains it at least as well. On the fetch wave at N = 10 this
+would recover `/docs/deploy/runbook`, whose own flow is currently lost to threat 18, because for
+that one request the superset call is not a candidate at all.
+
+**Why it is not adopted and not measured first.** It is predicted to fail, and to fail by
+reintroducing exactly the errors rule C was chosen to prevent. The ten `/robots.txt` requests in
+that wave contain the tokens of the site-root call and of no other call. Under per-flow
+evaluation the root call is the only candidate for each of them, so each would grade
+CONTENT_UNIQUE and be attributed to it: the nine false strong attributions of the no-floor rule,
+returning through a different door, plus a tenth. Trading one silent loss for ten confident
+errors is the wrong direction, and it is the direction that flatters the headline figure.
+
+**How it will be measured, if it is.** After the pre-registered measurement is complete and
+published, as an amendment with its own commit and date, reporting BOTH the recovered subset
+calls and the false strong attributions on constant-path flows, and labelled in any output as
+measured after the fact. It may not be swapped into the block, whatever it shows.
