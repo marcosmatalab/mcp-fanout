@@ -1,0 +1,53 @@
+{
+  "by_family": {
+    "doc_url": {
+      "false_positives": 10,
+      "pairs": 56,
+      "rate": 0.1786,
+      "wilson_95": [
+        0.1,
+        0.2984
+      ]
+    },
+    "json_post": {
+      "false_positives": 56,
+      "pairs": 56,
+      "rate": 1.0,
+      "wilson_95": [
+        0.9358,
+        1.0
+      ]
+    },
+    "rest_path": {
+      "false_positives": 0,
+      "pairs": 56,
+      "rate": 0.0,
+      "wilson_95": [
+        0.0,
+        0.0642
+      ]
+    },
+    "search_query": {
+      "false_positives": 0,
+      "pairs": 56,
+      "rate": 0.0,
+      "wilson_95": [
+        0.0,
+        0.0642
+      ]
+    }
+  },
+  "command": "make fp",
+  "false_positives": 66,
+  "half": "held_out",
+  "interval_caveat": "the count is exact and deterministic; the interval covers sampling variance only. These pairs are hand-authored, not drawn at random from any population, so the interval says nothing about how representative the corpus is (docs/CALIBRATION.md)",
+  "k": 16,
+  "name": "matcher_false_positive_rate_on_structured_language",
+  "pairs": 224,
+  "rate": 0.2946,
+  "what_a_pair_is": "two calls in flight at once, from the same family, sharing language structure and no information. A false positive is the matcher finding a k-gram of one call's arguments in the other call's request",
+  "wilson_95": [
+    0.2388,
+    0.3574
+  ]
+}

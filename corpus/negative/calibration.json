@@ -1,0 +1,524 @@
+{
+  "_what_this_is": "Negative control: concurrent call pairs that share LANGUAGE STRUCTURE and NO INFORMATION. Every match the matcher claims between two calls of one family is a false positive, because neither call's arguments caused the other's request. See docs/CALIBRATION.md.",
+  "families": [
+    {
+      "api": "a search endpoint: JSON {query} in, GET /api/search?q=<plus-encoded> out",
+      "calls": [
+        {
+          "arguments": {
+            "query": "how to rotate a database password"
+          },
+          "id": "cal-search-01",
+          "information": [
+            "rotate a database password",
+            "rotate+a+database+password"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+rotate+a+database+password"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to compress a video file"
+          },
+          "id": "cal-search-02",
+          "information": [
+            "compress a video file",
+            "compress+a+video+file"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+compress+a+video+file"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to list open pull requests"
+          },
+          "id": "cal-search-03",
+          "information": [
+            "list open pull requests",
+            "list+open+pull+requests"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+list+open+pull+requests"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to configure a reverse proxy"
+          },
+          "id": "cal-search-04",
+          "information": [
+            "configure a reverse proxy",
+            "configure+a+reverse+proxy"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+configure+a+reverse+proxy"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to export a spreadsheet as csv"
+          },
+          "id": "cal-search-05",
+          "information": [
+            "export a spreadsheet as csv",
+            "export+a+spreadsheet+as+csv"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+export+a+spreadsheet+as+csv"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to disable email notifications"
+          },
+          "id": "cal-search-06",
+          "information": [
+            "disable email notifications",
+            "disable+email+notifications"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+disable+email+notifications"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to restore a deleted branch"
+          },
+          "id": "cal-search-07",
+          "information": [
+            "restore a deleted branch",
+            "restore+a+deleted+branch"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+restore+a+deleted+branch"
+          }
+        },
+        {
+          "arguments": {
+            "query": "how to measure request latency"
+          },
+          "id": "cal-search-08",
+          "information": [
+            "measure request latency",
+            "measure+request+latency"
+          ],
+          "request": {
+            "body": "",
+            "target": "/api/search?q=how+to+measure+request+latency"
+          }
+        }
+      ],
+      "family": "search_query",
+      "shared_literals": [
+        "{\"query\": \"",
+        "/api/search?q=",
+        "how to "
+      ],
+      "shared_structure_note": "the JSON envelope, the path prefix, the opening phrase, and plus-encoding of every space",
+      "why": "Free-text search is the most common shape an agent sends and the one where shared English carries the most bytes. Every call here begins with the same four words, which is not a trick: an agent asking a documentation search engine phrases its questions the same way every time."
+    },
+    {
+      "api": "a REST read: JSON {owner, repo, path} in, GET /repos/<owner>/<repo>/contents/<path> out",
+      "calls": [
+        {
+          "arguments": {
+            "owner": "blue-harbor",
+            "path": "docs/setup.md",
+            "repo": "invoice-parser"
+          },
+          "id": "cal-rest-01",
+          "information": [
+            "blue-harbor",
+            "invoice-parser",
+            "docs/setup.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/blue-harbor/invoice-parser/contents/docs/setup.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "north-quay",
+            "path": "docs/upgrade.md",
+            "repo": "ledger-sync"
+          },
+          "id": "cal-rest-02",
+          "information": [
+            "north-quay",
+            "ledger-sync",
+            "docs/upgrade.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/north-quay/ledger-sync/contents/docs/upgrade.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "west-basin",
+            "path": "docs/limits.md",
+            "repo": "token-vault"
+          },
+          "id": "cal-rest-03",
+          "information": [
+            "west-basin",
+            "token-vault",
+            "docs/limits.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/west-basin/token-vault/contents/docs/limits.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "east-pier",
+            "path": "docs/design.md",
+            "repo": "route-planner"
+          },
+          "id": "cal-rest-04",
+          "information": [
+            "east-pier",
+            "route-planner",
+            "docs/design.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/east-pier/route-planner/contents/docs/design.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "stone-bridge",
+            "path": "docs/formats.md",
+            "repo": "media-encoder"
+          },
+          "id": "cal-rest-05",
+          "information": [
+            "stone-bridge",
+            "media-encoder",
+            "docs/formats.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/stone-bridge/media-encoder/contents/docs/formats.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "clay-works",
+            "path": "docs/fields.md",
+            "repo": "form-builder"
+          },
+          "id": "cal-rest-06",
+          "information": [
+            "clay-works",
+            "form-builder",
+            "docs/fields.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/clay-works/form-builder/contents/docs/fields.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "iron-gate",
+            "path": "docs/retries.md",
+            "repo": "queue-runner"
+          },
+          "id": "cal-rest-07",
+          "information": [
+            "iron-gate",
+            "queue-runner",
+            "docs/retries.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/iron-gate/queue-runner/contents/docs/retries.md"
+          }
+        },
+        {
+          "arguments": {
+            "owner": "glass-yard",
+            "path": "docs/schedule.md",
+            "repo": "report-mailer"
+          },
+          "id": "cal-rest-08",
+          "information": [
+            "glass-yard",
+            "report-mailer",
+            "docs/schedule.md"
+          ],
+          "request": {
+            "body": "",
+            "target": "/repos/glass-yard/report-mailer/contents/docs/schedule.md"
+          }
+        }
+      ],
+      "family": "rest_path",
+      "shared_literals": [
+        "{\"owner\": \"",
+        "\"path\": \"docs/",
+        "/repos/",
+        "/contents/docs/",
+        ".md"
+      ],
+      "shared_structure_note": "the JSON keys, both path prefixes, the docs/ directory, the .md extension and kebab-case naming throughout",
+      "why": "Structured arguments reassembled into a path. Included precisely because it is expected to behave BETTER than free text: the JSON envelope never reaches the wire, so the only shared runs are path segments. A negative corpus of only the hard shapes would overstate the rate."
+    },
+    {
+      "api": "a fetch: JSON {url} in, GET <path of that url> out, same host throughout",
+      "calls": [
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/deploy/rollback"
+          },
+          "id": "cal-doc-01",
+          "information": [
+            "rollback"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/deploy/rollback"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/deploy/retry-policy"
+          },
+          "id": "cal-doc-02",
+          "information": [
+            "retry-policy"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/deploy/retry-policy"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/deploy/canary-release"
+          },
+          "id": "cal-doc-03",
+          "information": [
+            "canary-release"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/deploy/canary-release"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/observe/tracing"
+          },
+          "id": "cal-doc-04",
+          "information": [
+            "tracing"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/observe/tracing"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/observe/alert-routing"
+          },
+          "id": "cal-doc-05",
+          "information": [
+            "alert-routing"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/observe/alert-routing"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/storage/snapshots"
+          },
+          "id": "cal-doc-06",
+          "information": [
+            "snapshots"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/storage/snapshots"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/storage/sharding"
+          },
+          "id": "cal-doc-07",
+          "information": [
+            "sharding"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/storage/sharding"
+          }
+        },
+        {
+          "arguments": {
+            "url": "https://docs.example.net/guides/access/service-accounts"
+          },
+          "id": "cal-doc-08",
+          "information": [
+            "service-accounts"
+          ],
+          "request": {
+            "body": "",
+            "target": "/guides/access/service-accounts"
+          }
+        }
+      ],
+      "family": "doc_url",
+      "shared_literals": [
+        "https://docs.example.net/guides/",
+        "/guides/"
+      ],
+      "shared_structure_note": "one host, one /guides/ prefix, a section segment shared by groups of calls, and kebab-case leaf names",
+      "why": "Sibling documents on one site. The section prefix is shared because that is what a site taxonomy is, and several leaves start with the same letters, which is what sibling pages look like. This family is where the rate should depend on k most sharply, since the shared run is the prefix plus however many leaf characters happen to agree."
+    },
+    {
+      "api": "a POST: JSON {text, locale} in, a JSON body out that wraps the same fields",
+      "calls": [
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "the quarterly summary needs a shorter opening paragraph"
+          },
+          "id": "cal-post-01",
+          "information": [
+            "the quarterly summary needs a shorter opening paragraph"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0001\", \"text\": \"the quarterly summary needs a shorter opening paragraph\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "please translate the welcome banner for the mobile app"
+          },
+          "id": "cal-post-02",
+          "information": [
+            "please translate the welcome banner for the mobile app"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0002\", \"text\": \"please translate the welcome banner for the mobile app\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "the confirmation email should mention the refund window"
+          },
+          "id": "cal-post-03",
+          "information": [
+            "the confirmation email should mention the refund window"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0003\", \"text\": \"the confirmation email should mention the refund window\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "rewrite the error message so it names the failing field"
+          },
+          "id": "cal-post-04",
+          "information": [
+            "rewrite the error message so it names the failing field"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0004\", \"text\": \"rewrite the error message so it names the failing field\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "the onboarding checklist is missing the final review step"
+          },
+          "id": "cal-post-05",
+          "information": [
+            "the onboarding checklist is missing the final review step"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0005\", \"text\": \"the onboarding checklist is missing the final review step\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "shorten the product description to fit the card layout"
+          },
+          "id": "cal-post-06",
+          "information": [
+            "shorten the product description to fit the card layout"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0006\", \"text\": \"shorten the product description to fit the card layout\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "the invoice footer still shows last year's company address"
+          },
+          "id": "cal-post-07",
+          "information": [
+            "the invoice footer still shows last year's company address"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0007\", \"text\": \"the invoice footer still shows last year's company address\"}",
+            "target": "/v1/rewrite"
+          }
+        },
+        {
+          "arguments": {
+            "locale": "en-US",
+            "text": "make the tooltip explain what the retry counter measures"
+          },
+          "id": "cal-post-08",
+          "information": [
+            "make the tooltip explain what the retry counter measures"
+          ],
+          "request": {
+            "body": "{\"locale\": \"en-US\", \"requestId\": \"req-0008\", \"text\": \"make the tooltip explain what the retry counter measures\"}",
+            "target": "/v1/rewrite"
+          }
+        }
+      ],
+      "family": "json_post",
+      "shared_literals": [
+        "\"locale\": \"en-US\"",
+        "\"text\": \"",
+        "the "
+      ],
+      "shared_structure_note": "the JSON keys, the locale enum, the wrapper keys the server adds, and ordinary English sentences",
+      "why": "The worst case, and the most ordinary one. Every call carries the same locale enum and the same key names, and the server's body repeats them verbatim, so a 16-byte run of shared field structure exists in every pair before a single word of the payload is compared. This is the family that makes the case for weighting a k-gram by how common it is."
+    }
+  ],
+  "half": "calibration",
+  "pair_rule": "ordered pairs WITHIN a family only: (A, B) asks whether a k-gram of B's arguments appears in A's request. Cross-family pairs share no structure, so counting them would deflate the rate with cases nobody finds hard."
+}
