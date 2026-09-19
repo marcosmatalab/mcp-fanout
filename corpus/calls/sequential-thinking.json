@@ -1,4 +1,4 @@
 [
-  {"tool": "sequentialthinking", "arguments": {"thought": "probe CANARY_QRY_ab12cd34ef56 end", "nextThoughtNeeded": false, "thoughtNumber": 1, "totalThoughts": 1},
+  {"tool": "sequentialthinking", "arguments": {"thought": "probe CANARY_QRY_ab12cd34ef56789a0b1c2d end", "nextThoughtNeeded": false, "thoughtNumber": 1, "totalThoughts": 1},
    "why": "The server's only tool, and all four of these are required, so no argument-less call is possible here. nextThoughtNeeded is false and totalThoughts is 1 so the call terminates in one step instead of asking to be driven again, which a fixed corpus cannot do."}
 ]

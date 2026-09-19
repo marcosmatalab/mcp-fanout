@@ -311,6 +311,21 @@ def test_fragments_are_long_enough_to_be_detectable():
     sys.path.insert(0, str(REPO / "bench"))
     from drive_bench import _fragment  # noqa: E402
 
+    from mcpfanout.calibrate import K_MAX
     from mcpfanout.shingle import DEFAULT_K
     frag = _fragment("anything")
-    assert len(frag) >= 2 * DEFAULT_K, f"{len(frag)} bytes is too short to match reliably"
+
+    # TWO bounds, and the pair is the requirement. Below: at least k + 8 bytes, so the fragment
+    # carries at least nine k-grams and detection never hinges on one of them surviving. Above: not
+    # longer than the top of the sweep range, because the k sweep has to be ABLE to observe bench
+    # recall collapsing (docs/CALIBRATION.md, F1.2); a fragment longer than every k in the range
+    # would make recall 1.0 everywhere and the curve could no longer show that it can fall at all.
+    #
+    # This replaced "at least 2 * k", which was a margin with no argument behind it and which
+    # started failing the moment k was chosen by measurement: 40 bytes is 1.8 k at k = 22, and the
+    # test called that "too short to match reliably" while the fragment in fact yields nineteen
+    # k-grams. A heuristic that fails on a correct change is a heuristic, not an invariant.
+    assert len(frag) >= DEFAULT_K + 8, f"{len(frag)} bytes leaves too few k-grams at k={DEFAULT_K}"
+    assert len(frag) <= K_MAX, (
+        f"{len(frag)} bytes exceeds the top of the sweep range ({K_MAX}), so the k sweep could no "
+        f"longer observe bench recall falling anywhere in it")

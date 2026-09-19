@@ -1,7 +1,7 @@
 [
-  {"tool": "search_repositories", "arguments": {"query": "CANARY_QRY_ab12cd34ef56"},
+  {"tool": "search_repositories", "arguments": {"query": "CANARY_QRY_ab12cd34ef56789a0b1c2d"},
    "why": "The canary goes straight into a query this server must forward to api.github.com. No tool on this server has an empty 'required', so github admits no argument-less call."},
-  {"tool": "search_code", "arguments": {"q": "CANARY_QRY_ab12cd34ef56"},
+  {"tool": "search_code", "arguments": {"q": "CANARY_QRY_ab12cd34ef56789a0b1c2d"},
    "why": "Second canary carrier on a different parameter name (q, not query), so a match is not an artefact of one field."},
   {"tool": "get_file_contents", "arguments": {"owner": "modelcontextprotocol", "repo": "servers", "path": "README.md"},
    "why": "A read with no canary, against a public repository, to separate 'reached api.github.com' from 'forwarded our argument'. Read-only on purpose: the 26 tools include create_repository, create_issue and merge_pull_request, which validate against their schemas and would act on a real third party. A witness that acts cannot attest to its own acts (docs/DOCTRINE.md, negativa 4)."}

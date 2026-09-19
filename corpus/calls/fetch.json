@@ -1,6 +1,6 @@
 [
   {"tool": "fetch", "arguments": {"url": "https://example.net/"},
    "why": "Baseline egress with no canary, so the destination is measured separately from argument forwarding. url is required and it is the only tool, so no argument-less call is possible. Target is example.net, not example.com: both are reserved by RFC 2606 and equally legitimate, but example.com does not resolve from the measurement network (verified on both the host and inside the container, while example.net, example.org and pypi.org all do), and an unresolvable target produces no egress to measure. See docs/THREATS.md threat 10."},
-  {"tool": "fetch", "arguments": {"url": "https://example.net/search?q=CANARY_QRY_ab12cd34ef56"},
+  {"tool": "fetch", "arguments": {"url": "https://example.net/search?q=CANARY_QRY_ab12cd34ef56789a0b1c2d"},
    "why": "The canary rides in the URL, which this server must forward verbatim to do its job. This is the cleanest positive case for number 5: if content matching cannot recover attribution here, it cannot anywhere."}
 ]

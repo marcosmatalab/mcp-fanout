@@ -25,7 +25,7 @@ k-gram-disjoint, which is the mechanical form of "not artificially distinct".
 
 ## No canary here, deliberately
 
-`corpus/calls/` plants `CANARY_QRY_ab12cd34ef56` in the arguments of every egress-capable server,
+`corpus/calls/` plants `CANARY_QRY_ab12cd34ef56789a0b1c2d` in the arguments of every egress-capable server,
 because the sequential pass asks whether recognisable material of ours travels at all. Planting
 the **same** marker in N concurrent calls would make every flow match every call, so every grade
 would be `CONTENT_AMBIGUOUS` by construction: our marker, not the servers' behaviour. Planting a

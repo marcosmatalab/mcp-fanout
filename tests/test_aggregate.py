@@ -51,17 +51,22 @@ def test_six_numbers_expected_values(tmp_path):
 
     # 4: provenance coverage, with occurrence alongside it because a provenance figure means
     # nothing without knowing how many requests could be read at all. Two flows matched context,
-    # one in each channel. Body: 36 (secret) + 19 (DB_PASSWORD line) = 55. Target: 37, the secret
-    # plus the "=" delimiter it shares with AWS_ACCESS_KEY_ID= in the .env reference.
+    # one in each channel.
+    #
+    # These byte counts MOVE WITH k, and they moved: at k = 16 the body figure was 55, the 36-byte
+    # secret plus the 19-byte DB_PASSWORD line. At k = 22 (docs/CALIBRATION.md, F1.2) that line is
+    # shorter than one k-gram, so it contributes nothing and the figure is the secret alone. That is
+    # the false-negative cost of a longer k, priced on a fixture small enough to read: the sweep
+    # bought the removal of every structural false positive, and this is what it cost.
     assert n[4]["occurrence_counts"] == {"observed": 3, "connection_only": 1}
     assert n[4]["provenance_counts"]["both"] == 2
     assert n[4]["provenance_counts"]["unknown"] == 1
     assert n[4]["flows_with_context_match"] == 2
     assert n[4]["flows_with_target_match"] == 1
     assert n[4]["flows_with_body_match"] == 1
-    assert n[4]["body_matched_bytes"] == 55
+    assert n[4]["body_matched_bytes"] == 36
     assert n[4]["target_matched_bytes"] == 37
-    assert n[4]["matched_bytes_total"] == 92
+    assert n[4]["matched_bytes_total"] == 73
 
     # 5: the attribution grade distribution. One flow carried our traceparent (strongest), one
     # matched content with a single call in flight (so uncontested, not unique), one has only

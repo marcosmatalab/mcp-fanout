@@ -1,0 +1,165 @@
+{
+  "instrument": {
+    "attribution": {
+      "attribution_precision": 1.0,
+      "false_strong_attributions": 0,
+      "flows_graded": 85,
+      "strong_attributions": 33,
+      "strong_attributions_correct": 33,
+      "strong_attributions_with_a_named_call": 33
+    },
+    "calls_planned": 82,
+    "capture": {
+      "capture_recall": 1.0,
+      "connections_observed": 85,
+      "connections_sent": 85,
+      "connections_the_bench_failed_to_send": 0,
+      "flows_to_bench_hosts": 85,
+      "hosts_sent_to_but_never_observed_count": 0
+    },
+    "known_negatives": {
+      "flows_carrying_material_in_an_unread_channel": 8,
+      "note": "headers and re-encoded payloads are channels byte-literal matching cannot see (negative 3). Measured to size the loss, documented as a permanent known negative, never as debt",
+      "of_which_the_sensor_attributed_strongly": 0
+    },
+    "name": "instrument_block",
+    "ok": true,
+    "per_cell": {
+      "all_distinct": {
+        "correct_call": 17,
+        "expect": "CONTENT_UNIQUE",
+        "flows": 17,
+        "grades": {
+          "CONTENT_UNIQUE": 17
+        },
+        "no_call": 0,
+        "wrong_call": 0
+      },
+      "all_shared": {
+        "correct_call": 0,
+        "expect": "CONTENT_AMBIGUOUS",
+        "flows": 17,
+        "grades": {
+          "CONTENT_AMBIGUOUS": 17
+        },
+        "no_call": 17,
+        "wrong_call": 0
+      },
+      "fan_out_from_one_call": {
+        "correct_call": 4,
+        "expect": "",
+        "flows": 4,
+        "grades": {
+          "CONTENT_MATCH_UNCONTESTED": 4
+        },
+        "no_call": 0,
+        "wrong_call": 0
+      },
+      "header_channel": {
+        "correct_call": 0,
+        "expect": "UNATTRIBUTED",
+        "flows": 5,
+        "grades": {
+          "UNATTRIBUTED": 5
+        },
+        "no_call": 5,
+        "wrong_call": 0
+      },
+      "late_egress": {
+        "correct_call": 0,
+        "expect": "",
+        "flows": 1,
+        "grades": {
+          "UNATTRIBUTED": 1
+        },
+        "no_call": 1,
+        "wrong_call": 0
+      },
+      "no_arguments": {
+        "correct_call": 0,
+        "expect": "UNATTRIBUTED",
+        "flows": 17,
+        "grades": {
+          "UNATTRIBUTED": 17
+        },
+        "no_call": 17,
+        "wrong_call": 0
+      },
+      "one_connection_per_call": {
+        "correct_call": 1,
+        "expect": "",
+        "flows": 1,
+        "grades": {
+          "CONTENT_MATCH_UNCONTESTED": 1
+        },
+        "no_call": 0,
+        "wrong_call": 0
+      },
+      "reencoded_base64": {
+        "correct_call": 1,
+        "expect": "",
+        "flows": 1,
+        "grades": {
+          "TEMPORAL_ONLY": 1
+        },
+        "no_call": 0,
+        "wrong_call": 0
+      },
+      "reencoded_gzip": {
+        "correct_call": 1,
+        "expect": "",
+        "flows": 1,
+        "grades": {
+          "TEMPORAL_ONLY": 1
+        },
+        "no_call": 0,
+        "wrong_call": 0
+      },
+      "reencoded_json_escaped": {
+        "correct_call": 1,
+        "expect": "",
+        "flows": 1,
+        "grades": {
+          "TEMPORAL_ONLY": 1
+        },
+        "no_call": 0,
+        "wrong_call": 0
+      },
+      "target_channel": {
+        "correct_call": 5,
+        "expect": "CONTENT_UNIQUE",
+        "flows": 5,
+        "grades": {
+          "CONTENT_UNIQUE": 5
+        },
+        "no_call": 0,
+        "wrong_call": 0
+      },
+      "two_shared_rest_distinct": {
+        "correct_call": 11,
+        "expect": "mixture",
+        "flows": 15,
+        "grades": {
+          "CONTENT_AMBIGUOUS": 4,
+          "CONTENT_UNIQUE": 11
+        },
+        "no_call": 4,
+        "wrong_call": 0
+      }
+    },
+    "provenance": {
+      "false_provenance_matches": 0,
+      "false_provenance_rate": 0.0,
+      "flows_with_no_material_sent": 17
+    }
+  },
+  "normalized": true,
+  "phase": "A",
+  "provenance": {
+    "command": "python -m mcpfanout.cli bench-verify --run runs/20260919T112523Z-bench",
+    "ground_truth_author": "bench/server.py, from inside its own handler. It imports nothing from mcpfanout and never reads the harness control directory; tests/test_bench_isolation.py enforces both",
+    "not_computable_elsewhere": "recall needs a denominator of transfers we caused and precision needs a known cause, so these three exist only for phase A (gate rule 8)",
+    "run_id": "20260919T112523Z-bench",
+    "what_this_is": "the phase A bench's instrument block: capture recall, attribution precision and false provenance matches, from comparing the bench's own truth ledger against what the sensor recorded"
+  }
+}

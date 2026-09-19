@@ -59,8 +59,14 @@ export MCPFANOUT_RUNDIR="${RUN_DIR}"
 export MCPFANOUT_RUNID="${RUN_ID}"
 export MCPFANOUT_CONTROL="${RUN_DIR}/control"
 export MCPFANOUT_CONTEXT="${RUN_DIR}/context.json"
-export MCPFANOUT_K="16"
-export MCPFANOUT_W="8"
+# k and w come from the shipped constants rather than being repeated here. They were literals for
+# one release and that was a defect waiting: k is chosen by a measurement (docs/CALIBRATION.md,
+# F1.2), and a capture run that kept its own copy of the old value would have silently matched at a
+# k no published figure describes. tests/test_negative_corpus.py fails if the registry and the
+# constant disagree; this reads the constant itself, so there is no third copy to drift.
+export MCPFANOUT_K="$(python -c 'from mcpfanout.shingle import DEFAULT_K; print(DEFAULT_K)')"
+export MCPFANOUT_W="$(python -c 'from mcpfanout.shingle import DEFAULT_W; print(DEFAULT_W)')"
+echo "[run] matcher: k=${MCPFANOUT_K} w=${MCPFANOUT_W}"
 
 # 1. Pre-digest the session context (content-free) for the addon.
 python -m mcpfanout.cli prep-context --context-dir corpus/context --out "${MCPFANOUT_CONTEXT}"

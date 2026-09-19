@@ -40,6 +40,7 @@ from mcpfanout.driver import CallSpec, StdioMCPClient, drive, drive_wave
 from mcpfanout.record import (PASS_CONCURRENT, PASS_SEQUENTIAL, RunManifest, ToolCall,
                               read_manifest, write_jsonl, write_manifest)
 from mcpfanout.redact import DEFAULT_SALT, Redactor
+from mcpfanout.shingle import DEFAULT_K, DEFAULT_W
 
 # The concurrency ladder, the same levels the phase A bench drove (bench/waves.json). Same levels
 # on purpose: the bench established what the sensor does at N = 2, 5 and 10 with maximally
@@ -220,7 +221,9 @@ def main() -> int:
     reg = yaml.safe_load(Path(args.registry).read_text(encoding="utf-8"))
     run_dir = Path(args.run_dir)
     control_dir = run_dir / "control"
-    k, w = int(reg.get("k", 16)), int(reg.get("w", 8))
+    # The registry declares k and w for the run, and a test pins them to the shipped constants, so
+    # the fallback is the constant rather than a literal copy of last year's value.
+    k, w = int(reg.get("k", DEFAULT_K)), int(reg.get("w", DEFAULT_W))
     salt = args.salt.encode() or DEFAULT_SALT
     redactor = Redactor(salt=salt, k=k, w=w)
     run_id = run_dir.name

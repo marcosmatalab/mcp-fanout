@@ -31,6 +31,7 @@ from pathlib import Path
 # flows that looks like a server that never egressed. tests/test_capture_addon_loads.py loads
 # this file the way mitmproxy does, so the mistake cannot come back.
 from mcpfanout import match as _match
+from mcpfanout import shingle as _shingle
 from mcpfanout.classify import classify_host
 from mcpfanout.record import Flow
 from mcpfanout.redact import Redactor
@@ -41,8 +42,14 @@ class FanoutRecorder:
         self.run_dir = Path(os.environ.get("MCPFANOUT_RUNDIR", "runs/live"))
         self.run_id = os.environ.get("MCPFANOUT_RUNID", "live")
         salt = os.environ.get("MCPFANOUT_SALT", "").encode() or None
-        k = int(os.environ.get("MCPFANOUT_K", "16"))
-        w = int(os.environ.get("MCPFANOUT_W", "8"))
+        # Defaults from the shipped constants, never literals. This module carried its own "16"
+        # and "8", and when k was chosen by measurement (docs/CALIBRATION.md, F1.2) the addon kept
+        # matching at the old value: a capture would have graded at a k no published figure
+        # describes, silently, because a k mismatch does not error, it just stops matching.
+        # tests/test_capture_addon_hooks.py caught it as a flow that carried the fixture's own
+        # token and came out non-causal.
+        k = int(os.environ.get("MCPFANOUT_K", str(_shingle.DEFAULT_K)))
+        w = int(os.environ.get("MCPFANOUT_W", str(_shingle.DEFAULT_W)))
         self.redactor = Redactor(salt=salt, k=k, w=w) if salt else Redactor(k=k, w=w)
         self.control = Path(os.environ.get("MCPFANOUT_CONTROL", "runs/live/control"))
         self.flows_path = self.run_dir / "flows.jsonl"

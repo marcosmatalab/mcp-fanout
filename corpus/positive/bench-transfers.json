@@ -1,0 +1,1100 @@
+{
+  "_what_this_is": "Phase A positive control: every transfer the bench actually made, with the bytes it sent and the arguments of the call that caused it. Distilled from the bench's OWN ledger, which it writes from inside its handler. Used by the k sweep as the truth pattern (docs/CALIBRATION.md).",
+  "_why_committed": "the bench's payloads are synthetic and keyed from a published constant, so this file carries no third-party content and makes the sweep reproducible without Docker. It is not a run: gate rule 4 still holds",
+  "source_run": "20260919T112523Z-bench",
+  "transfers": [
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFfbf9d776b389d0f9dde64c39c54c31177454ae",
+        "slot": 1
+      },
+      "body_b64": "eyJmcmFnIjogIkJGZmJmOWQ3NzZiMzg5ZDBmOWRkZTY0YzM5YzU0YzMxMTc3NDU0YWUifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t000"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF5c620acc3d6676faeda6a7cf02cffe6441c21e",
+        "slot": 0
+      },
+      "body_b64": "eyJmcmFnIjogIkJGNWM2MjBhY2MzZDY2NzZmYWVkYTZhN2NmMDJjZmZlNjQ0MWMyMWUifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t001"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF662ff8181f9e439d723081a35f8cb80be7e36e",
+        "slot": 3
+      },
+      "body_b64": "eyJmcmFnIjogIkJGNjYyZmY4MTgxZjllNDM5ZDcyMzA4MWEzNWY4Y2I4MGJlN2UzNmUifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t002"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFe7d56343ae0cc419d8d490320c79c2fd80ad3b",
+        "slot": 2
+      },
+      "body_b64": "eyJmcmFnIjogIkJGZTdkNTYzNDNhZTBjYzQxOWQ4ZDQ5MDMyMGM3OWMyZmQ4MGFkM2IifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t003"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF200864877e2e8baea36e7f7673439621242316",
+        "slot": 4
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMjAwODY0ODc3ZTJlOGJhZWEzNmU3Zjc2NzM0Mzk2MjEyNDIzMTYifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t004"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF6a06bf08877d7271dafb38ab375905dedf98f2",
+        "slot": 6
+      },
+      "body_b64": "eyJmcmFnIjogIkJGNmEwNmJmMDg4NzdkNzI3MWRhZmIzOGFiMzc1OTA1ZGVkZjk4ZjIifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t005"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF2eee3b2c3ecae793ea81d78ae33c067bb24934",
+        "slot": 5
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMmVlZTNiMmMzZWNhZTc5M2VhODFkNzhhZTMzYzA2N2JiMjQ5MzQifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t006"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF3e53c1b6443a5d2cd46b4829dc947d763cc0ed",
+        "slot": 7
+      },
+      "body_b64": "eyJmcmFnIjogIkJGM2U1M2MxYjY0NDNhNWQyY2Q0NmI0ODI5ZGM5NDdkNzYzY2MwZWQifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t007"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1af83f0cd63810ad1dd064e8a957d7fd9b1311",
+        "slot": 8
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWFmODNmMGNkNjM4MTBhZDFkZDA2NGU4YTk1N2Q3ZmQ5YjEzMTEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t008"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF526e5b83e0d2cf9657adfe8602b9641e9a3c6f",
+        "slot": 10
+      },
+      "body_b64": "eyJmcmFnIjogIkJGNTI2ZTViODNlMGQyY2Y5NjU3YWRmZTg2MDJiOTY0MWU5YTNjNmYifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t009"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFe8b9f62c5ce0e8f7de8ef1f12fef1dd43f8540",
+        "slot": 9
+      },
+      "body_b64": "eyJmcmFnIjogIkJGZThiOWY2MmM1Y2UwZThmN2RlOGVmMWYxMmZlZjFkZDQzZjg1NDAifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t010"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFbe80f3fdbc20c48800060bd9cf4b14a93247b2",
+        "slot": 11
+      },
+      "body_b64": "eyJmcmFnIjogIkJGYmU4MGYzZmRiYzIwYzQ4ODAwMDYwYmQ5Y2Y0YjE0YTkzMjQ3YjIifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t011"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF4450565684a7be57775419d7c79df190be3b15",
+        "slot": 12
+      },
+      "body_b64": "eyJmcmFnIjogIkJGNDQ1MDU2NTY4NGE3YmU1Nzc3NTQxOWQ3Yzc5ZGYxOTBiZTNiMTUifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t012"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF3365e14d08f3fe570de70aa2888e2422717a4b",
+        "slot": 13
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMzM2NWUxNGQwOGYzZmU1NzBkZTcwYWEyODg4ZTI0MjI3MTdhNGIifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t013"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF2de9b724a748dd62d9667e48b705c0d76b5510",
+        "slot": 15
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMmRlOWI3MjRhNzQ4ZGQ2MmQ5NjY3ZTQ4YjcwNWMwZDc2YjU1MTAifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t014"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF4b608ed5b1eec2a210d7c8bcdbabd527fbb79d",
+        "slot": 14
+      },
+      "body_b64": "eyJmcmFnIjogIkJGNGI2MDhlZDViMWVlYzJhMjEwZDdjOGJjZGJhYmQ1MjdmYmI3OWQifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t015"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF52a84c42126868e6b85ebbb6e254094e441488",
+        "slot": 16
+      },
+      "body_b64": "eyJmcmFnIjogIkJGNTJhODRjNDIxMjY4NjhlNmI4NWViYmI2ZTI1NDA5NGU0NDE0ODgifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t016"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFa98dd3ac998ea8346bd89d8657c78fc075646b",
+        "slot": 17
+      },
+      "body_b64": "eyJmcmFnIjogIkJGYTk4ZGQzYWM5OThlYTgzNDZiZDg5ZDg2NTdjNzhmYzA3NTY0NmIifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t017"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFa98dd3ac998ea8346bd89d8657c78fc075646b",
+        "slot": 18
+      },
+      "body_b64": "eyJmcmFnIjogIkJGYTk4ZGQzYWM5OThlYTgzNDZiZDg5ZDg2NTdjNzhmYzA3NTY0NmIifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t018"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF349ecc0381863344a4f97d2f9b25570bac2371",
+        "slot": 19
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMzQ5ZWNjMDM4MTg2MzM0NGE0Zjk3ZDJmOWIyNTU3MGJhYzIzNzEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t019"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF349ecc0381863344a4f97d2f9b25570bac2371",
+        "slot": 21
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMzQ5ZWNjMDM4MTg2MzM0NGE0Zjk3ZDJmOWIyNTU3MGJhYzIzNzEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t020"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF349ecc0381863344a4f97d2f9b25570bac2371",
+        "slot": 20
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMzQ5ZWNjMDM4MTg2MzM0NGE0Zjk3ZDJmOWIyNTU3MGJhYzIzNzEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t021"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF349ecc0381863344a4f97d2f9b25570bac2371",
+        "slot": 23
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMzQ5ZWNjMDM4MTg2MzM0NGE0Zjk3ZDJmOWIyNTU3MGJhYzIzNzEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t022"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF349ecc0381863344a4f97d2f9b25570bac2371",
+        "slot": 22
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMzQ5ZWNjMDM4MTg2MzM0NGE0Zjk3ZDJmOWIyNTU3MGJhYzIzNzEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t023"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1d49f91dd4779ea608e4cc852eeab60721ef6a",
+        "slot": 24
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWQ0OWY5MWRkNDc3OWVhNjA4ZTRjYzg1MmVlYWI2MDcyMWVmNmEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t024"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1d49f91dd4779ea608e4cc852eeab60721ef6a",
+        "slot": 25
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWQ0OWY5MWRkNDc3OWVhNjA4ZTRjYzg1MmVlYWI2MDcyMWVmNmEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t025"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1d49f91dd4779ea608e4cc852eeab60721ef6a",
+        "slot": 26
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWQ0OWY5MWRkNDc3OWVhNjA4ZTRjYzg1MmVlYWI2MDcyMWVmNmEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t026"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1d49f91dd4779ea608e4cc852eeab60721ef6a",
+        "slot": 27
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWQ0OWY5MWRkNDc3OWVhNjA4ZTRjYzg1MmVlYWI2MDcyMWVmNmEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t027"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1d49f91dd4779ea608e4cc852eeab60721ef6a",
+        "slot": 29
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWQ0OWY5MWRkNDc3OWVhNjA4ZTRjYzg1MmVlYWI2MDcyMWVmNmEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t028"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1d49f91dd4779ea608e4cc852eeab60721ef6a",
+        "slot": 28
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWQ0OWY5MWRkNDc3OWVhNjA4ZTRjYzg1MmVlYWI2MDcyMWVmNmEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t029"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1d49f91dd4779ea608e4cc852eeab60721ef6a",
+        "slot": 30
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWQ0OWY5MWRkNDc3OWVhNjA4ZTRjYzg1MmVlYWI2MDcyMWVmNmEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t030"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1d49f91dd4779ea608e4cc852eeab60721ef6a",
+        "slot": 32
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWQ0OWY5MWRkNDc3OWVhNjA4ZTRjYzg1MmVlYWI2MDcyMWVmNmEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t031"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1d49f91dd4779ea608e4cc852eeab60721ef6a",
+        "slot": 31
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWQ0OWY5MWRkNDc3OWVhNjA4ZTRjYzg1MmVlYWI2MDcyMWVmNmEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t032"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF1d49f91dd4779ea608e4cc852eeab60721ef6a",
+        "slot": 33
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMWQ0OWY5MWRkNDc3OWVhNjA4ZTRjYzg1MmVlYWI2MDcyMWVmNmEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t033"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF90884687b1421655dee748330419910b23c9cd",
+        "slot": 34
+      },
+      "body_b64": "eyJmcmFnIjogIkJGOTA4ODQ2ODdiMTQyMTY1NWRlZTc0ODMzMDQxOTkxMGIyM2M5Y2QifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t034"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF90884687b1421655dee748330419910b23c9cd",
+        "slot": 35
+      },
+      "body_b64": "eyJmcmFnIjogIkJGOTA4ODQ2ODdiMTQyMTY1NWRlZTc0ODMzMDQxOTkxMGIyM2M5Y2QifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t035"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFb2a6e5cb4d2ea6925bfef90c9fb25b020c4aaf",
+        "slot": 38
+      },
+      "body_b64": "eyJmcmFnIjogIkJGYjJhNmU1Y2I0ZDJlYTY5MjViZmVmOTBjOWZiMjViMDIwYzRhYWYifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t036"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFd209ecfd2708946f5a869f68842d13aa1aa18a",
+        "slot": 37
+      },
+      "body_b64": "eyJmcmFnIjogIkJGZDIwOWVjZmQyNzA4OTQ2ZjVhODY5ZjY4ODQyZDEzYWExYWExOGEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t037"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF908e50c33ae3970a0f60a7afa31df565db1df0",
+        "slot": 36
+      },
+      "body_b64": "eyJmcmFnIjogIkJGOTA4ZTUwYzMzYWUzOTcwYTBmNjBhN2FmYTMxZGY1NjVkYjFkZjAifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t038"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF09ae53e4095e4d9936ff402f4f19dcf7d5ad40",
+        "slot": 39
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMDlhZTUzZTQwOTVlNGQ5OTM2ZmY0MDJmNGYxOWRjZjdkNWFkNDAifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t039"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF09ae53e4095e4d9936ff402f4f19dcf7d5ad40",
+        "slot": 40
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMDlhZTUzZTQwOTVlNGQ5OTM2ZmY0MDJmNGYxOWRjZjdkNWFkNDAifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t040"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFccdd7f5822c154ee1076466da54fb9be1db5ca",
+        "slot": 41
+      },
+      "body_b64": "eyJmcmFnIjogIkJGY2NkZDdmNTgyMmMxNTRlZTEwNzY0NjZkYTU0ZmI5YmUxZGI1Y2EifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t041"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF8e3d09fca84c872bca9832badb1a953cbd37af",
+        "slot": 43
+      },
+      "body_b64": "eyJmcmFnIjogIkJGOGUzZDA5ZmNhODRjODcyYmNhOTgzMmJhZGIxYTk1M2NiZDM3YWYifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t042"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF7baa7951e7068441ef8bbd3f54e64f50e95ba1",
+        "slot": 42
+      },
+      "body_b64": "eyJmcmFnIjogIkJGN2JhYTc5NTFlNzA2ODQ0MWVmOGJiZDNmNTRlNjRmNTBlOTViYTEifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t043"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF61d05bd49e3a8043b303077e73d267d6dbbc87",
+        "slot": 44
+      },
+      "body_b64": "eyJmcmFnIjogIkJGNjFkMDViZDQ5ZTNhODA0M2IzMDMwNzdlNzNkMjY3ZDZkYmJjODcifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t044"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF051bdbce32628bfa37e570ea5b348d095de6f9",
+        "slot": 45
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMDUxYmRiY2UzMjYyOGJmYTM3ZTU3MGVhNWIzNDhkMDk1ZGU2ZjkifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t045"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF938a4ea9b8ba55fcb5028187ebe8d0e7d6bad6",
+        "slot": 47
+      },
+      "body_b64": "eyJmcmFnIjogIkJGOTM4YTRlYTliOGJhNTVmY2I1MDI4MTg3ZWJlOGQwZTdkNmJhZDYifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t046"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BF30a2d0ffdf6e5da200da5da68fc43bb47d5a98",
+        "slot": 46
+      },
+      "body_b64": "eyJmcmFnIjogIkJGMzBhMmQwZmZkZjZlNWRhMjAwZGE1ZGE2OGZjNDNiYjQ3ZDVhOTgifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t047"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFce3524881ade3dc804896b271ad2dab2f213b2",
+        "slot": 48
+      },
+      "body_b64": "eyJmcmFnIjogIkJGY2UzNTI0ODgxYWRlM2RjODA0ODk2YjI3MWFkMmRhYjJmMjEzYjIifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t048"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 49
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t049"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 50
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t050"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 51
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t051"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 52
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t052"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 53
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t053"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 54
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t054"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 55
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t055"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 56
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t056"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 57
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t057"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 58
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t058"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 59
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t059"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 60
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t060"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 61
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t061"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 62
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t062"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 63
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t063"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 64
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t064"
+    },
+    {
+      "arguments": {
+        "channel": "none",
+        "slot": 65
+      },
+      "body_b64": "",
+      "channel": "none",
+      "detectable_by_design": false,
+      "not_detectable_reason": "nothing_carried",
+      "target": "/bench/plain",
+      "transfer_id": "t065"
+    },
+    {
+      "arguments": {
+        "channel": "target",
+        "fragment": "BF666627e6c07abbae8036f3074629929078ead8",
+        "slot": 66
+      },
+      "body_b64": "",
+      "channel": "target",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/q?frag=BF666627e6c07abbae8036f3074629929078ead8",
+      "transfer_id": "t066"
+    },
+    {
+      "arguments": {
+        "channel": "target",
+        "fragment": "BF59c4c649c984fc7d747ced517c8f6fc0d4212d",
+        "slot": 67
+      },
+      "body_b64": "",
+      "channel": "target",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/q?frag=BF59c4c649c984fc7d747ced517c8f6fc0d4212d",
+      "transfer_id": "t067"
+    },
+    {
+      "arguments": {
+        "channel": "target",
+        "fragment": "BF00215e3b3486e8260ca72f9a4c38b29a845ca6",
+        "slot": 69
+      },
+      "body_b64": "",
+      "channel": "target",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/q?frag=BF00215e3b3486e8260ca72f9a4c38b29a845ca6",
+      "transfer_id": "t068"
+    },
+    {
+      "arguments": {
+        "channel": "target",
+        "fragment": "BF34d72bded7b0ef27761789be4cb8d42dc70823",
+        "slot": 68
+      },
+      "body_b64": "",
+      "channel": "target",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/q?frag=BF34d72bded7b0ef27761789be4cb8d42dc70823",
+      "transfer_id": "t069"
+    },
+    {
+      "arguments": {
+        "channel": "target",
+        "fragment": "BFd94d13c20c853cb8bce14e6774b6d4e30f4bb5",
+        "slot": 70
+      },
+      "body_b64": "",
+      "channel": "target",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/q?frag=BFd94d13c20c853cb8bce14e6774b6d4e30f4bb5",
+      "transfer_id": "t070"
+    },
+    {
+      "arguments": {
+        "channel": "header",
+        "fragment": "BF6d22c2ea9d5949ce948bbf12f8307410ce5612",
+        "slot": 71
+      },
+      "body_b64": "",
+      "channel": "header",
+      "detectable_by_design": false,
+      "not_detectable_reason": "channel_not_read",
+      "target": "/bench/hdr",
+      "transfer_id": "t071"
+    },
+    {
+      "arguments": {
+        "channel": "header",
+        "fragment": "BF325e39daec151259466d357795629f1db68a09",
+        "slot": 72
+      },
+      "body_b64": "",
+      "channel": "header",
+      "detectable_by_design": false,
+      "not_detectable_reason": "channel_not_read",
+      "target": "/bench/hdr",
+      "transfer_id": "t072"
+    },
+    {
+      "arguments": {
+        "channel": "header",
+        "fragment": "BF22ab8a3ecc5a9dc9589edb1634a28c8cebbbbd",
+        "slot": 73
+      },
+      "body_b64": "",
+      "channel": "header",
+      "detectable_by_design": false,
+      "not_detectable_reason": "channel_not_read",
+      "target": "/bench/hdr",
+      "transfer_id": "t073"
+    },
+    {
+      "arguments": {
+        "channel": "header",
+        "fragment": "BFc7e4cacc9152388cee8d0c967152b752e1d845",
+        "slot": 74
+      },
+      "body_b64": "",
+      "channel": "header",
+      "detectable_by_design": false,
+      "not_detectable_reason": "channel_not_read",
+      "target": "/bench/hdr",
+      "transfer_id": "t074"
+    },
+    {
+      "arguments": {
+        "channel": "header",
+        "fragment": "BF94c0e414c4028216b25888eb2e0718112934fb",
+        "slot": 75
+      },
+      "body_b64": "",
+      "channel": "header",
+      "detectable_by_design": false,
+      "not_detectable_reason": "channel_not_read",
+      "target": "/bench/hdr",
+      "transfer_id": "t075"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "fragment": "BFcc688847dec1d2c6f5effaa0ec39386a7ad60e",
+        "slot": 76
+      },
+      "body_b64": "eyJmcmFnIjogIkJGY2M2ODg4NDdkZWMxZDJjNmY1ZWZmYWEwZWMzOTM4NmE3YWQ2MGUifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t076"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "count": 4,
+        "fragment": "BFaaced80754b8fd6329198e984a5c63fb4e8759",
+        "slot": 77
+      },
+      "body_b64": "eyJmcmFnIjogIkJGYWFjZWQ4MDc1NGI4ZmQ2MzI5MTk4ZTk4NGE1YzYzZmI0ZTg3NTkifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t077"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "count": 4,
+        "fragment": "BFaaced80754b8fd6329198e984a5c63fb4e8759",
+        "slot": 77
+      },
+      "body_b64": "eyJmcmFnIjogIkJGYWFjZWQ4MDc1NGI4ZmQ2MzI5MTk4ZTk4NGE1YzYzZmI0ZTg3NTkifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t078"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "count": 4,
+        "fragment": "BFaaced80754b8fd6329198e984a5c63fb4e8759",
+        "slot": 77
+      },
+      "body_b64": "eyJmcmFnIjogIkJGYWFjZWQ4MDc1NGI4ZmQ2MzI5MTk4ZTk4NGE1YzYzZmI0ZTg3NTkifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t079"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "count": 4,
+        "fragment": "BFaaced80754b8fd6329198e984a5c63fb4e8759",
+        "slot": 77
+      },
+      "body_b64": "eyJmcmFnIjogIkJGYWFjZWQ4MDc1NGI4ZmQ2MzI5MTk4ZTk4NGE1YzYzZmI0ZTg3NTkifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t080"
+    },
+    {
+      "arguments": {
+        "encoding": "base64",
+        "fragment": "BFefe18794c841391494bcf5790ef68f2dad43b0",
+        "slot": 79
+      },
+      "body_b64": "UWtabFptVXhPRGM1TkdNNE5ERXpPVEUwT1RSaVkyWTFOemt3WldZMk9HWXlaR0ZrTkROaU1BPT0=",
+      "channel": "body:base64",
+      "detectable_by_design": false,
+      "not_detectable_reason": "re_encoded",
+      "target": "/bench/encoded",
+      "transfer_id": "t081"
+    },
+    {
+      "arguments": {
+        "encoding": "gzip",
+        "fragment": "BFefe18794c841391494bcf5790ef68f2dad43b0",
+        "slot": 80
+      },
+      "body_b64": "H4sIACVxrmoC/3NyS01LNbQwtzRJtjAxNLY0NLE0SUpOMzW3NEhNM7NIM0pJTDExTjIAAKiqzuEoAAAA",
+      "channel": "body:gzip",
+      "detectable_by_design": false,
+      "not_detectable_reason": "re_encoded",
+      "target": "/bench/encoded",
+      "transfer_id": "t082"
+    },
+    {
+      "arguments": {
+        "encoding": "json_escaped",
+        "fragment": "BFefe18794c841391494bcf5790ef68f2dad43b0",
+        "slot": 81
+      },
+      "body_b64": "XHUwMDQyXHUwMDQ2XHUwMDY1XHUwMDY2XHUwMDY1XHUwMDMxXHUwMDM4XHUwMDM3XHUwMDM5XHUwMDM0XHUwMDYzXHUwMDM4XHUwMDM0XHUwMDMxXHUwMDMzXHUwMDM5XHUwMDMxXHUwMDM0XHUwMDM5XHUwMDM0XHUwMDYyXHUwMDYzXHUwMDY2XHUwMDM1XHUwMDM3XHUwMDM5XHUwMDMwXHUwMDY1XHUwMDY2XHUwMDM2XHUwMDM4XHUwMDY2XHUwMDMyXHUwMDY0XHUwMDYxXHUwMDY0XHUwMDM0XHUwMDMzXHUwMDYyXHUwMDMw",
+      "channel": "body:json_escaped",
+      "detectable_by_design": false,
+      "not_detectable_reason": "re_encoded",
+      "target": "/bench/encoded",
+      "transfer_id": "t083"
+    },
+    {
+      "arguments": {
+        "channel": "body",
+        "delay_ms": 1200,
+        "fragment": "BFef504f26336f302381e84490fcf64781d01b99",
+        "slot": 78
+      },
+      "body_b64": "eyJmcmFnIjogIkJGZWY1MDRmMjYzMzZmMzAyMzgxZTg0NDkwZmNmNjQ3ODFkMDFiOTkifQ==",
+      "channel": "body",
+      "detectable_by_design": true,
+      "not_detectable_reason": "",
+      "target": "/bench/ingest",
+      "transfer_id": "t084"
+    }
+  ]
+}

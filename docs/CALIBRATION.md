@@ -83,6 +83,10 @@ figures below are read from, so the prose cannot drift from the measurement
 **Held-out half, k = 16, no weighting: 66 false positives in 224 pairs, a rate of 0.2946, Wilson
 95% interval [0.2388, 0.3574].**
 
+This is the **baseline at the k that was chosen by judgement**, kept as the measurement F1.1 was
+asked for and as the before half of the comparison F1.2 makes. The figure at the k the sweep chose
+is in the F1.2 section below, and it is not this one.
+
 | Family | Pairs | False positives | Rate | Wilson 95% |
 | --- | --- | --- | --- | --- |
 | `search_query` | 56 | 0 | 0.0 | [0.0, 0.0642] |
@@ -109,8 +113,9 @@ says something a single figure cannot:
   letters under the same section prefix. This is the family whose rate should move most with k.
 
 **What the number means for phase B.** Roughly three in ten concurrent pairs of realistic,
-information-disjoint calls produce a content match that implicates the wrong call, at the shipped
-k and with no weighting. In the grade vocabulary that is not a false `CONTENT_UNIQUE`: an extra
+information-disjoint calls produce a content match that implicates the wrong call, at k = 16 and
+with no weighting. (At the k the sweep chose it is zero on this corpus; the reasoning below is what
+that k had to fix.) In the grade vocabulary that is not a false `CONTENT_UNIQUE`: an extra
 implicated candidate turns what should be `CONTENT_UNIQUE` into `CONTENT_AMBIGUOUS`, which is the
 safe direction and is exactly what prediction B1 in `docs/PHASES.md` says will dominate. It becomes
 a false `CONTENT_UNIQUE` only when the true cause's own material does not reach the wire while a
@@ -119,10 +124,71 @@ suppresses the true match and any surviving bystander run would win uncontested.
 
 ## F1.2: the k sweep
 
-Pending. `k = 16` was chosen by judgement, not by data. The sweep runs 8 to 64, minimising false
-positives on the calibration half without sinking the phase A bench's content-match recall, which
-remains the truth pattern. The curve and the chosen constant, with the curve cited beside it in
-code, are the acceptance criteria.
+`k = 16` was chosen by judgement. It is now chosen by a curve. Command: `make ksweep`. Artifact:
+`docs/figures/calibration/ksweep-calibration.json`, which holds every integer k from 8 to 64; the
+rows below are the ones where something changes.
+
+**Three curves, and each one alone picks a different k.** That is why they are read together:
+
+- **false positives**, on the calibration half. Falls as k grows. Alone it picks the largest k.
+- **bench detection recall**, over the 60 phase A transfers the bench designed to be detectable.
+  The truth pattern F1.2 was told to protect. Alone it picks the smallest k.
+- **self-match recall**, on the negative corpus itself: can the matcher still find a call's own
+  arguments in that call's own request? The same question as bench recall, asked of natural language
+  and URLs instead of keyed digests. It is here because the bench's fragments are 40 bytes **by
+  design**, so "recall survives a large k" is a fact about the bench and not about real material.
+
+| k | false positives | bench recall | self-match on realistic material |
+| --- | --- | --- | --- |
+| 8 | 0.5 | 1.0 | 0.9375 |
+| 10 | 0.2946 | 1.0 | 0.8125 |
+| 16 | 0.2768 | 1.0 | 0.5312 |
+| 18 | 0.25 | 1.0 | 0.5 |
+| 22 | 0.0 | 1.0 | 0.5 |
+| 24 | 0.0 | 1.0 | 0.4375 |
+| 32 | 0.0 | 1.0 | 0.25 |
+| 40 | 0.0 | 1.0 | 0.25 |
+| 41 | 0.0 | 0.9167 | 0.25 |
+| 48 | 0.0 | 0.0 | 0.25 |
+
+**The rule, written in code before the numbers were looked at** (`calibrate.choose_k`): keep the k
+values at the best observed bench recall, take the lowest false-positive rate among them, break the
+tie toward the **smallest** k, because every byte of k is a false negative on some real fragment
+shorter than it. A k at which a known negative became "detectable" is disqualified outright,
+whatever its rate: that would be a collision counted as a success. None was, at any k in the range.
+
+**It picks k = 22.** The first k at which the structural collisions disappear entirely, with phase A
+recall intact. Nineteen values (22 to 40) share that rate and that recall; the tie breaks downward.
+
+**The holdout agrees, which is the point of having reserved it.** k was chosen against the
+calibration half alone. Measured once on the reserved half at the chosen k:
+**0 false positives in 224 pairs, a rate of
+0.0, Wilson 95% [0.0, 0.0169]** (artifact
+`fp-held-out-k22-unweighted.json`). Every family, including the one that failed 56 of 56 pairs at
+k = 16, is now at zero. The upper bound is what to quote, not the zero: 224 pairs cannot distinguish
+"never" from "under two per cent".
+
+**What it cost, priced rather than waved at.** Self-match recall on realistic material moves from
+0.5312 at k = 16 to 0.5 at k = 22, so three per cent of the true matches this corpus can express are
+gone. A concrete instance, small enough to read, is in the selftest fixture: at k = 16 a flow matched
+55 bytes of context, the 36-byte synthetic secret plus a 19-byte `DB_PASSWORD=` line; at k = 22 that
+line is shorter than one k-gram and contributes nothing, so the figure is 36
+(`tests/test_aggregate.py`). **Every false negative pushes the published attributable share down**,
+which is the safe direction, and it is the direction this trade deliberately buys.
+
+**Read the bench column last.** It holds at 1.0 to k = 40 and collapses at 41, which is the length
+of the bench's fragments plus its two-byte prefix. That cliff is evidence the sweep can see recall
+fall; it is not evidence that a large k is safe. The self-match column is, and it says the opposite:
+from 0.9375 at k = 8 to 0.25 at k = 32, real material stops being matchable long before the bench's
+does. `tests/test_bench_metrics.py` now pins the fragment length between k + 8 and the top of the
+sweep range, so the bench cannot drift into hiding that cliff.
+
+**Three copies of k became one.** The constant lived in `shingle.py`, in `registry/servers.yaml` and
+as a literal in `harness/run.sh`, and the capture addon carried a fourth as an environment default.
+Moving the constant exposed all of them: the addon kept matching at 16 while everything else moved,
+which does not error, it just silently stops matching, and a capture would have graded at a k no
+published figure describes. `run.sh` now reads the constant, the addon defaults to it, and a test
+pins the registry to it.
 
 ## F1.3: rarity weighting
 
