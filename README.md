@@ -17,8 +17,12 @@ protected us from turned out to be our own first two figures.
 
 ## What it found
 
-Measured on run `20260919T194649Z-concurrent`: ten of the most-installed MCP servers, 130 tool
-calls in concurrent waves of 2, 5 and 10, plus a 26-call sequential pass. Full write-up in
+Measured on run `20260919T194649Z-concurrent`: **ten widely used, pinned MCP servers**, 130 tool
+calls in concurrent waves of 2, 5 and 10, plus a 26-call sequential pass. Every server is pinned
+to an exact version in [`registry/servers.yaml`](registry/servers.yaml) and its tool schemas are
+committed under `registry/probes/`. We do not claim they are the ten most installed: we never
+measured an install ranking, and rule 6 says a claim without a command behind it does not get
+published. Full write-up in
 [`docs/paper/DRAFT.md`](docs/paper/DRAFT.md).
 
 **The headline is about the instrument, not about MCP.**

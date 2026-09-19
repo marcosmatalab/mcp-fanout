@@ -21,7 +21,7 @@ abstract: >-
   to honour two environment variables, and that subset is not knowable in advance: here it
   silently excluded one of the three components that reached a third party at all, because Node.js
   ignores those variables in its global fetch unless a flag that is off by default is enabled.
-  Across ten of the most-installed Model Context Protocol servers, driven under packet and proxy
+  Across ten widely used, version-pinned Model Context Protocol servers, driven under packet and
   capture with 130 tool calls in concurrent waves of 2, 5 and 10 plus a 26-call sequential pass,
   the attributable share of call-caused, content-eligible outbound flows is 0.6579 against a
   threshold of 0.80 sealed by digest before any measurement existed. The instrument does not meet

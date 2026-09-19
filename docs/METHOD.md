@@ -203,5 +203,11 @@ number 5 publishes the count of such calls so the limit is visible in the output
 
 ## Cost
 
-One afternoon, about 10 EUR of compute. It touches nothing outside a container and starts no server
-against real credentials. The stop criteria (docs/STOP-CRITERIA.md) say when to stop spending.
+**Corrected 2026-09-20.** Earlier versions of this paragraph said "one afternoon and about
+10 EUR of compute". Both figures were guesses and both were wrong, and README.md now publishes
+the measured table that disproves them. Measured: **0 EUR** of cloud compute, because everything
+runs in Docker on one machine; **0 EUR** of paid APIs, the only credential being a free-tier
+GitHub token; **138 seconds** of actual driving across 21 capture runs; **two days** of wall
+clock. The money cost is genuinely zero and the real cost is attention.
+
+It touches nothing outside a container and starts no server against real credentials. The stop criteria (docs/STOP-CRITERIA.md) say when to stop spending.

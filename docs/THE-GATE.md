@@ -155,7 +155,7 @@ screen on purpose: it is where credibility is won or lost.
     announces itself. It produces a clean run, a passing suite and an empty result that reads as a
     finding.
 
-    **The class is established by five instances, not argued from one.**
+    **The class is established by six instances, not argued from one.**
 
     - `capture_addon.py` used a relative import. mitmproxy loads an addon by path under a synthetic
       package name, so the import raised, mitmdump logged it and carried on proxying. The run
@@ -174,6 +174,10 @@ screen on purpose: it is where credibility is won or lost.
       `compute_all` was called without the constant-path list. The published artifact omitted the
       quantity the published verdict is measured against, and it validated, diffed and committed
       cleanly.
+    - `pyproject.toml` and `mcpfanout.__version__` said `0.1.0` while `CITATION.cff` said `1.0.0`,
+      in the same commit. Two artifacts of one repository asserting different facts, each
+      well-formed, each passing every check that existed. Guarded now by
+      `tests/test_version_is_one_number.py`, which also covers the harness image tag.
     - `README.md` stated a compute cost, a reproducibility guarantee and a version number that the
       measurements contradicted, and went on doing so for four days after each was disproved. It is
       the page almost every reader sees, and nothing in the suite could tell that a sentence of

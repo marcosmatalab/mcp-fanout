@@ -31,10 +31,19 @@ gate rule 6. Each names the threat and what it does to the numbers.
    every number downward. It is unfixable in a sandbox and is stated, not hidden. eBPF SSL uprobes
    (docs/METHOD.md) reduce the proxy-detection surface but not the sandbox-detection surface.
 
-4. **The most-installed do not represent the long tail.** Ten popular servers are curated,
+4. **Widely used servers do not represent the long tail.** Ten well-known servers are curated,
    audited, and unrepresentative of the thousands of small servers where supply-chain risk
    concentrates. The numbers describe the head of the distribution. The tail is future work and is
    labeled as such.
+
+   **On the word "most-installed", which this threat and three other documents used until
+   2026-09-20.** It was a ranking claim with no artifact behind it: no install counts were
+   collected, from npm, PyPI or anywhere else, and rule 6 forbids publishing a figure or a
+   superlative without the command that produced it. The servers ARE widely used and ARE pinned
+   and probed, both of which are checkable from `registry/servers.yaml` and `registry/probes/`.
+   Documenting an actual install ranking at this point would be new work for one word, so the
+   word went instead. Section 5.4.1's tool-shape distribution has the same bound: it describes
+   these ten and nothing about the population they were drawn from.
 
 5. **Absent credentials change behavior.** Servers that need a token are run without one and fail
    auth. A failed call may egress less (or differently) than a successful one. We measure the
