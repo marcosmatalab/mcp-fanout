@@ -392,8 +392,10 @@ fact, and repairing it by rewriting dates is precisely the fraud the whole appar
 prevent.
 
 **So the rule, for every pre-registration after this one: seal, commit, PUSH, and only then
-measure.** A seal that has not left the machine is a draft with a hash on it. Commits from
-`e5c1892` onward are GPG-signed, which binds authorship but not time; it is the push that binds
+measure.** A seal that has not left the machine is a draft with a hash on it. Signing begins at
+`a167a54`, the commit AFTER `e5c1892`, which this paragraph misnamed until it was checked against
+the history rather than remembered: `e5c1892` itself carries no signature, and it is the commit the
+table above cites. A signature binds authorship and not time in any case; it is the push that binds
 time, and only a push that happens before the measurement binds the right thing.
 
 ## 13. For the write-up: what must appear in the method section, not be tidied away

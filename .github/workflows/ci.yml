@@ -15,7 +15,12 @@ jobs:
   gates:
     runs-on: ubuntu-latest
     steps:
+      # The whole history, not the default depth of 1: tests/test_history_claims.py checks where
+      # signing begins against the commit objects, and on a shallow clone it would skip while
+      # looking exactly like a pass.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

@@ -52,10 +52,11 @@ Full text in `docs/DOCTRINE.md`.
 
 Every instrument needs a test that goes red when the instrument is ABSENT, not only when it is
 wrong. A wrong number gets investigated; a green gets published. This repo has produced that
-failure seven times, listed in `docs/PROTOCOL.md`: an addon that did not load and finished green
+failure eight times, listed in `docs/PROTOCOL.md`: an addon that did not load and finished green
 with zero flows, a k constant that diverged and silently stopped matching, a selftest that
-serialised the structural fields without ever populating one, and, past code, a README and four
-calibration figures that went on stating what the measurements no longer said. Asserting a field is
+serialised the structural fields without ever populating one, and, past code, a README, four
+calibration figures and a claim about where this history is signed, all of which went on stating
+what the artifacts no longer said. Asserting a field is
 PRESENT is not enough, every one of them had its fields. Asserting the SHAPE of an artifact is not
 enough either. Assert the value only a working instrument could compute, through its real entry
 point, and for a committed artifact that means regenerating it and comparing.
@@ -69,7 +70,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 662
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 666
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only**, and the list of what counts as the core is
@@ -170,7 +171,7 @@ README's argument and read as unfinished work inside the code.
 ```bash
 source .venv/bin/activate
 make gates       # EVERYTHING CI runs, in the order CI runs it. This is the one to use
-make verify      # 662 tests, no Docker, no network
+make verify      # 666 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make reproduce   # the headline number end to end from the committed example runs
 make numbers     # the six numbers from a run (RUN defaults to the committed example-concurrent)

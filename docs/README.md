@@ -7,7 +7,7 @@ of them.
 | Document | Read it for | Size |
 | --- | --- | --- |
 | [`METHOD.md`](METHOD.md) | how the observation works and what each of the six numbers is. The one to read first after the README | 3,400 words |
-| [`PROTOCOL.md`](PROTOCOL.md) | the ten gate rules, the three phases, the two phase B passes and their measured results, and when to stop. Contains the sealed phase B predictions | 5,800 words |
+| [`PROTOCOL.md`](PROTOCOL.md) | the ten gate rules, the three phases, the two phase B passes and their measured results, and when to stop. Contains the sealed phase B predictions | 5,900 words |
 | [`THREATS.md`](THREATS.md) | nineteen ways the measurement could be wrong, each with what it does to the numbers. **Threat 19 is the headline result** and threat 17 is second | 6,700 words |
 | [`PREREG-F2.md`](PREREG-F2.md) | what was predicted before the structural matcher existed, frozen by digest, including the prediction that turned out false | 6,800 words |
 | [`CALIBRATION.md`](CALIBRATION.md) | how the matcher was calibrated on language that shares structure and no information, and what the chosen k cost | 4,200 words |

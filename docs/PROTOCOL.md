@@ -156,7 +156,7 @@ Ten conditions a run must pass before any number from it is reported.
     **a green gets published**. An absent instrument produces a clean run, a passing suite and an
     empty result that reads as a finding.
 
-    **The class is established by seven instances, not argued from one.**
+    **The class is established by eight instances, not argued from one.**
 
     - `capture_addon.py` used a relative import. mitmproxy loads an addon by path under a synthetic
       package name, so the import raised, mitmdump logged it and carried on proxying. The run
@@ -186,11 +186,19 @@ Ten conditions a run must pass before any number from it is reported.
       maximum of 1 where the pass that may answer says 84, and stated a cost, a reproducibility
       guarantee and a version the measurements contradicted. Nothing in the suite could tell that a
       sentence of prose had stopped being true. Guarded by `make claims-check`.
+    - Three documents stated where the GPG signing of this history begins, and one of them was off
+      by one commit: it named `e5c1892`, which carries no signature, and `e5c1892` is the commit
+      the pre-registration's timeline cites as external evidence. `CITATION.cff` says the argument
+      depends on the signed history, so this is a load-bearing claim about an artifact nobody could
+      check, because every other figure here has a command behind it and this class did not.
+      Guarded by `tests/test_history_claims.py`, which reads the boundary out of the prose and
+      checks it against the commit objects.
 
-    Seven instances is not an anecdote: the class is that an ABSENT input produces a WELL-FORMED
-    output, and well-formed output is what gets reviewed. The last three extend it past code. A
-    document is an artifact, a figure is an artifact, and an artifact that omits or contradicts the
-    result it is measured against fails at the one job it has.
+    Eight instances is not an anecdote: the class is that an ABSENT input produces a WELL-FORMED
+    output, and well-formed output is what gets reviewed. The last four extend it past code. A
+    document is an artifact, a figure is an artifact, a commit history is an artifact, and an
+    artifact that omits or contradicts the result it is measured against fails at the one job it
+    has.
 
     **What the test has to do, since "we have tests" was true in every case above.** It must
     exercise the instrument's real entry point, with the real loader where there is one, and assert
