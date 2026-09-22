@@ -64,17 +64,14 @@ a number about our imagination.
 
 All three F1 pieces are measured against this one corpus, so the failure to design against is
 obvious: tune the matcher until the corpus is happy, then publish the corpus's verdict on the
-matcher. Hence:
+matcher. So the **calibration half** is for tuning (choosing k, choosing a threshold, trying
+something out) and the **held-out half** is measured once, at the end, and is what gets published.
 
-- **the calibration half** is for tuning: choosing k, choosing a threshold, trying something out;
-- **the held-out half** is measured once, at the end, and is what gets published;
-- `calibrate.load_negative` **raises** `HeldOutViolation` when the held-out half is asked for with
-  a calibration purpose, and the CLI derives the purpose from the half so the choice is not a flag
-  somebody in a hurry can flip;
-- the reserved filename appears in exactly one place in `src/`, the loader's own table, and a test
-  fails if any other module names it;
-- a test fails if the two halves stop being independent, in either direction, over the whole byte
-  content of every call and not merely over ids.
+Four things enforce it rather than one sentence asking for it: `calibrate.load_negative` raises
+`HeldOutViolation` when the held-out half is asked for with a calibration purpose; the CLI derives
+the purpose from the half, so the choice is not a flag somebody in a hurry can flip; the reserved
+filename appears in exactly one place in `src/`, the loader's own table; and a test fails if the
+two halves stop being independent, over the whole byte content of every call rather than over ids.
 
 ## F1.1: the measured rate
 
@@ -196,12 +193,11 @@ from 0.95 at k = 8 to 0.2 at k = 32, real material stops being matchable long be
 does. `tests/test_bench_metrics.py` now pins the fragment length between k + 8 and the top of the
 sweep range, so the bench cannot drift into hiding that cliff.
 
-**Three copies of k became one.** The constant lived in `shingle.py`, in `registry/servers.yaml` and
-as a literal in `harness/run.sh`, and the capture addon carried a fourth as an environment default.
-Moving the constant exposed all of them: the addon kept matching at 16 while everything else moved,
-which does not error, it just silently stops matching, and a capture would have graded at a k no
-published figure describes. `run.sh` now reads the constant, the addon defaults to it, and a test
-pins the registry to it.
+**Four copies of k became one.** It lived in `shingle.py`, in `registry/servers.yaml`, as a literal
+in `harness/run.sh` and as the addon's environment default. Moving it exposed the rest: the addon
+kept matching at 16 while everything else moved, which does not error, it silently stops matching,
+and the capture would have graded at a k no published figure describes. Everything reads the
+constant now and a test pins the registry to it.
 
 ## The self-match ceiling. The number that bounds everything phase B publishes
 
@@ -214,14 +210,12 @@ match itself.
 
 ### What self-match means, exactly
 
-For one call, take the bytes the matcher indexes on the cause side, which is
-`driver.args_bytes(its arguments)`, the same serialisation the driver publishes to the capture
-addon. Take the bytes of the request that **that same call** caused, its declared target and body.
-Ask the shipped matcher whether any k-gram of the first appears in the second.
-
-It is the true-positive question in the easiest form it has: the call is its own cause, there is no
-competing candidate, nothing is concurrent, and no window is involved. **A call that fails here can
-never be attributed by content anywhere**, under any concurrency, by any grade.
+For one call, take `driver.args_bytes(its arguments)`, the same serialisation the driver publishes
+to the capture addon, and the bytes of the request that **that same call** caused. Ask the shipped
+matcher whether any k-gram of the first appears in the second. It is the true-positive question in
+the easiest form it has: the call is its own cause, no competing candidate, nothing concurrent, no
+window. **A call that fails here can never be attributed by content anywhere**, under any
+concurrency, by any grade.
 
 Measured over `corpus/negative/calibration.json`, the calibration half of the negative corpus: 40 calls in five
 families, the same material the false-positive rate is measured over. It is **not** recall against
@@ -278,9 +272,9 @@ estimate, and this figure is the reason.** The same sentence is in `docs/THREATS
 `docs/METHOD.md`, and `number_5`'s own output carries it as `published_as`, so the figure
 cannot be quoted without it.
 
-This is a limit to declare, not a defect to fix before phase B. Every cause of it pushes the
-published share **down**: a miss is a false negative, which is the safe direction. What would be
-unacceptable is publishing the share as though the sensor saw everything.
+It is a limit to declare, not a defect to fix: every cause of it pushes the published share
+**down**, which is the safe direction. What would be unacceptable is publishing the share as
+though the sensor saw everything.
 
 ## F1.3: rarity weighting. Measured, and REVERTED
 

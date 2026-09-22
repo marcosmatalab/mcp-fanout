@@ -4,7 +4,7 @@
 #
 # We set RECIPEPREFIX to '>' so recipe lines do not depend on literal tabs.
 .RECIPEPREFIX = >
-.PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
+.PHONY: help install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
         bench-verify disclosure control control-publish fp fp-calibration ksweep positive rarity \
         inventory f2 f2-reserved corpus-check backstop honesty-curve argument-shapes clean \
         figures-check curve-svg chain-svg lint types cov claims-check reproduce gates
@@ -14,6 +14,31 @@
 # fails, and on a developer's machine it silently answers about a different run than the one the
 # README quotes. Pass RUN=latest explicitly after a capture.
 RUN ?= example-concurrent
+
+.DEFAULT_GOAL := help
+
+# The list a reader needs, in the order they need it. Forty targets is too many to scan, and the
+# ones that matter are the four that produce a published figure plus the one that runs every gate.
+help:
+> @echo "Start here:"
+> @echo "  make install      editable install with the dev extras"
+> @echo "  make gates        EVERYTHING CI runs: tests + 10 gates. Under three minutes"
+> @echo "  make reproduce    the headline number from the committed example runs, offline"
+> @echo ""
+> @echo "The published figures, each with the command behind it (doctrine rule 6):"
+> @echo "  make n1 .. n6 RUN=example-sequential|example-concurrent   the six numbers"
+> @echo "  make honesty-curve     what the headline did as the instrument stopped being blind"
+> @echo "  make argument-shapes   how much of a tool surface is attributable, from schemas alone"
+> @echo "  make backstop RUN=...  outbound SYNs per destination: what the proxy could NOT see"
+> @echo "  make fp / ksweep / inventory / rarity   the calibration block (docs/CALIBRATION.md)"
+> @echo ""
+> @echo "The gates, individually:"
+> @echo "  make verify claims-check figures-check corpus-check lint types cov"
+> @echo ""
+> @echo "Needs Docker and network (a NEW capture, never required to read a number):"
+> @echo "  make run / run-concurrent / bench / control"
+> @echo ""
+> @echo "Two targets exit NON-ZERO as a result, not as a failure: rarity and control."
 
 install:
 > python3 -m pip install -e ".[dev]"

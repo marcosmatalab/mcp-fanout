@@ -138,3 +138,32 @@ def test_the_product_gate_has_no_invented_threshold():
     # No percentage may appear in the product-gate section at all.
     assert not re.search(r"\d+\s*%", product), (
         "a threshold appeared in the product gate; it was pre-registered as having none")
+
+
+DOCS_INDEX = REPO / "docs" / "README.md"
+
+
+def test_the_docs_index_lists_every_document_and_sizes_it_correctly():
+    """A map of the documentation is a published figure too, and it goes stale the same way.
+
+    Rounded to the nearest hundred words, because a reader uses the number to decide what to open
+    and a test that demanded exact counts would fire on every edit without telling anyone anything.
+    """
+    index = DOCS_INDEX.read_text(encoding="utf-8")
+    documents = sorted(p for p in (REPO / "docs").glob("*.md") if p.name != "README.md")
+    assert documents, "docs/ has no documents"
+    problems = []
+    for path in documents:
+        if path.name not in index:
+            problems.append(f"{path.name} is not listed in docs/README.md")
+            continue
+        actual = len(path.read_text(encoding="utf-8").split())
+        row = next(line for line in index.splitlines() if path.name in line)
+        quoted = re.search(r"\| ([\d,]+) words \|", row)
+        if not quoted:
+            problems.append(f"{path.name} is listed without a size")
+            continue
+        stated = int(quoted.group(1).replace(",", ""))
+        if abs(stated - actual) > 100:
+            problems.append(f"{path.name}: index says {stated} words, the file has {actual}")
+    assert not problems, "\n".join(problems)

@@ -48,11 +48,15 @@ Ten conditions a run must pass before any number from it is reported.
    against a newer registry. The cost is reported in the output, not absorbed.
 
    **A committed artifact is never hand-edited, not even to repair a renamed path.** These three
-   documents were merged into this one and every reference in the repository was updated, except
-   inside the aggregates under `docs/figures/`: those carry the document name as it stood when the
-   run was taken, because an artifact is a record of what the code said and not a page that tracks
-   the tree. `make figures-check` fails on any edit to one, which is what makes that a rule rather
-   than an intention.
+   documents were merged into this one and every reference in the repository was updated, with two
+   deliberate exceptions. The aggregates under `docs/figures/` carry the document name as it stood
+   when the run was taken, because an artifact records what the code said and is not a page that
+   tracks the tree; `make figures-check` fails on any edit to one. And
+   `registry/package-infrastructure.json` still points at a merged document inside a comment,
+   because its sha256 is quoted in every published figure that excluded a host with it: correcting
+   the sentence would move the digest and make the figures describe a list that no longer exists.
+   A stale pointer inside a frozen artifact is the cheaper error, and naming it here is what keeps
+   it from being read as an oversight.
 
 5. **Nothing runs outside the container, and lab accounts only.** The harness runs in Docker with a
    throwaway network, enforced by a check in `harness/run.sh` rather than by a comment.
