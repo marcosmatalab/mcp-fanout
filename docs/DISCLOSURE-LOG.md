@@ -103,3 +103,18 @@ arrive. If the publication date arrives with no reply, that is recorded here as
 notice of our own timing and never a condition either maintainer accepted or owed us. The absence
 of a reply is also data, and a log that only records answers would quietly overstate how often
 these reports are read.
+
+## Status of the three issues, checked rather than assumed
+
+Each check is a read of the issue's own state through GitHub's API, recorded with its date. The
+plural matters: a log that records only answers would quietly overstate how often these reports are
+read, so "open, no reply" is written down the same way a reply would be.
+
+| checked | issue | state | maintainer response |
+| --- | --- | --- | --- |
+| 2026-09-22 | `alan-turing-institute/ReadabiliPy#122` | open | none |
+| 2026-09-22 | `modelcontextprotocol/servers#4829` | open | none |
+| 2026-09-22 | `modelcontextprotocol/servers#4830` | open | none |
+
+The next check is due on **2026-10-19**, when the publication window closes. Whatever it finds,
+including nothing, is recorded here before `v1.0.0` is tagged.
