@@ -9,6 +9,10 @@ authors:
   - family-names: "Mata García"
     given-names: "Marcos"
     email: "matagarciamarcos@gmail.com"
+# Written with the assistance of a coding agent under a written doctrine (CLAUDE.md,
+# docs/DOCTRINE.md). 48 of the first 50 commits carry a Co-Authored-By trailer recording it.
+# The measurements, the pre-registered thresholds and the disclosure decisions are the author's;
+# the agent wrote code and prose against rules fixed before the work started.
 repository-code: "https://github.com/marcosmatalab/mcp-fanout"
 version: "1.0.0"
 # doi: filled in from the Zenodo VERSION DOI after the release is published, in a follow-up

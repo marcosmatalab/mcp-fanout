@@ -2,6 +2,14 @@
 
 Operating rules for any agent working in this repository. Read this before touching anything.
 
+**This file is a deliberate artifact of the method, not leftover scaffolding.** This repository was
+written with the assistance of a coding agent, and the rules below were fixed BEFORE the agent
+started rather than derived from what it produced: four hard negatives, ten gate rules, and rule 6,
+no published figure without a command that measures it. It is kept in the repository root, and
+declared in the README under "How this was built", because 48 of the first 50 commits carry a
+`Co-Authored-By` trailer and a public history is not something a deleted file hides. The doctrine
+in `docs/DOCTRINE.md` is the same argument written for a reader rather than for the agent.
+
 ## What this repo is
 
 `mcp-fanout` is a **measurement harness**, not a product. It exists to produce six numbers that
