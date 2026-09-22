@@ -33,8 +33,11 @@ request, which is the only thing attribution is supposed to get right.
 
 ## The corpus, and the two halves
 
-`corpus/negative/calibration.json` and `corpus/negative/held-out.json`. Four families, 32 calls
-per half, **224 ordered pairs per half**. Ordered, because "B's arguments in A's request" and "A's
+`corpus/negative/calibration.json` and `corpus/negative/held-out.json`. The held-out half is four
+families, 32 calls, **224 ordered pairs**. The calibration half is five families, 40 calls, **280
+ordered pairs**: it gained `containment_subset` when the structural matcher was pre-registered
+(commit `68889d8`), because the original four were authored against the k-gram matcher and cannot
+falsify a matcher that came later. The halves are therefore compared by RATE and never by count. Ordered, because "B's arguments in A's request" and "A's
 arguments in B's request" are different events and both happen. Within a family only: pairs drawn
 across families share nothing but the alphabet, so counting them would deflate the rate with cases
 nobody finds hard.
@@ -140,16 +143,26 @@ rows below are the ones where something changes.
 
 | k | false positives | bench recall | self-match on realistic material |
 | --- | --- | --- | --- |
-| 8 | 0.5 | 1.0 | 0.9375 |
-| 10 | 0.2946 | 1.0 | 0.8125 |
-| 16 | 0.2768 | 1.0 | 0.5312 |
-| 18 | 0.25 | 1.0 | 0.5 |
-| 22 | 0.0 | 1.0 | 0.5 |
-| 24 | 0.0 | 1.0 | 0.4375 |
-| 32 | 0.0 | 1.0 | 0.25 |
-| 40 | 0.0 | 1.0 | 0.25 |
-| 41 | 0.0 | 0.9167 | 0.25 |
-| 48 | 0.0 | 0.0 | 0.25 |
+| 8 | 0.6 | 1.0 | 0.95 |
+| 10 | 0.35 | 1.0 | 0.85 |
+| 16 | 0.2214 | 1.0 | 0.475 |
+| 18 | 0.2 | 1.0 | 0.425 |
+| 22 | 0.0 | 1.0 | 0.4 |
+| 24 | 0.0 | 1.0 | 0.35 |
+| 32 | 0.0 | 1.0 | 0.2 |
+| 40 | 0.0 | 1.0 | 0.2 |
+| 41 | 0.0 | 0.9167 | 0.2 |
+| 48 | 0.0 | 0.0 | 0.2 |
+
+**The denominator moved and the figures moved with it.** This table was first measured over four
+families and 224 pairs. A fifth family, `containment_subset`, was added to the calibration half when
+the structural matcher was pre-registered (commit `68889d8`), and every figure above is measured over
+the five families and 280 pairs. The choice of k did not move: 22 is still the first k at which
+structural collisions disappear with bench recall intact. What moved is the price. Self-match at the
+chosen k is 0.4, not the 0.5 first published, because the new family is built from fragments shorter
+than one k-gram and never matches itself at any k. Regenerate with `make ksweep`; `make figures-check`
+fails if this table and the artifact disagree, and it exists because they disagreed for eight commits
+while the suite stayed green.
 
 **The rule, written in code before the numbers were looked at** (`calibrate.choose_k`): keep the k
 values at the best observed bench recall, take the lowest false-positive rate among them, break the
@@ -169,8 +182,8 @@ k = 16, is now at zero. The upper bound is what to quote, not the zero: 224 pair
 "never" from "under two per cent".
 
 **What it cost, priced rather than waved at.** Self-match recall on realistic material moves from
-0.5312 at k = 16 to 0.5 at k = 22, so three per cent of the true matches this corpus can express are
-gone. A concrete instance, small enough to read, is in the selftest fixture: at k = 16 a flow matched
+0.475 at k = 16 to 0.4 at k = 22, so three of the forty calls this corpus can express stop matching
+themselves. A concrete instance, small enough to read, is in the selftest fixture: at k = 16 a flow matched
 55 bytes of context, the 36-byte synthetic secret plus a 19-byte `DB_PASSWORD=` line; at k = 22 that
 line is shorter than one k-gram and contributes nothing, so the figure is 36
 (`tests/test_aggregate.py`). **Every false negative pushes the published attributable share down**,
@@ -179,7 +192,7 @@ which is the safe direction, and it is the direction this trade deliberately buy
 **Read the bench column last.** It holds at 1.0 to k = 40 and collapses at 41, which is the length
 of the bench's fragments plus its two-byte prefix. That cliff is evidence the sweep can see recall
 fall; it is not evidence that a large k is safe. The self-match column is, and it says the opposite:
-from 0.9375 at k = 8 to 0.25 at k = 32, real material stops being matchable long before the bench's
+from 0.95 at k = 8 to 0.2 at k = 32, real material stops being matchable long before the bench's
 does. `tests/test_bench_metrics.py` now pins the fragment length between k + 8 and the top of the
 sweep range, so the bench cannot drift into hiding that cliff.
 
@@ -195,9 +208,9 @@ pins the registry to it.
 Command: `make inventory`. Artifact: `docs/figures/calibration/inventory-k22.json`.
 
 This figure was a column in the k sweep's table and it does not belong there. The delta across k is
-irrelevant (0.5312 at k = 16, 0.5 at k = 22); **the level is what
-matters, and it was already the level at k = 16**: half of the realistic material does not match
-itself.
+irrelevant (0.475 at k = 16, 0.4 at k = 22); **the level is what
+matters, and it was already the level at k = 16**: three fifths of the realistic material does not
+match itself.
 
 ### What self-match means, exactly
 
@@ -210,12 +223,12 @@ It is the true-positive question in the easiest form it has: the call is its own
 competing candidate, nothing is concurrent, and no window is involved. **A call that fails here can
 never be attributed by content anywhere**, under any concurrency, by any grade.
 
-Measured over `corpus/negative/calibration.json`, the calibration half of the negative corpus: 32 calls in four
+Measured over `corpus/negative/calibration.json`, the calibration half of the negative corpus: 40 calls in five
 families, the same material the false-positive rate is measured over. It is **not** recall against
 real servers: the requests are the corpus's declared ones, re-derived from the arguments in the test
 suite, so this measures realistic argument SHAPES rather than the wire behaviour of ten real servers.
 
-### Why it is 0.5, decomposed
+### Why it is 0.4, decomposed
 
 Two thresholds, and they are different guarantees. A run of at least **k = 22** bytes IS
 found, because numbers 4 and 5 match exact k-grams. A run of at least **w + k - 1 =
@@ -229,8 +242,9 @@ be reconstructible later from what was kept on disk.
 | `doc_url` | 8 | 1.0 | 23 / 27 / 31 | 3 / 5 / 0 |
 | `rest_path` | 8 | 0.0 | 14 / 15 / 16 | 0 / 0 / 8 |
 | `search_query` | 8 | 0.0 | 7 / 8 / 13 | 0 / 0 / 8 |
+| `containment_subset` | 8 | 0.0 | 12 / 12 / 19 | 0 / 0 / 8 |
 
-**Two of the four families are structurally invisible, and for two different reasons.** In
+**Three of the five families are structurally invisible, and for three different reasons.** In
 `rest_path` the JSON envelope never reaches the wire: the server reassembles the fields into a path,
 so the longest run the arguments share with the request is a single path segment of 14 to 16 bytes.
 In `search_query` the arguments carry spaces and the query string carries `+`, so the run breaks at
@@ -294,7 +308,7 @@ corpus to zero. No mechanism lowers zero, and reporting only that would let "it 
 "there was nothing to help with". So the mechanism was probed at k = 16, where false
 positives still exist: reserved half 0.2946 unweighted against
 0.2946 weighted, calibration half
-0.2768 against 0.2589. Four of
+0.2214 against 0.2071. Four of
 sixty-two removed on the half it was allowed to see, none at all on the half that counts.
 
 **2. The background corpus cannot see that an API envelope is boilerplate.** Of the
@@ -314,18 +328,18 @@ It works, and it costs more than the k choice does:
 
 | minimum rarity mass | false positives (k = 16) | self-match recall | bench recall |
 | --- | --- | --- | --- |
-| 1.0 | 0.2589 | 0.5 | 1.0 |
-| 2.0 | 0.25 | 0.5 | 1.0 |
-| 4.0 | 0.25 | 0.4688 | 1.0 |
-| 5.0 | 0.0536 | 0.4062 | 1.0 |
-| 6.0 | 0.0 | 0.375 | 1.0 |
-| 8.0 | 0.0 | 0.2812 | 1.0 |
-| 16.0 | 0.0 | 0.25 | 1.0 |
+| 1.0 | 0.2071 | 0.45 | 1.0 |
+| 2.0 | 0.2 | 0.425 | 1.0 |
+| 4.0 | 0.2 | 0.375 | 1.0 |
+| 5.0 | 0.0429 | 0.325 | 1.0 |
+| 6.0 | 0.0 | 0.3 | 1.0 |
+| 8.0 | 0.0 | 0.225 | 1.0 |
+| 16.0 | 0.0 | 0.2 | 1.0 |
 
 The cheapest threshold that clears every false positive is
 6.0, and self-match recall on realistic material
-there is 0.375. **The k the sweep chose reaches the same zero with
-0.5.** Same false positives, better recall,
+there is 0.3. **The k the sweep chose reaches the same zero with
+0.4.** Same false positives, better recall,
 one parameter instead of two. The k choice strictly dominates, which is the whole argument for
 reverting rather than a preference about complexity.
 
@@ -356,7 +370,7 @@ verdict reads `reverted`.
 
 ## Threats to this measurement
 
-1. **The corpus is hand-authored, so the interval covers sampling variance only.** These 224 pairs
+1. **The corpus is hand-authored, so the interval covers sampling variance only.** The 224 reserved pairs
    are not drawn at random from any population of real agent traffic, and no interval can fix that.
    What can be said is what the corpus contains and why, which is the table above; what cannot be
    said is that 0.2946 is the rate an arbitrary deployment would see.

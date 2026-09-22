@@ -52,10 +52,13 @@ Full text in `docs/DOCTRINE.md`.
 
 Every instrument needs a test that goes red when the instrument is ABSENT, not only when it is
 wrong. A wrong number gets investigated; a green gets published. This repo has produced that
-failure three times: an addon that did not load and finished green with zero flows, a k constant
-that diverged and silently stopped matching, and a selftest that serialised the structural fields
-without ever populating one. Asserting a field is PRESENT is not enough, all three had their
-fields. Assert the value only a working instrument could compute, through its real entry point.
+failure seven times, listed in `docs/THE-GATE.md`: an addon that did not load and finished green
+with zero flows, a k constant that diverged and silently stopped matching, a selftest that
+serialised the structural fields without ever populating one, and, past code, a README and four
+calibration figures that went on stating what the measurements no longer said. Asserting a field is
+PRESENT is not enough, every one of them had its fields. Asserting the SHAPE of an artifact is not
+enough either. Assert the value only a working instrument could compute, through its real entry
+point, and for a committed artifact that means regenerating it and comparing.
 The rule applies to itself: a detector must catch a planted instance in the same run before its
 clean report counts. Full text in `docs/THE-GATE.md` rule 10.
 

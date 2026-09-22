@@ -251,10 +251,12 @@ gate rule 6. Each names the threat and what it does to the numbers.
 
     Self-match is the true-positive question in its easiest possible form: does a call's own argument
     material appear in the request that same call caused, with no competing candidate, nothing
-    concurrent and no window involved. Over the negative corpus's four realistic families it is
-    **0.5**, and it was already 0.5312 at the old k, so this is not a consequence of the k the sweep
-    chose. A call that fails here cannot be attributed by content under any concurrency, at any
-    grade.
+    concurrent and no window involved. Over the negative corpus's five realistic families it is
+    **0.4**, and it was already 0.475 at the old k, so this is not a consequence of the k the sweep
+    chose. The level fell from the 0.5 first published because a fifth family was added whose
+    fragments are shorter than one k-gram and which therefore never matches itself at any k: the
+    ceiling got lower when the corpus got more honest, which is the same shape as the honesty curve.
+    A call that fails here cannot be attributed by content under any concurrency, at any grade.
 
     Why, per family and measured rather than assumed: in one family the JSON envelope never reaches
     the wire, because the server reassembles the fields into a path, so the longest run the arguments

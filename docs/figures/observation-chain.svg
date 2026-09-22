@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430" width="800" height="430" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-label="A tool call reaches a third party through one of three kinds of HTTP client. The environment-variable proxy observes one kind. The packet capture underneath observes all of them.">
+<style>
+  text { fill: #1f2328; }
+  text.muted { fill: #57606a; }
+  text.blind { fill: #d1603d; }
+  rect.node { fill: none; stroke: #57606a; }
+  rect.blind { fill: none; stroke: #d1603d; }
+  line.edge, path.edge { stroke: #57606a; fill: none; }
+  line.blind, path.blind { stroke: #d1603d; fill: none; }
+  rect.band { fill: #57606a; fill-opacity: 0.06; stroke: #57606a; stroke-opacity: 0.35; }
+  @media (prefers-color-scheme: dark) {
+    text { fill: #e6edf3; }
+    text.muted { fill: #9198a1; }
+    rect.node { stroke: #9198a1; }
+    line.edge, path.edge { stroke: #9198a1; }
+    rect.band { fill: #9198a1; fill-opacity: 0.08; stroke: #9198a1; stroke-opacity: 0.35; }
+  }
+</style>
+<title>The observation chain</title>
+<desc>A tool call enters a server process. The process can reach a third party through a proxy-honouring client, through Node's global fetch, which ignores the proxy variables, or through a pinned or custom client. The proxy sees only the first kind. The packet capture sees every outbound connection, which is how the blind client was found.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>
+<text x="24" y="26" font-size="16" font-weight="600">What the proxy observes is not what the agent sent</text>
+<rect class="node" x="24" y="60" width="150" height="52" rx="6" stroke-width="1.5"/>
+<text x="99.0" y="82.0" font-size="13" text-anchor="middle">tool call</text>
+<text class="muted" x="99.0" y="99.0" font-size="11" text-anchor="middle">MCP, over stdio</text>
+<rect class="node" x="24" y="150" width="150" height="62" rx="6" stroke-width="1.5"/>
+<text x="99.0" y="177.0" font-size="13" text-anchor="middle">server process</text>
+<text class="muted" x="99.0" y="194.0" font-size="11" text-anchor="middle">one pid, several clients</text>
+<line class="edge" x1="99.0" y1="112" x2="99.0" y2="150" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect class="node" x="214" y="60" width="240" height="62" rx="6" stroke-width="1.5"/>
+<text x="334.0" y="87.0" font-size="13" text-anchor="middle">proxy-honouring client</text>
+<text class="muted" x="334.0" y="104.0" font-size="11" text-anchor="middle">requests, axios, curl</text>
+<line class="edge" x1="174" y1="181" x2="214" y2="91.0" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect class="blind" x="214" y="150" width="240" height="62" rx="6" stroke-width="1.5"/>
+<text class="blind" x="334.0" y="177.0" font-size="13" text-anchor="middle">Node global fetch, undici</text>
+<text class="muted" x="334.0" y="194.0" font-size="11" text-anchor="middle">ignores HTTP(S)_PROXY</text>
+<line class="edge" x1="174" y1="181" x2="214" y2="181.0" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect class="blind" x="214" y="240" width="240" height="62" rx="6" stroke-width="1.5"/>
+<text class="blind" x="334.0" y="267.0" font-size="13" text-anchor="middle">pinned or custom client</text>
+<text class="muted" x="334.0" y="284.0" font-size="11" text-anchor="middle">if one exists, unmeasured</text>
+<line class="edge" x1="174" y1="181" x2="214" y2="271.0" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect class="node" x="506" y="60" width="150" height="62" rx="6" stroke-width="1.5"/>
+<text x="581.0" y="87.0" font-size="13" text-anchor="middle">the proxy</text>
+<text class="muted" x="581.0" y="104.0" font-size="11" text-anchor="middle">observed 3 components</text>
+<rect class="node" x="506" y="240" width="150" height="62" rx="6" stroke-width="1.5"/>
+<text x="581.0" y="267.0" font-size="13" text-anchor="middle">third party</text>
+<text class="muted" x="581.0" y="284.0" font-size="11" text-anchor="middle">answers either way</text>
+<line class="edge" x1="454" y1="91" x2="506" y2="91" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line class="edge" x1="581.0" y1="122" x2="581.0" y2="240" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path class="blind" d="M454,181.0 H708 V258 H656" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+<path class="blind" d="M454,271.0 H476 V318 H734 V288 H656" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+<text class="blind" x="462" y="173" font-size="11">straight past the proxy</text>
+<rect class="band" x="24" y="336" width="632" height="48" rx="6" stroke-width="1.5"/>
+<text x="340.0" y="359" font-size="13" text-anchor="middle">packet capture: every outbound SYN, whatever the client decided</text>
+<text class="muted" x="340.0" y="376" font-size="11" text-anchor="middle">make backstop. The layer that found the blind client, and the only judge of what is still missing</text>
+<text class="muted" x="24" y="404" font-size="11">Dashed: traffic an environment-variable proxy cannot see. Solid: traffic it can. The proxy is a</text>
+<text class="muted" x="24" y="418" font-size="11">configuration a client may decline, not a boundary.</text>
+</svg>

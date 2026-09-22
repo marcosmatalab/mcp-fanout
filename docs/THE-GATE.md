@@ -155,7 +155,7 @@ screen on purpose: it is where credibility is won or lost.
     announces itself. It produces a clean run, a passing suite and an empty result that reads as a
     finding.
 
-    **The class is established by six instances, not argued from one.**
+    **The class is established by seven instances, not argued from one.**
 
     - `capture_addon.py` used a relative import. mitmproxy loads an addon by path under a synthetic
       package name, so the import raised, mitmdump logged it and carried on proxying. The run
@@ -178,18 +178,34 @@ screen on purpose: it is where credibility is won or lost.
       in the same commit. Two artifacts of one repository asserting different facts, each
       well-formed, each passing every check that existed. Guarded now by
       `tests/test_version_is_one_number.py`, which also covers the harness image tag.
+    - Four calibration figures stopped reproducing. The negative corpus gained a fifth family when
+      the structural matcher was pre-registered, and nothing regenerated the artifacts: 654 lines
+      of difference, in four files, quoted verbatim by three documents and by a module docstring.
+      `tests/test_calibration_figures.py` was green throughout, because it checks that a figure has
+      the fields a figure should have and never runs the instrument that produces it. Its own
+      docstring claimed byte-for-byte reproducibility that had been false for eight commits.
+      Guarded now by `make figures-check`, which regenerates every calibration artifact and fails
+      on a non-empty `git diff`, and by `tests/test_docstring_figures.py` for the copy in the
+      docstring.
     - `README.md` stated a compute cost, a reproducibility guarantee and a version number that the
       measurements contradicted, and went on doing so for four days after each was disproved. It is
       the page almost every reader sees, and nothing in the suite could tell that a sentence of
-      prose had stopped being true. Five instances is not an anecdote: the class is that an ABSENT
-      input produces a WELL-FORMED output, and well-formed output is what gets reviewed. The fifth
-      extends it past code: a document is an artifact, and a published artifact that omits or
-      contradicts the result it is measured against fails at the one job it has.
+      prose had stopped being true. Guarded now by `make claims-check`, which reads the README's
+      six-number table and compares every figure in it against the committed aggregate of the pass
+      that is allowed to publish it. It was written before the fix and confirmed red first: it
+      reported that the README published a maximum of 1 where the sequential figure says 84.
 
-    **What the test has to do, since "we have tests" is what was true in all three cases.** It must
+    Seven instances is not an anecdote: the class is that an ABSENT input produces a WELL-FORMED
+    output, and well-formed output is what gets reviewed. The last three extend it past code. A
+    document is an artifact, a figure is an artifact, and an artifact that omits or contradicts the
+    result it is measured against fails at the one job it has.
+
+    **What the test has to do, since "we have tests" is what was true in every case above.** It must
     exercise the instrument's real entry point, with the real loader where there is one, and it
     must assert a POSITIVE result that only a working instrument can produce. Asserting that a
-    field is present is not enough: all three instances above had their fields present. Assert that
+    field is present is not enough: every instance above had its fields present. Asserting the
+    SHAPE of an artifact is not enough either, which is the sixth instance's lesson: the only check
+    that can tell a stale figure from a current one is regenerating it and comparing. Assert that
     the field holds the value the instrument was supposed to compute.
 
     **Applied to itself.** A detector whose job is to find something must be shown to find a planted

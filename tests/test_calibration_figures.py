@@ -4,7 +4,12 @@ Same arrangement as the run aggregates under docs/figures/ (tests/test_committed
 the same reason: gate rule 6 wants a command behind every published figure, and a figure quoted in a
 document is only re-derivable if the artifact it came from is in the repository. The difference is
 that these are fully re-derivable by anyone, because the corpus they are measured over IS committed:
-`make fp` reproduces the file byte for byte on any machine, with no Docker and no network.
+`make fp` reproduces the file byte for byte on any machine, with no Docker and no network, and
+`make figures-check` is what proves it on every push: it regenerates every calibration artifact and
+fails on a non-empty `git diff`. That gate exists because this sentence was false for eight commits,
+between `dd5207a` and `68889d8`, while the suite stayed green. The tests below check that a figure
+says what it was measured at and that the prose quotes it verbatim; neither can tell that the figure
+itself stopped being what the code produces, and that is the gap the gate closes.
 
 So these tests check three things: the artifact says what it was measured at, the prose quotes it
 verbatim, and the reserved half is not being published in a form that could be confused with the
@@ -88,9 +93,26 @@ def test_the_document_quotes_the_artifact_and_not_a_remembered_number():
         assert row in text, f"row for {family} does not match the artifact: {row!r}"
 
 
-def test_the_document_states_the_pair_count_the_acceptance_criterion_asked_for():
+def test_the_document_states_the_pair_count_of_each_half_separately():
+    """The halves stopped being the same size, and a single figure for both would now be wrong.
+
+    This test used to require "N ordered pairs per half", which was true while both halves were
+    four families of eight calls. The calibration half then gained `containment_subset` and the
+    sentence silently became false: 280 pairs on one side, 224 on the other. A published rate is
+    only comparable across the halves because it is a RATE, so each half states its own count and
+    each count is read from the artifact measured over it.
+    """
     text = " ".join(DOC.read_text().split())
-    assert f"**{_published()['pairs']} ordered pairs per half**" in text
+    held_out = _published()["pairs"]
+    calibration = json.loads(
+        (CALIB_FIGURES / "ksweep-calibration.json").read_text())["curve"][0]["false_positives"]
+    assert f"**{held_out} ordered pairs**" in text, (
+        f"the document does not state the held-out half's pair count ({held_out})")
+    assert f"**{calibration['pairs']} ordered pairs**" in text, (
+        f"the document does not state the calibration half's pair count ({calibration['pairs']})")
+    assert held_out != calibration["pairs"], (
+        "the two halves are the same size again; this test's reason for existing is gone and the "
+        "document should say so rather than carrying two numbers that are one")
 
 
 def test_the_document_names_the_command_and_the_artifact():

@@ -21,6 +21,19 @@
   },
   "realistic_arguments": {
     "by_family": {
+      "containment_subset": {
+        "buckets": {
+          "below_k_invisible": 8
+        },
+        "calls": 8,
+        "longest_common_run": {
+          "max": 19,
+          "median": 12,
+          "min": 12
+        },
+        "self_match_recall": 0.0,
+        "self_matched": 0
+      },
       "doc_url": {
         "buckets": {
           "at_or_above_winnowing_floor": 3,
@@ -75,9 +88,9 @@
         "self_matched": 0
       }
     },
-    "calls": 32,
+    "calls": 40,
     "matched": 16,
-    "self_match_recall": 0.5
+    "self_match_recall": 0.4
   },
   "w": 8,
   "what_self_match_is": "for one call, whether any k-gram of driver.args_bytes(its arguments) appears in the request that same call caused. The true-positive question in its easiest form: the call is its own cause, there is no competing candidate and nothing is concurrent. A call that fails here can never be attributed by content anywhere",
