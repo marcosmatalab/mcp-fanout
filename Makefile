@@ -6,7 +6,8 @@
 .RECIPEPREFIX = >
 .PHONY: install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
         bench-verify disclosure control control-publish fp fp-calibration ksweep positive rarity \
-        inventory f2 f2-reserved corpus-check backstop honesty-curve argument-shapes clean
+        inventory f2 f2-reserved corpus-check backstop honesty-curve argument-shapes clean \
+        figures-check curve-svg chain-svg lint types cov
 
 RUN ?= latest
 
@@ -166,6 +167,54 @@ control-publish:
 # itself (docs/THE-GATE.md, rules 1 and 4). Counts only: no host, no server id, no digest.
 figures:
 > python3 -m mcpfanout.cli figures --run $(RUN) --out docs/figures
+
+# ---------------------------------------------------------------------------------------------
+# The gates. Every one of them caught something that the suite, as it stood, could not see.
+# Gate rule 10: an instrument needs a test that goes red when the instrument is ABSENT.
+# CONTRIBUTING.md says what each gate caught and how to run it while working.
+# ---------------------------------------------------------------------------------------------
+
+# Gate 3: every calibration artifact, regenerated from the corpus it describes, must come back
+# byte for byte. A test that inspects the SHAPE of a committed figure passes just as happily when
+# the figure is eight commits stale, which is exactly what happened: the negative corpus gained a
+# fifth family and four figures plus three documents went on quoting the old curve while the suite
+# stayed green. Regenerating is the only check that can tell the difference.
+#
+# The SVGs are in here for the same reason: a picture is a published figure, and one drawn by hand
+# goes stale in silence.
+figures-check:
+> $(MAKE) fp fp-calibration ksweep inventory
+# `rarity` exits 1 BY DESIGN: the weighting did not lower the rate and the exit code is that
+# result. The leading `-` keeps the figure regenerated without turning a measured verdict into a
+# broken build, and the verdict itself is asserted by tests/test_rarity.py instead.
+> -$(MAKE) rarity
+> $(MAKE) curve-svg chain-svg
+> git diff --exit-code docs/figures/
+# A regenerated figure that is NEW is invisible to `git diff`, and an uncommitted figure is a
+# published number nobody can re-derive. Untracked files under docs/figures/ fail the gate too.
+> @test -z "$$(git ls-files --others --exclude-standard docs/figures/)" || { \
+>   echo "untracked figures under docs/figures/:"; \
+>   git ls-files --others --exclude-standard docs/figures/; exit 1; }
+
+# The honesty curve as an image, from the same command that publishes it as JSON.
+curve-svg:
+> python3 tools/render_honesty_curve.py > docs/figures/honesty-curve.svg
+
+# The observation chain: what an environment-variable proxy sees, and what goes straight past it.
+chain-svg:
+> python3 tools/render_chain_diagram.py > docs/figures/observation-chain.svg
+
+# Lint, types and coverage. Declared as gates rather than as habits: a threshold nobody enforces
+# is a number that only moves in one direction.
+lint:
+> ruff check .
+
+types:
+> mypy src/mcpfanout
+
+cov:
+> python3 -m pytest --cov=src/mcpfanout --cov-report=term-missing --cov-fail-under=85 -q
+> python3 -m pytest --cov=tools --cov-report=term-missing --cov-fail-under=60 -q
 
 clean:
 > rm -rf build dist src/*.egg-info .pytest_cache

@@ -25,7 +25,7 @@
     "chosen_k": 22,
     "false_positive_rate_at_choice": 0.0,
     "rule": "keep the k values at the best observed bench recall, take the lowest false-positive rate among them, break ties toward the smallest k",
-    "self_match_recall_at_choice": 0.5
+    "self_match_recall_at_choice": 0.4
   },
   "command": "make ksweep",
   "curve": [
@@ -44,22 +44,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 1.0,
           "doc_url": 1.0,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
-        "count": 112,
-        "pairs": 224,
-        "rate": 0.5,
+        "count": 168,
+        "pairs": 280,
+        "rate": 0.6,
         "wilson_95": [
-          0.4351,
-          0.5649
+          0.5416,
+          0.6557
         ]
       },
       "k": 8,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 8,
+            "recall": 1.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -81,9 +87,9 @@
             "recall": 0.75
           }
         },
-        "calls": 32,
-        "matched": 30,
-        "recall": 0.9375
+        "calls": 40,
+        "matched": 38,
+        "recall": 0.95
       }
     },
     {
@@ -101,22 +107,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.8929,
           "doc_url": 0.1786,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
-        "count": 66,
-        "pairs": 224,
-        "rate": 0.2946,
+        "count": 116,
+        "pairs": 280,
+        "rate": 0.4143,
         "wilson_95": [
-          0.2388,
-          0.3574
+          0.3581,
+          0.4728
         ]
       },
       "k": 9,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 8,
+            "recall": 1.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -138,9 +150,9 @@
             "recall": 0.375
           }
         },
-        "calls": 32,
-        "matched": 27,
-        "recall": 0.8438
+        "calls": 40,
+        "matched": 35,
+        "recall": 0.875
       }
     },
     {
@@ -158,22 +170,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.5714,
           "doc_url": 0.1786,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
-        "count": 66,
-        "pairs": 224,
-        "rate": 0.2946,
+        "count": 98,
+        "pairs": 280,
+        "rate": 0.35,
         "wilson_95": [
-          0.2388,
-          0.3574
+          0.2965,
+          0.4076
         ]
       },
       "k": 10,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 8,
+            "recall": 1.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -195,9 +213,9 @@
             "recall": 0.25
           }
         },
-        "calls": 32,
-        "matched": 26,
-        "recall": 0.8125
+        "calls": 40,
+        "matched": 34,
+        "recall": 0.85
       }
     },
     {
@@ -215,22 +233,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.5714,
           "doc_url": 0.1786,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
-        "count": 66,
-        "pairs": 224,
-        "rate": 0.2946,
+        "count": 98,
+        "pairs": 280,
+        "rate": 0.35,
         "wilson_95": [
-          0.2388,
-          0.3574
+          0.2965,
+          0.4076
         ]
       },
       "k": 11,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 8,
+            "recall": 1.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -252,9 +276,9 @@
             "recall": 0.25
           }
         },
-        "calls": 32,
-        "matched": 26,
-        "recall": 0.8125
+        "calls": 40,
+        "matched": 34,
+        "recall": 0.85
       }
     },
     {
@@ -272,22 +296,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.5714,
           "doc_url": 0.1786,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
-        "count": 66,
-        "pairs": 224,
-        "rate": 0.2946,
+        "count": 98,
+        "pairs": 280,
+        "rate": 0.35,
         "wilson_95": [
-          0.2388,
-          0.3574
+          0.2965,
+          0.4076
         ]
       },
       "k": 12,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 8,
+            "recall": 1.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -309,9 +339,9 @@
             "recall": 0.125
           }
         },
-        "calls": 32,
-        "matched": 25,
-        "recall": 0.7812
+        "calls": 40,
+        "matched": 33,
+        "recall": 0.825
       }
     },
     {
@@ -329,22 +359,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.1786,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 66,
-        "pairs": 224,
-        "rate": 0.2946,
+        "pairs": 280,
+        "rate": 0.2357,
         "wilson_95": [
-          0.2388,
-          0.3574
+          0.1898,
+          0.2888
         ]
       },
       "k": 13,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 3,
+            "recall": 0.375
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -366,9 +402,9 @@
             "recall": 0.125
           }
         },
-        "calls": 32,
-        "matched": 25,
-        "recall": 0.7812
+        "calls": 40,
+        "matched": 28,
+        "recall": 0.7
       }
     },
     {
@@ -386,22 +422,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.1786,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 66,
-        "pairs": 224,
-        "rate": 0.2946,
+        "pairs": 280,
+        "rate": 0.2357,
         "wilson_95": [
-          0.2388,
-          0.3574
+          0.1898,
+          0.2888
         ]
       },
       "k": 14,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 3,
+            "recall": 0.375
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -423,9 +465,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
-        "matched": 24,
-        "recall": 0.75
+        "calls": 40,
+        "matched": 27,
+        "recall": 0.675
       }
     },
     {
@@ -443,22 +485,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.1786,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 66,
-        "pairs": 224,
-        "rate": 0.2946,
+        "pairs": 280,
+        "rate": 0.2357,
         "wilson_95": [
-          0.2388,
-          0.3574
+          0.1898,
+          0.2888
         ]
       },
       "k": 15,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 3,
+            "recall": 0.375
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -480,9 +528,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
-        "matched": 20,
-        "recall": 0.625
+        "calls": 40,
+        "matched": 23,
+        "recall": 0.575
       }
     },
     {
@@ -500,22 +548,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.1071,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 62,
-        "pairs": 224,
-        "rate": 0.2768,
+        "pairs": 280,
+        "rate": 0.2214,
         "wilson_95": [
-          0.2223,
-          0.3388
+          0.1767,
+          0.2736
         ]
       },
       "k": 16,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 2,
+            "recall": 0.25
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -537,9 +591,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
-        "matched": 17,
-        "recall": 0.5312
+        "calls": 40,
+        "matched": 19,
+        "recall": 0.475
       }
     },
     {
@@ -557,22 +611,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0357,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 58,
-        "pairs": 224,
-        "rate": 0.2589,
+        "pairs": 280,
+        "rate": 0.2071,
         "wilson_95": [
-          0.206,
-          0.32
+          0.1638,
+          0.2584
         ]
       },
       "k": 17,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 2,
+            "recall": 0.25
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -594,9 +654,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
-        "matched": 16,
-        "recall": 0.5
+        "calls": 40,
+        "matched": 18,
+        "recall": 0.45
       }
     },
     {
@@ -614,22 +674,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 56,
-        "pairs": 224,
-        "rate": 0.25,
+        "pairs": 280,
+        "rate": 0.2,
         "wilson_95": [
-          0.1978,
-          0.3106
+          0.1573,
+          0.2508
         ]
       },
       "k": 18,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 1,
+            "recall": 0.125
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -651,9 +717,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
-        "matched": 16,
-        "recall": 0.5
+        "calls": 40,
+        "matched": 17,
+        "recall": 0.425
       }
     },
     {
@@ -671,22 +737,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 56,
-        "pairs": 224,
-        "rate": 0.25,
+        "pairs": 280,
+        "rate": 0.2,
         "wilson_95": [
-          0.1978,
-          0.3106
+          0.1573,
+          0.2508
         ]
       },
       "k": 19,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 1,
+            "recall": 0.125
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -708,9 +780,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
-        "matched": 16,
-        "recall": 0.5
+        "calls": 40,
+        "matched": 17,
+        "recall": 0.425
       }
     },
     {
@@ -728,22 +800,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 56,
-        "pairs": 224,
-        "rate": 0.25,
+        "pairs": 280,
+        "rate": 0.2,
         "wilson_95": [
-          0.1978,
-          0.3106
+          0.1573,
+          0.2508
         ]
       },
       "k": 20,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -765,9 +843,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 16,
-        "recall": 0.5
+        "recall": 0.4
       }
     },
     {
@@ -785,22 +863,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 1.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 56,
-        "pairs": 224,
-        "rate": 0.25,
+        "pairs": 280,
+        "rate": 0.2,
         "wilson_95": [
-          0.1978,
-          0.3106
+          0.1573,
+          0.2508
         ]
       },
       "k": 21,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -822,9 +906,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 16,
-        "recall": 0.5
+        "recall": 0.4
       }
     },
     {
@@ -842,22 +926,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 22,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -879,9 +969,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 16,
-        "recall": 0.5
+        "recall": 0.4
       }
     },
     {
@@ -899,22 +989,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 23,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 8,
@@ -936,9 +1032,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 16,
-        "recall": 0.5
+        "recall": 0.4
       }
     },
     {
@@ -956,22 +1052,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 24,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 6,
@@ -993,9 +1095,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 14,
-        "recall": 0.4375
+        "recall": 0.35
       }
     },
     {
@@ -1013,22 +1115,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 25,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 5,
@@ -1050,9 +1158,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 13,
-        "recall": 0.4062
+        "recall": 0.325
       }
     },
     {
@@ -1070,22 +1178,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 26,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 4,
@@ -1107,9 +1221,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 12,
-        "recall": 0.375
+        "recall": 0.3
       }
     },
     {
@@ -1127,22 +1241,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 27,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 4,
@@ -1164,9 +1284,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 12,
-        "recall": 0.375
+        "recall": 0.3
       }
     },
     {
@@ -1184,22 +1304,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 28,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 3,
@@ -1221,9 +1347,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 11,
-        "recall": 0.3438
+        "recall": 0.275
       }
     },
     {
@@ -1241,22 +1367,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 29,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 3,
@@ -1278,9 +1410,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 11,
-        "recall": 0.3438
+        "recall": 0.275
       }
     },
     {
@@ -1298,22 +1430,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 30,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 1,
@@ -1335,9 +1473,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 9,
-        "recall": 0.2812
+        "recall": 0.225
       }
     },
     {
@@ -1355,22 +1493,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 31,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 1,
@@ -1392,9 +1536,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 9,
-        "recall": 0.2812
+        "recall": 0.225
       }
     },
     {
@@ -1412,22 +1556,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 32,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -1449,9 +1599,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -1469,22 +1619,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 33,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -1506,9 +1662,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -1526,22 +1682,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 34,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -1563,9 +1725,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -1583,22 +1745,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 35,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -1620,9 +1788,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -1640,22 +1808,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 36,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -1677,9 +1851,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -1697,22 +1871,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 37,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -1734,9 +1914,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -1754,22 +1934,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 38,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -1791,9 +1977,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -1811,22 +1997,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 39,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -1848,9 +2040,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -1868,22 +2060,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 40,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -1905,9 +2103,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -1925,22 +2123,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 41,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -1962,9 +2166,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -1982,22 +2186,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 42,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2019,9 +2229,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2039,22 +2249,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 43,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2076,9 +2292,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2096,22 +2312,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 44,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2133,9 +2355,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2153,22 +2375,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 45,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2190,9 +2418,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2210,22 +2438,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 46,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2247,9 +2481,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2267,22 +2501,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 47,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2304,9 +2544,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2324,22 +2564,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 48,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2361,9 +2607,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2381,22 +2627,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 49,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2418,9 +2670,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2438,22 +2690,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 50,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2475,9 +2733,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2495,22 +2753,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 51,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2532,9 +2796,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2552,22 +2816,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 52,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2589,9 +2859,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2609,22 +2879,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 53,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2646,9 +2922,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2666,22 +2942,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 54,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2703,9 +2985,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2723,22 +3005,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 55,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2760,9 +3048,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2780,22 +3068,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 56,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2817,9 +3111,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2837,22 +3131,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 57,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2874,9 +3174,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2894,22 +3194,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 58,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2931,9 +3237,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -2951,22 +3257,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 59,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -2988,9 +3300,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -3008,22 +3320,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 60,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -3045,9 +3363,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -3065,22 +3383,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 61,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -3102,9 +3426,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -3122,22 +3446,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 62,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -3159,9 +3489,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -3179,22 +3509,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 63,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -3216,9 +3552,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     },
     {
@@ -3236,22 +3572,28 @@
       },
       "false_positives": {
         "by_family": {
+          "containment_subset": 0.0,
           "doc_url": 0.0,
           "json_post": 0.0,
           "rest_path": 0.0,
           "search_query": 0.0
         },
         "count": 0,
-        "pairs": 224,
+        "pairs": 280,
         "rate": 0.0,
         "wilson_95": [
           0.0,
-          0.0169
+          0.0135
         ]
       },
       "k": 64,
       "self_match": {
         "by_family": {
+          "containment_subset": {
+            "calls": 8,
+            "matched": 0,
+            "recall": 0.0
+          },
           "doc_url": {
             "calls": 8,
             "matched": 0,
@@ -3273,9 +3615,9 @@
             "recall": 0.0
           }
         },
-        "calls": 32,
+        "calls": 40,
         "matched": 8,
-        "recall": 0.25
+        "recall": 0.2
       }
     }
   ],

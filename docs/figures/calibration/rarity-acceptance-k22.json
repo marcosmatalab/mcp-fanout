@@ -1,6 +1,6 @@
 {
   "background": {
-    "distinct_kgrams": 63859,
+    "distinct_kgrams": 67658,
     "documents": 32,
     "k": 22,
     "sources": [
@@ -37,14 +37,14 @@
       "corpus/concurrent/time.json",
       "corpus/negative/calibration.json"
     ],
-    "sources_sha256": "0c3f88c4d719ccb33f316a324152b30923d11b82819c07d0b104a8fdec1812c8"
+    "sources_sha256": "6645ded416950b864c5030e246a5787ae1ce96ad180ca9092dfff816993bbd60"
   },
   "command": "make rarity",
   "criterion": "the F1.1 rate is re-measured with weighting on and must FALL. If it does not, the weighting is reverted and why is documented; it is not kept for being more sophisticated",
   "mechanism_probe": {
     "calibration": {
-      "unweighted_rate": 0.2768,
-      "weighted_rate": 0.2589
+      "unweighted_rate": 0.2214,
+      "weighted_rate": 0.2071
     },
     "colliding_kgrams": {
       "background_documents": 32,
@@ -68,73 +68,73 @@
     "mass_ladder": [
       {
         "bench_recall": 1.0,
-        "false_positive_rate": 0.2589,
+        "false_positive_rate": 0.2071,
         "false_positives": 58,
         "min_rarity_mass": 1.0,
-        "self_match_recall": 0.5
+        "self_match_recall": 0.45
       },
       {
         "bench_recall": 1.0,
-        "false_positive_rate": 0.25,
+        "false_positive_rate": 0.2,
         "false_positives": 56,
         "min_rarity_mass": 2.0,
-        "self_match_recall": 0.5
+        "self_match_recall": 0.425
       },
       {
         "bench_recall": 1.0,
-        "false_positive_rate": 0.25,
+        "false_positive_rate": 0.2,
         "false_positives": 56,
         "min_rarity_mass": 3.0,
-        "self_match_recall": 0.5
+        "self_match_recall": 0.4
       },
       {
         "bench_recall": 1.0,
-        "false_positive_rate": 0.25,
+        "false_positive_rate": 0.2,
         "false_positives": 56,
         "min_rarity_mass": 4.0,
-        "self_match_recall": 0.4688
+        "self_match_recall": 0.375
       },
       {
         "bench_recall": 1.0,
-        "false_positive_rate": 0.0536,
+        "false_positive_rate": 0.0429,
         "false_positives": 12,
         "min_rarity_mass": 5.0,
-        "self_match_recall": 0.4062
+        "self_match_recall": 0.325
       },
       {
         "bench_recall": 1.0,
         "false_positive_rate": 0.0,
         "false_positives": 0,
         "min_rarity_mass": 6.0,
-        "self_match_recall": 0.375
+        "self_match_recall": 0.3
       },
       {
         "bench_recall": 1.0,
         "false_positive_rate": 0.0,
         "false_positives": 0,
         "min_rarity_mass": 8.0,
-        "self_match_recall": 0.2812
+        "self_match_recall": 0.225
       },
       {
         "bench_recall": 1.0,
         "false_positive_rate": 0.0,
         "false_positives": 0,
         "min_rarity_mass": 10.0,
-        "self_match_recall": 0.25
+        "self_match_recall": 0.2
       },
       {
         "bench_recall": 1.0,
         "false_positive_rate": 0.0,
         "false_positives": 0,
         "min_rarity_mass": 12.0,
-        "self_match_recall": 0.25
+        "self_match_recall": 0.2
       },
       {
         "bench_recall": 1.0,
         "false_positive_rate": 0.0,
         "false_positives": 0,
         "min_rarity_mass": 16.0,
-        "self_match_recall": 0.25
+        "self_match_recall": 0.2
       }
     ],
     "true_match_kgrams": {
@@ -161,7 +161,7 @@
   "what_a_working_threshold_would_be_doing": {
     "cheapest_mass_that_clears_all_false_positives": 6.0,
     "note": "compare the last two. If the k the sweep chose reaches the same zero with HIGHER recall on realistic material, then the threshold is buying nothing that the k choice has not already bought, and what it is thresholding is match length rather than rarity",
-    "self_match_recall_at_the_shipped_k_without_weighting": 0.5,
-    "self_match_recall_there": 0.375
+    "self_match_recall_at_the_shipped_k_without_weighting": 0.4,
+    "self_match_recall_there": 0.3
   }
 }
