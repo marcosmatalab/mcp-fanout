@@ -275,7 +275,7 @@ its recall figure says nothing about real arguments.
 **An attributable share measured by a sensor that cannot see half of the realistic material it is
 shown is at most half of the true share. Number 5 is therefore published as a LOWER BOUND, not as an
 estimate, and this figure is the reason.** The same sentence is in `docs/THREATS.md` and in
-`docs/THE-SIX-NUMBERS.md`, and `number_5`'s own output carries it as `published_as`, so the figure
+`docs/METHOD.md`, and `number_5`'s own output carries it as `published_as`, so the figure
 cannot be quoted without it.
 
 This is a limit to declare, not a defect to fix before phase B. Every cause of it pushes the

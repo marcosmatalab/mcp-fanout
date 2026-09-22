@@ -311,7 +311,9 @@ def test_every_document_that_publishes_number_5_states_the_lower_bound():
     """Three documents quote number 5. All three have to carry the reason, or one of them is a trap."""
     for name, marker in (("CALIBRATION.md", "published as a LOWER BOUND"),
                          ("THREATS.md", "published as a LOWER BOUND"),
-                         ("THE-SIX-NUMBERS.md", "Published as a lower bound")):
+                         # THE-SIX-NUMBERS.md was merged into METHOD.md; the number 5 section, and
+                         # the caveat that may not travel apart from it, went with it.
+                         ("METHOD.md", "Published as a lower bound")):
         text = " ".join((REPO / "docs" / name).read_text().split())
         assert marker in text, f"docs/{name} does not state that number 5 is a lower bound"
         assert "self-match" in text, f"docs/{name} states the bound without its reason"
