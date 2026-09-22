@@ -159,7 +159,7 @@ serve are in [`DOCTRINE.md`](DOCTRINE.md).
     **a green gets published**. An absent instrument produces a clean run, a passing suite and an
     empty result that reads as a finding.
 
-    **The class is established by nine instances, not argued from one.**
+    **The class is established by ten instances, not argued from one.**
 
     - `capture_addon.py` used a relative import. mitmproxy loads an addon by path under a synthetic
       package name, so the import raised, mitmdump logged it and carried on proxying. The run
@@ -226,14 +226,26 @@ serve are in [`DOCTRINE.md`](DOCTRINE.md).
       annotation from, and reads the published body back from the API to compare. Guarded by
       `tools/release_notes.py` and `tests/test_release_notes.py`, which plants the unfetched-tag
       condition as a lightweight tag and fails if the commit message is accepted in its place.
+    - `make figures-check`, the gate that exists BECAUSE inspecting a committed figure cannot tell
+      a stale one from a current one, had one line that inspected. `rarity` exits 1 by design, so
+      its invocation carried make's leading `-`, and `-` ignores every non-zero exit rather than
+      the documented one. Measured with a `RuntimeError` planted in `rarity.acceptance`: the old
+      recipe exited **0**, because a step that never rewrote the committed JSON leaves a file that
+      produces no diff. The artifact is now deleted before the step that rewrites it, so "did not
+      regenerate" and "was deleted" are one observable and the `git diff --exit-code` already in
+      the target catches it. Re-measured after the change, the same planted crash exits **2** and
+      the ordinary reverted verdict still exits 0. Guarded by
+      `tests/test_figures_check_regenerates.py`, which fails on an ignored exit code with no
+      delete in front of it, in this target or in any other.
 
-    Nine instances is not an anecdote: the class is that an ABSENT input produces a WELL-FORMED
-    output, and well-formed output is what gets reviewed. The last five extend it past code. A
+    Ten instances is not an anecdote: the class is that an ABSENT input produces a WELL-FORMED
+    output, and well-formed output is what gets reviewed. The last six extend it past code. A
     document is an artifact, a figure is an artifact, a commit history is an artifact, a published
-    release is an artifact, and an artifact that omits or contradicts the result it is measured
-    against fails at the one job it has. Four of the nine were caught by a comment, a document or a
-    workflow claiming a property rather than checking it, which is why each guard above verifies
-    instead of asserting.
+    release is an artifact, a gate is an artifact, and an artifact that omits or contradicts the
+    result it is measured against fails at the one job it has. Five of the ten were caught by a
+    comment, a document or a workflow claiming a property rather than checking it, which is why
+    each guard above verifies instead of asserting. The tenth is the sharpest form of it: the
+    failure was inside the gate that enforces this rule on everything else.
 
     **What the test has to do, since "we have tests" was true in every case above.** It must
     exercise the instrument's real entry point, with the real loader where there is one, and assert

@@ -232,8 +232,16 @@ claims-check:
 figures-check:
 > $(MAKE) fp fp-calibration ksweep inventory
 # `rarity` exits 1 BY DESIGN: the weighting did not lower the rate and the exit code is that
-# result. The leading `-` keeps the figure regenerated without turning a measured verdict into a
-# broken build, and the verdict itself is asserted by tests/test_rarity.py instead.
+# result, so the leading `-` keeps a measured verdict from reading as a broken build. What the `-`
+# actually does is ignore EVERY non-zero exit, not only the documented 1, and that made this the
+# one line in the target that INSPECTED instead of regenerating: a rarity that raised left the
+# committed JSON untouched, the diff came out clean and the gate went green on a figure nobody had
+# recomputed. So the artifact is deleted first. "Did not regenerate" is now indistinguishable from
+# "was deleted", and the `git diff --exit-code` below catches it as a deletion. The glob rather
+# than the current k, so a k change shows up as one file gone and one untracked file arriving,
+# which is what it is. Gate rule 10, tenth instance; the verdict itself stays asserted by
+# tests/test_rarity.py, and tests/test_figures_check_regenerates.py keeps the pairing.
+> rm -f docs/figures/calibration/rarity-acceptance-k*.json
 > -$(MAKE) rarity
 > $(MAKE) curve-svg chain-svg
 > git diff --exit-code docs/figures/
