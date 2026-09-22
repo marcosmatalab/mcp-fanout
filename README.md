@@ -182,6 +182,9 @@ Requirements: Python 3.11+. Docker is needed for a new capture only, which is th
 commands below. Everything else runs offline, against artifacts committed to this repository.
 
 ```bash
+# 0. What everything does. `make` on its own prints this
+make help
+
 # 1. Install (editable) and dev deps
 make install
 
@@ -326,6 +329,7 @@ commit that follows the release.
 | How the matcher was calibrated, and what the chosen k cost | [`docs/CALIBRATION.md`](docs/CALIBRATION.md) |
 | What was disclosed, to whom, and when | [`docs/DISCLOSURE-LOG.md`](docs/DISCLOSURE-LOG.md) |
 | How to run the gates locally, and what each one caught | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| A map of the seven documents, with what each is for and how long it is | [`docs/README.md`](docs/README.md) |
 
 ## License
 

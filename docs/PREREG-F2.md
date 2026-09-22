@@ -7,31 +7,21 @@ exactly as the phase B predictions are.
 
 Written 2026-09-19, after an external review of the matcher, before any line of `structure.py`.
 
-`make verify` is green at 493 tests at the time of writing.
+`make verify` was green at 493 tests when this was written. The figure is kept as written rather than refreshed, because this document is dated and a pre-registration that updates itself is not one; the current count is in `CLAUDE.md`, which is not dated.
 
 ## 0. The finding that outranks this work, recorded first
 
 The measurement that produced the denominator argument below also produced the strongest result
-this project has. It is written up as **`docs/THREATS.md` threat 17** and it is not a matcher
-question at all:
+this project has, and it is not a matcher question at all: a tool call downloads and executes about
+forty third-party packages from a registry the tool's documentation never mentions, with contents
+that differ between days. The full causal chain is **`docs/THREATS.md` threat 17**; what belongs
+here is the evidence that it is instability rather than a stale figure, namely 87 connections on
+2026-09-18 and 82 on two separate runs a pass apart on 2026-09-19.
 
-`mcp-server-fetch` depends on `readabilipy`, whose `simple_json.py` calls `have_node()` during
-HTML conversion, which is to say inside `tools/call`. When `node_modules` is missing that calls
-`run_npm_install()`, which runs `subprocess.run(["npm", "install"], check=True)` against a
-`package.json` with no lockfile and three unpinned ranges. A tool call downloads and executes
-about forty third-party packages, from a registry the tool's documentation never mentions, with
-contents that differ between days, with nothing recorded about what ran and nothing shown to the
-user.
-
-The 87 connections recorded on 2026-09-18 and the 82 recorded on two separate runs on 2026-09-19
-are not a stale figure needing a refresh. Two runs a pass apart agreeing on 82 rules out noise,
-and the difference from 87 is the direct measurement of the instability. It is evidence.
-
-This is the leading candidate for the paper's headline, above number 3: number 3 measures a
-property of a population, this is a reproducible mechanism with a named causal chain that
-generalises to any tool that lazily installs a dependency at call time. Disclosure draft, to both
-sets of maintainers, in `docs/disclosure/2026-09-19-readabilipy-npm-install-at-call-time.md`, to
-be sent before anything is published (gate rule 7).
+It was the leading candidate for the headline, above number 3, until threat 19 displaced it: a
+defect in the instrument outranks a defect in a subject. Disclosure draft in
+`docs/disclosure/2026-09-19-readabilipy-npm-install-at-call-time.md`, sent before publication
+(gate rule 7).
 
 ## 1. The reserve, and a guard that turned out to be a courtesy
 
@@ -69,13 +59,13 @@ and the reserve. Four cases, as asked: a call whose tokens are a proper subset o
 request, a second subset one token longer, two calls sharing an enum ref name and nothing else,
 and one repository reached through two organisations.
 
-Building it forced a collision worth recording, because it is a corpus invariant meeting a matcher
-it was not written for. `test_every_family_states_what_it_is_for` required every call to declare
-information that would make a match a true positive. The subset attack cannot satisfy that: owning
-a distinguishing value is exactly what would stop a call being a subset of another's request. The
-invariant was not relaxed, it was split: a call may now declare emptiness, in an
-`information_free` field, with a reason of more than 120 characters that has to be an argument
-rather than a label. Silence is still a failure. Five of the eight calls use it.
+Building it forced a corpus invariant to meet a matcher it was not written for:
+`test_every_family_states_what_it_is_for` required every call to declare information that would
+make a match a true positive, and the subset attack cannot, because owning a distinguishing value
+is exactly what would stop a call being a subset. The invariant was split rather than relaxed. A
+call may declare emptiness in an `information_free` field, with a reason of more than 120
+characters that has to be an argument rather than a label; silence is still a failure. Five of the
+eight calls use it.
 
 ## 2. Baseline, per family, at k = 22
 
@@ -354,22 +344,13 @@ passes.**
 ### What the measured figure actually is, stated before anyone leans on it
 
 It is NOT a re-grade of the stored run, and section 6's phrase "re-graded without re-capturing"
-turned out to promise more than the data supports. `flows.jsonl` for
-`20260919T130847Z-concurrent` was written before the structural fields existed, so the run cannot
-be re-graded from what was persisted. That is threat 16 arriving from a new direction, and it is
-recorded here rather than smoothed over.
-
-What is re-derivable is the wire each call produces, because every driven call is a fetch of a URL
-the corpus names, and `make f2` cross-checks the derivation against the real run's composition:
-127 flows, 38 call-caused and eligible, 19 constant client paths, 19 in the content denominator.
-The derivation is honest exactly while that cross-check holds, so the command prints it rather
-than assuming it.
-
-`aggregate --number 5` on the stored run reads the three fractions correctly (0.0551 raw, 0.1842
-attributable, denominator 38) and reports that no flow carries the constant-path flag, because the
-run predates it. The first capture driven with the new addon produces all three from persisted
-data. Until then the 0.8947 is a corpus-derived figure with a published cross-check, and it is
-labelled that way wherever it appears.
+promised more than the data supports: `flows.jsonl` for `20260919T130847Z-concurrent` was written
+before the structural fields existed. That is threat 16 arriving from a new direction, recorded
+rather than smoothed over. What IS re-derivable is the wire each call produces, since every driven
+call fetches a URL the corpus names, and `make f2` prints its cross-check against the run's real
+composition (127 flows, 38 call-caused and eligible, 19 constant client paths) instead of assuming
+it. So 0.8947 is a corpus-derived figure with a published cross-check and is labelled that way
+wherever it appears. Sections 15 and 16 are the measurements from persisted data that replace it.
 
 ### What did not move, and why that matters
 

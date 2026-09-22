@@ -680,13 +680,13 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
     out = {"number": 5, "name": "attribution_grade_distribution",
            "pass": pass_name,
            # THE CAVEAT TRAVELS WITH THE FIGURE, not beside it in a document. The sensor's
-           # self-match recall on realistic argument material is below 1 (measured: 0.5 over the
-           # negative corpus's four families, docs/CALIBRATION.md "The self-match ceiling"), so
-           # half the material it is shown does not match itself even when the call is its own
-           # cause and nothing is concurrent. An attributable share measured by such a sensor is at
-           # most that fraction of the true share. The value is deliberately NOT copied here: a
-           # number duplicated in two places is a number that goes stale in one of them, so this
-           # names the command that measures it instead.
+           # self-match recall on realistic argument material is below 1, so much of the material
+           # it is shown does not match itself even when the call is its own cause and nothing is
+           # concurrent, and an attributable share measured by such a sensor is at most that
+           # fraction of the true share. The VALUE is deliberately not copied here, and this
+           # comment proves the rule: it used to quote 0.5 over four families, and both figures
+           # moved when the corpus gained a fifth. `make inventory` measures it;
+           # docs/CALIBRATION.md, "The self-match ceiling", decomposes it.
            "published_as": "lower_bound",
            "published_as_reason": (
                "the sensor's self-match recall on realistic argument material is below 1, so an "

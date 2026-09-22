@@ -10,11 +10,10 @@ gate rule 6. Each names the threat and what it does to the numbers.
    `tests/test_corpus_matches_probes.py` fails if an argument stops validating against the real
    `inputSchema`. The corpus SHA is in the manifest, so the input is pinned to the output.
 
-   What that fixed, stated plainly because it was live: the corpus previously named tools that
-   do not exist. Of four names guessed for `everything`, three were wrong. Each would have
-   returned an error, recorded zero egress, and biased numbers 1, 2 and 5 downward with nothing
-   in the output distinguishing "this server does not egress" from "we called a tool that is not
-   there". Any number produced before this alignment should be discarded, not adjusted.
+   What that fixed was live, not hypothetical: of four tool names guessed for `everything`, three
+   did not exist. Each would have returned an error, recorded zero egress, and biased numbers 1, 2
+   and 5 downward with nothing distinguishing "this server does not egress" from "we called a tool
+   that is not there". Any number produced before the alignment is discarded, not adjusted.
 
    The residual threat is unchanged and unfixable by alignment: we drive read-only tools only, so
    a server whose egress happens on a write path is measured on the wrong path. That is a
@@ -36,14 +35,12 @@ gate rule 6. Each names the threat and what it does to the numbers.
    concentrates. The numbers describe the head of the distribution. The tail is future work and is
    labeled as such.
 
-   **On the word "most-installed", which this threat and three other documents used until
-   2026-09-20.** It was a ranking claim with no artifact behind it: no install counts were
-   collected, from npm, PyPI or anywhere else, and rule 6 forbids publishing a figure or a
-   superlative without the command that produced it. The servers ARE widely used and ARE pinned
-   and probed, both of which are checkable from `registry/servers.yaml` and `registry/probes/`.
-   Documenting an actual install ranking at this point would be new work for one word, so the
-   word went instead. Section 5.4.1's tool-shape distribution has the same bound: it describes
-   these ten and nothing about the population they were drawn from.
+   **The word "most-installed" was removed from four documents on 2026-09-20**, because it was a
+   ranking claim with no artifact behind it: no install counts were ever collected, and rule 6
+   forbids a superlative as firmly as a figure. The servers are widely used, pinned and probed,
+   all three checkable from `registry/servers.yaml` and `registry/probes/`. The argument-shape
+   distribution has the same bound: it describes these ten and nothing about the population they
+   were drawn from.
 
 5. **Absent credentials change behavior.** Servers that need a token are run without one and fail
    auth. A failed call may egress less (or differently) than a successful one. We measure the
@@ -56,35 +53,21 @@ gate rule 6. Each names the threat and what it does to the numbers.
    bounds. The pcap backstop records the connections the proxy missed; until reconciliation is
    implemented, treat the proxy fan-out as a floor.
 
-   **Measured 2026-09-19, on the first ten-server capture: a client that does not honour the proxy
-   environment is invisible to the proxy and visible only in the pcap.** The proxy is a
-   `HTTP(S)_PROXY` proxy, which means interception depends on each client choosing to use it.
-   Python's requests and urllib do, npm and npx do, Chromium does. Node's own `fetch` (undici) does
-   **not**: it ignores `HTTP_PROXY` and `HTTPS_PROXY` by default. One of the ten servers reaches its
-   API that way, so its API traffic never entered `flows.jsonl` while the tool call plainly
-   succeeded and returned the API's own answer.
+   **Measured twice, and the second time with a working credential.** Interception through
+   `HTTP(S)_PROXY` depends on each client choosing to honour two environment variables. Python's
+   requests and urllib do, npm and npx do, Chromium does; Node's own `fetch` (undici) does not.
+   On the first ten-server capture, 53 outbound SYNs, 26 to the proxy on loopback and one straight
+   to an API on port 443. On run `20260919T193121Z-concurrent`, credentialed: **140 SYNs, 66 to
+   the proxy, and 10 straight to `140.82.121.5:443`**, while that server completed 16 of 17 calls,
+   returned the API's own answers, and left **zero flows** in `flows.jsonl`.
 
-   The pcap is what proves it rather than a suspicion: of 53 outbound SYNs in that run, 26 went to
-   the proxy on loopback and one went straight to the API's address on port 443. So for that server
-   numbers 1, 2, 4 and 5 are not a floor with a small gap, they are **zero for a reason that has
-   nothing to do with the server**, and no figure about it may be read from this capture layer.
-
-   **Re-measured 2026-09-19 WITH a working credential, run `20260919T193121Z-concurrent`, and the
-   blind spot is now the dominant fact about that server rather than a footnote.** `make backstop`
-   on that run's pcap: 140 outbound SYNs, 66 to the proxy on loopback, and **10 straight to
-   140.82.121.5:443, which is `api.github.com`**. The server made 17 driven calls, 16 of them
-   succeeded and returned the API's own answers, and `flows.jsonl` contains **zero flows for it**.
-
-   Why the credential makes this worse rather than better, which is the part worth keeping. Before,
-   the server was failing its authenticated calls, so there was little traffic to miss and the gap
-   was plausibly small. With a token the calls work, the server really does reach GitHub ten times,
-   and every byte of it is invisible to the instrument. **Crediting that server changed nothing in
-   any published number**, and a reader comparing the two runs would see no difference and conclude
-   the credential did not matter. It mattered; the capture layer cannot see it.
-
-   What this costs the lab-accounts decision is written in `docs/METHOD.md` section 1: for
-   any server whose client ignores the proxy environment, an account buys nothing measurable until
-   the capture layer changes, and that is a fact about our instrument, not about the server.
+   The credential makes it worse rather than better, which is the part worth keeping. Without a
+   token the calls failed, so there was little traffic to miss. With one the server really does
+   reach GitHub ten times and every byte is invisible, so **crediting it changed nothing in any
+   published number** and a reader comparing the two runs would conclude the credential did not
+   matter. It mattered; the capture layer cannot see it. For any server whose client ignores the
+   proxy, an account buys nothing measurable until the capture layer changes (`docs/METHOD.md`).
+   The full chain, and why this is the headline of the whole measurement, is threat 19.
 
    How it is handled, and what it costs. It is reported, not silently patched, because the two
    available fixes are not equivalent. Injecting a proxy agent into each server's runtime would mean
@@ -128,14 +111,12 @@ gate rule 6. Each names the threat and what it does to the numbers.
    tools), filesystem (14), memory (9), sequential-thinking (1), git (12), time (2), fetch (1),
    puppeteer (7), github (26), and brave-search (2) only with a placeholder key. 87 tools in all.
 
-   On naming servers here, since gate rule 3 says no server id "in anything published". Rule 3's
-   subject is aggregate output -- the numbers artifact -- and that is where the enforcing test
-   sits (tests/test_aggregate.py). This section is a threats-to-validity statement about which
-   servers could be measured at all, drawn from public registry metadata that
-   `registry/servers.yaml` already commits, and it names no capture finding. Rule 7, the one that
-   forbids locating a server, governs a server caught egressing somewhere undeclared, and nothing
-   here is that. The counts above are checked against `registry/probes/` by
-   `tests/test_corpus_matches_probes.py`, per gate rule 2: no figure without a command behind it.
+   On naming servers here: gate rule 3's subject is AGGREGATE OUTPUT, and that is where its
+   enforcing test sits (`tests/test_aggregate.py`). This is a threats-to-validity statement about
+   which servers could be measured at all, drawn from registry metadata `registry/servers.yaml`
+   already commits, and it names no capture finding; rule 7, the one that forbids locating a
+   server, governs a server caught egressing somewhere undeclared. The counts are checked against
+   `registry/probes/` by `tests/test_corpus_matches_probes.py`.
 
    **brave-search did not start.** It exits before the JSON-RPC handshake on all four candidate
    protocol revisions with `BRAVE_API_KEY environment variable is required`. This contradicts the
@@ -169,11 +150,13 @@ gate rule 6. Each names the threat and what it does to the numbers.
    `2026-07-28` was removed from the candidate ladder in `harness/probe.py`: these three would
    have accepted that too, and the registry would have recorded a revision nobody speaks.
 
-9. **Nothing here has been driven under capture yet.** Everything above comes from `initialize`
-   plus `tools/list`, which is the probe, not the measurement. The probe never calls a tool, so it
-   produces no egress and therefore no fan-out. The alignment makes a future run countable; it
-   does not itself count anything. No number in `docs/METHOD.md` has a measured value as
-   of this writing, and an aligned corpus must not be mistaken for a result.
+9. **An aligned corpus is not a result, and for a while this document had to say so.** The probe
+   (`initialize` plus `tools/list`) calls no tool, so it produces no egress and no fan-out:
+   everything in threats 1 to 8 describes what could be measured, not what was. That distinction
+   is now historical, both phase B passes having been driven, published and committed in redacted
+   form under `runs/`, and it is left standing rather than deleted because the reverse mistake is
+   the easy one: a corpus that validates against real schemas reads like a measurement and is not
+   one.
 
 10. **A tool call is not atomic: `mcp-server-fetch` reaches a package registry mid-call.** Named
     as a finding rather than filed as noise, because it is the most interesting thing the first
@@ -218,20 +201,13 @@ gate rule 6. Each names the threat and what it does to the numbers.
     this says only that one of the ten does, and that the raw-versus-excluded gap is where to
     look for the rest.
 
-    Provenance of the figures above, and how the tension that used to sit here was resolved.
-    They come from run `20260918T200935Z`, a single-server capture driven with `--only fetch`.
-    Its **normalized aggregate is committed** at `docs/figures/20260918T200935Z.json`, and the
-    command that regenerates it is recorded inside that file. So every figure quoted above is
-    re-derivable from this repository alone, and `tests/test_committed_figures.py` fails if this
-    prose and that artifact drift apart.
-
-    Earlier this paragraph said the opposite, and the reason is worth keeping. Gate rule 2 wants
-    a command behind every number, gate rule 4 refuses to track runs, and the two together made a
-    quoted figure measured but unverifiable. The way out was not to relax either rule but to
-    notice they govern different objects: the AGGREGATE is counts and category breakdowns with no
-    host, no server id and no payload digest, while the RUN holds per-flow records and salted
-    digests tied to specific servers. Committing the first satisfies rule 2; not committing the
-    second satisfies rules 3 and 4. See `docs/PROTOCOL.md`, rules 1 and 4.
+    Provenance of the figures above. Run `20260918T200935Z`, a single-server capture driven with
+    `--only fetch`, whose **normalized aggregate is committed** at
+    `docs/figures/20260918T200935Z.json` with its regenerating command inside it. Rule 2 wants a
+    command behind every number and rule 4 refused to track runs, which together made a quoted
+    figure measured but unverifiable; the way out was not to relax either but to notice they
+    govern different objects, the aggregate being counts with no host, server id or digest.
+    `tests/test_committed_figures.py` fails if this prose and that artifact drift apart.
 
 11. **The canary is only detectable where the client does not re-encode it.** Numbers 4 and 5
     match the request target and the body byte-literally (`docs/METHOD.md`, "The two
@@ -321,57 +297,43 @@ gate rule 6. Each names the threat and what it does to the numbers.
     Chromium's. The cause has to sit in the same sentence as both.
 
     **How it was measured, and why a control was needed at all.** Gate rule 7 flagged the two
-    hosts. The obvious diagnosis was that the embedded browser checks for updates on its own, and
-    an obvious diagnosis is still a guess: the same observation is equally consistent with the
-    server initiating those requests. So the diagnosis was tested against its own negative. `make
-    control` drives a CONTROL run (`src/mcpfanout/control.py`, `harness/control_browser.py`): the
-    same browser binary the package downloaded into its own cache, the same flags the package
-    passes in a container (`--no-sandbox --single-process --no-zygote`), the same proxy delivered
-    the same way (HTTP(S)_PROXY in the environment, not `--proxy-server`, because a browser does
-    not resolve the two identically), the same navigation target read out of
-    `corpus/calls/puppeteer.json`, and no MCP server anywhere in the process tree.
+    hosts and the obvious diagnosis, that the embedded browser checks for updates on its own, is
+    still a guess: the same observation is equally consistent with the server initiating them. So
+    `make control` tested it against its own negative (`src/mcpfanout/control.py`): the same
+    browser binary the package downloaded, the same flags it passes in a container, the same proxy
+    delivered the same way (`HTTP(S)_PROXY` in the environment, not `--proxy-server`, which a
+    browser does not resolve identically), the same navigation target out of
+    `corpus/calls/puppeteer.json`, and no MCP server anywhere in the process tree. **3** launches,
+    cold profile each, twelve seconds of dwell apiece, because a control killed at page load would
+    miss exactly the class of request it exists to observe.
 
-    Three launches with a cold profile each, twelve seconds of dwell apiece, because the traffic
-    under investigation is background traffic and a control killed at page load would miss exactly
-    the class of request it exists to observe. Result: **both hosts under review reached in all
-    three launches**, plus two the server's own run did not produce (`redirector.gvt1.com` and a
-    `gvt1.com` edge node, which is a component download the longer dwell had time to reach). So
-    `only_under_the_server` is empty: there is no destination of that server's that the bare
-    browser fails to explain. Verdict `cause_reproduced`, exit 0, command and artifact in
-    `docs/figures/control/20260919T125335Z-control-vs-puppeteer.json`.
+    Result: **both hosts under review reached in all three launches**, plus two the server's own
+    run did not produce (`redirector.gvt1.com` and a `gvt1.com` edge node, a component download the
+    longer dwell had time to reach). `only_under_the_server` is empty. Verdict `cause_reproduced`,
+    exit 0, artifact `docs/figures/control/20260919T125335Z-control-vs-puppeteer.json`.
 
-    **What a reproduced control does and does not establish.** It establishes that the MCP server
-    is not a NECESSARY condition for that egress: remove it and the traffic still happens. It does
-    not establish that the server never initiates such a request, because no black-box observer can
-    prove a negative about a process it did not write. The direction of the evidence is the
-    publishable part, and the verdict string carries its own meaning inside the artifact so it
-    cannot be quoted as more than it is.
+    That establishes the server is not a NECESSARY condition for the egress: remove it and the
+    traffic still happens. It does not establish that the server never initiates such a request,
+    because no black-box observer can prove a negative about a process it did not write. The
+    verdict string carries that bound inside the artifact so it cannot be quoted as more.
 
-    **Neither flow carried content, and that was checked rather than assumed. This is the question
-    that decides what the finding IS**, because a background beacon carrying nothing is a note and
-    the same host carrying a fragment of a call's arguments is the phenomenon the six numbers
-    exist to measure. Both channels read zero on both hosts, and they are two different
-    quantities: the ARGUMENT channel (a boolean per flow: did any k-gram of the driving call's
-    arguments appear) is false on both, and the CONTEXT channel (bytes of a planted bait file
-    covered) is zero bytes with `matched_refs` empty. The POST body to `accounts.google.com` was
-    **1 byte**, which makes that one floor-free: there is no room in one byte for a fragment of any
-    length, so it does not depend on the calibrated k at all. The GET to `clients2.google.com`
-    carried 143 bytes of request target and no body, and its zero IS at k = 22
-    (`docs/CALIBRATION.md`, F1.2), so what it says exactly is that nothing the sensor can see
-    travelled there.
+    **Neither flow carried content, and that was checked rather than assumed**, because a
+    background beacon carrying nothing is a note while the same host carrying a fragment of a
+    call's arguments is the phenomenon the six numbers exist to measure. Both channels read zero on
+    both hosts: the ARGUMENT channel (did any k-gram of the driving call's arguments appear) is
+    false, and the CONTEXT channel is zero bytes with `matched_refs` empty. The POST body to
+    `accounts.google.com` was **1 byte**, which makes that one floor-free: no fragment of any
+    length fits, so it does not depend on the calibrated k at all. The GET to
+    `clients2.google.com` carried 143 bytes of target and no body, and its zero IS at k = 22.
 
     **The control carries its own positive control, which is what makes those zeros mean
-    anything.** A run in which nothing matches is evidence only if something COULD have matched.
-    The control publishes the corpus call's own argument digests to the capture addon exactly as
-    the driver does for a real call, so its navigation to the corpus URL should be causal, and it
-    is: 3 of the control's 15 flows are causal, one per launch, all of them the navigation, and
-    the remaining 12 background flows carry nothing on either channel. Without that, "the
-    background requests carried nothing" and "the matcher saw nothing at all" would be the same
-    observation, in the direction that flatters the diagnosis. `is_the_sensor_alive` is in the
-    artifact for that reason and a test fails if threat 15 ever rests on a control whose matcher
-    never fired. If a browser's background request had carried our argument material, that would be
-    a far more
-    serious finding than this one, and this is the measurement that would have shown it.
+    anything.** A run in which nothing matches is evidence only if something COULD have matched, so
+    the control publishes the corpus call's argument digests to the addon exactly as the driver
+    does: 3 of its 15 flows are causal, one per launch, all of them the navigation, and the other
+    12 carry nothing on either channel. Without that, "the background requests carried nothing" and
+    "the matcher saw nothing at all" would be the same observation, in the direction that flatters
+    the diagnosis. `is_the_sensor_alive` is in the artifact for that reason and a test fails if
+    this threat ever rests on a control whose matcher never fired.
 
     **What it does to the numbers.** Nothing, and that is worth saying explicitly. These flows
     grade `UNATTRIBUTED` and count in numbers 1 and 2 as what they are: outbound connections and
@@ -413,18 +375,13 @@ gate rule 6. Each names the threat and what it does to the numbers.
     **Two ways out, both with a real cost, and the decision is deferred on purpose.**
 
     - *Persist the exact digests of the matched regions*, alongside the winnowed fingerprints.
-      Re-verification then always succeeds, because the auditor checks the same digests the match
-      was made from. The cost is that it widens the privacy surface negative 2 exists to bound: a
-      winnowed fingerprint is a lossy sample of a document, while a per-match digest set is a
-      targeted record of exactly the fragments that travelled, which is a stronger handle on the
-      content even though it is still a digest. Salted, so not directly invertible; but a holder of
-      the salt and a candidate corpus can confirm specific fragments, and "we keep only digests" is
-      a weaker promise once the digests are chosen for their relevance.
-    - *Raise the persisted floor to the matching floor*, by winnowing at a window that guarantees
-      every k-gram is kept (w = 1), or by matching only at or above w + k - 1. The privacy surface
-      does not move. The cost is paid in storage for the first option and in recall for the second:
-      a rule of 29 bytes drops the entire 22-to-28 band from the numbers, and every dropped match
-      pushes the attributable share down, which is the safe direction but a real loss on the exact
+      Re-verification then always succeeds. The cost is that it widens the privacy surface negative
+      2 exists to bound: a winnowed fingerprint is a lossy sample of a document, a per-match digest
+      set is a targeted record of exactly the fragments that travelled, and "we keep only digests"
+      is a weaker promise once the digests are chosen for their relevance.
+    - *Raise the persisted floor to the matching floor*, by winnowing at w = 1 or by matching only
+      at or above w + k - 1. The privacy surface does not move; the cost is storage for the first
+      and recall for the second, since a 29-byte rule drops the whole 22-to-28 band, on exactly the
       material (`doc_url`, ordinary document URLs) where realistic arguments do match.
 
     **Not decided now, and not decided by whoever hits it first.** The choice is a trade between
@@ -459,12 +416,11 @@ gate rule 6. Each names the threat and what it does to the numbers.
     $(python -c "import readabilipy,os;print(os.path.dirname(readabilipy.__file__))")/utils.py'`.
 
     **Why each link matters.** An open upper bound with no lockfile means the code that runs is
-    whatever the registry serves at the moment of the call. `jsdom` alone pulls a tree of about
-    forty packages, each resolved the same way. Pinning `mcp-server-fetch@2026.8.18` in
-    `registry/servers.yaml` pins the Python distribution and says nothing whatsoever about the
-    JavaScript that executes. Nothing in this project's records names the code that actually ran:
-    the manifest, the corpus digest and the version pin all describe the state BEFORE the call,
-    and this server mutates its own implementation after that snapshot is taken.
+    whatever the registry serves at the moment of the call, and `jsdom` alone pulls a tree of about
+    forty packages resolved the same way. Pinning `mcp-server-fetch@2026.8.18` pins the Python
+    distribution and says nothing about the JavaScript that executes: the manifest, the corpus
+    digest and the version pin all describe the state BEFORE the call, and this server mutates its
+    own implementation after that snapshot is taken.
 
     **The `check=True` with no output capture is a second defect on the same line.** npm's stdout
     goes to the server's stdout, which is the JSON-RPC channel, so the install corrupts the
@@ -490,15 +446,13 @@ gate rule 6. Each names the threat and what it does to the numbers.
     what left the machine, is present in that single behaviour, and it was found by instrumenting
     an edge rather than by reading documentation.
 
-    **Where it goes. SUPERSEDED 2026-09-19: threat 19 leads and this is second.** It held the lead
-    for a few hours, and the reason it lost it is itself the argument. This is a finding about one
-    package's behaviour: sharp, reproducible, and something a reader fixes by pinning a dependency.
-    Threat 19 is a finding about how the measurement must be BUILT, which every reader who repeats
-    this work will hit before they can observe anything at all. A defect in the instrument outranks
-    a defect in a subject, because it invalidates the observations of the subject. This one still
-    goes above number 3: number 3 measures a property of a population, while this is a mechanism
-    with a named causal chain that generalises beyond MCP to any tool lazily installing a
-    dependency at call time.
+    **Where it goes: second, behind threat 19, and the reason it lost the lead is itself the
+    argument.** This is a finding about one package, sharp and reproducible, that a reader fixes by
+    pinning a dependency. Threat 19 is a finding about how the measurement must be BUILT, and a
+    defect in the instrument outranks a defect in a subject because it invalidates the observations
+    of the subject. This still goes above number 3, which measures a property of a population,
+    because it is a mechanism with a named causal chain that generalises to any tool lazily
+    installing a dependency at call time.
 
     **Disclosure.** Gate rule 7 applies and, unlike threat 15's browser, both maintainers are
     reachable: `alan-turing-institute/ReadabiliPy` and the `mcp-server-fetch` maintainers. Draft
@@ -616,9 +570,7 @@ gate rule 6. Each names the threat and what it does to the numbers.
     pcap stays the judge**: `make backstop` counts outbound SYNs per destination, and anything
     going somewhere that is not the proxy is still blind.
 
-    **Why this outranks threat 17 for the write-up.** Threat 17 is a finding about one package's
-    behaviour, reproducible and sharp. This is a finding about how the measurement itself must be
-    built: an environment-variable proxy is not an observation of an agent's egress, it is an
-    observation of the subset of clients that opted in, and the subset is not knowable in advance.
-    It converts "transparent interception or eBPF" from an engineering preference into a measured
-    requirement, and it generalises to every tool that claims to watch what an agent sends.
+    **Why this outranks threat 17.** That one is about a package; this is about how the
+    measurement itself must be built, and it converts "transparent interception or eBPF" from an
+    engineering preference into a measured requirement. It generalises to every tool that claims to
+    watch what an agent sends.
