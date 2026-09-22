@@ -226,6 +226,28 @@ serve are in [`DOCTRINE.md`](DOCTRINE.md).
       annotation from, and reads the published body back from the API to compare. Guarded by
       `tools/release_notes.py` and `tests/test_release_notes.py`, which plants the unfetched-tag
       condition as a lightweight tag and fails if the commit message is accepted in its place.
+
+      **The outcome, which is why this entry is no longer a hypothesis.** The very next tag
+      pushed, `v1.0.0-rc2` on 2026-09-22, failed the release job at the step that derives the
+      notes. Run `35747403738`, verbatim:
+
+      > release-notes: refs/tags/v1.0.0-rc2 is a commit, not an annotated tag object. Either the
+      > tag is lightweight and carries no message to sign, or the checkout fetched the ref without
+      > the object. Publishing here would silently use the COMMIT message as release notes
+
+      Nothing was published, which is the correct behaviour and the reason the guard exists. It
+      fired **after** every gate above it had gone green, in public, on the first release it was
+      ever asked to judge. A check that catches something on its first outing has stopped being a
+      prediction about a failure mode and become a measurement of one.
+
+      It also corrected the cause. The clone depth was the plausible reading and it was not the
+      mechanism: on a TAG PUSH, `actions/checkout` writes `refs/tags/<tag>` as a LIGHTWEIGHT tag
+      pointing at the commit, and since the ref already exists neither `fetch-depth: 0` nor
+      `fetch-tags` replaces it. The remote object was an annotated, signed tag throughout
+      (`gh api repos/<owner>/<repo>/git/ref/tags/v1.0.0-rc2` reports `object.type` = `tag`); the
+      runner's copy of it was not. The job now force-fetches the object over the ref and asserts
+      `git cat-file -t` says `tag` before anything reads a message from it, because a `git fetch`
+      that exits 0 is not evidence that the ref is now a tag object.
     - `make figures-check`, the gate that exists BECAUSE inspecting a committed figure cannot tell
       a stale one from a current one, had one line that inspected. `rarity` exits 1 by design, so
       its invocation carried make's leading `-`, and `-` ignores every non-zero exit rather than
