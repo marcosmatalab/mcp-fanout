@@ -159,11 +159,11 @@ cost is zero and the honest cost is attention ([`docs/PROTOCOL.md`](docs/PROTOCO
 | F2, the structural matcher number 5 is read through | Complete and **failed its own sealed threshold**: pre-registered 0.80, measured **0.6579** |
 | Phase C, attacking attribution adversarially | Not started, and named as what a measurement of this would need next. eBPF capture, which would catch pinned TLS, is out of scope and documented as the next layer |
 
-**`v1.0.0-rc1` is tagged and released; `v1.0.0` follows on 19 October 2026**, when the disclosure
-window closes, because minting a DOI before that date would break a commitment made in writing.
-Cite the archived release rather than the default branch: the argument depends on the sealed
-pre-registration and on the signed history, and only a tag fixes both. **The DOI is minted with
-`v1.0.0`** and added here and to [`CITATION.cff`](CITATION.cff) in the commit that follows it.
+**A pre-release is tagged and published, and `v1.0.0` follows on 19 October 2026**, when the
+disclosure window closes: minting a DOI earlier would break a commitment made in writing. Cite the
+archived release rather than the default branch, and take the current one from the badge above or
+[releases/latest](https://github.com/marcosmatalab/mcp-fanout/releases/latest), never a tag named
+in a sentence. **The DOI is minted with `v1.0.0`**, here and in [`CITATION.cff`](CITATION.cff).
 
 ## How this was built
 

@@ -9,12 +9,14 @@ derived from the tag by the file that claims it is; it is derived by a flag, fro
 runner's git happens to hold, and a ref whose annotated object was never fetched resolves to a
 commit, whose message is then a plausible set of notes that nobody signed.
 
-**What was measured, before this paragraph was written.** The first thing the `verify` command
-below did was read the live `v1.0.0-rc1` release back from the API and compare: it MATCHES the
-signed tag. So the claim was true and unverified, not false. That is the instance, not an excuse
-for it: for the whole life of the release workflow nothing could have told a true claim from a
-false one, and gate rule 10 is about which of those two a green result means. So this file
-replaces the claim with two commands:
+**What the workflow actually published.** At `2026-09-22T13:01:19Z` the run created the
+`v1.0.0-rc1` release as `github-actions[bot]`, and its body was the message of commit `fb71b16`,
+"State the trailer claim as a boundary, and check it against the history too". The signed tag's
+subject is something else. The notes were replaced by hand three and a half minutes later
+(`updated_at` = `2026-09-22T13:04:51Z`, `gh release edit --notes-file`), which is why reading the
+release today shows the signed text and shows nothing of what the workflow did. A measurement
+taken after a repair cannot testify about the state it repaired, and the first version of this
+docstring made exactly that mistake. So this file replaces the claim with two commands:
 
     python tools/release_notes.py write  <tag> <file>        # notes, derived explicitly
     python tools/release_notes.py verify <tag> <published>   # what GitHub actually shows

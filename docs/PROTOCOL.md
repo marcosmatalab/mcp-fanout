@@ -196,18 +196,36 @@ serve are in [`DOCTRINE.md`](DOCTRINE.md).
       check, because every other figure here has a command behind it and this class did not.
       Guarded by `tests/test_history_claims.py`, which reads the boundary out of the prose and
       checks it against the commit objects.
-    - `.github/workflows/release.yml` published with `--notes-from-tag` under a depth-1 checkout
-      and a comment asserting the consequence: "the signed tag's own message is the notes, so the
-      text that is signed is the text that is published." Nothing in the job checked it, and a ref
-      whose annotated object was never fetched resolves to a commit, whose message then becomes a
-      plausible set of release notes that nobody signed. **This one was measured before it was
-      written down, and the claim held**: the live `v1.0.0-rc1` release body is the signed tag's
-      message. That is the instance rather than a reason to drop it, because for the whole life of
-      the workflow nothing could have told a true claim from a false one, and this rule is about
-      what a green result is allowed to mean. The workflow now derives the notes from the tag
-      object, fails on a tag it cannot read an annotation from, and reads the published body back
-      from the API to compare. Guarded by `tools/release_notes.py` and
-      `tests/test_release_notes.py`, which plants the unfetched-tag condition as a lightweight tag.
+    - `.github/workflows/release.yml` published with `--notes-from-tag` under a depth-1 checkout,
+      and a comment two lines above the call asserted the consequence: "the signed tag's own
+      message is the notes, so the text that is signed is the text that is published." **That
+      comment was FALSE at the moment it mattered.** `actions/checkout` at depth 1 does not fetch
+      the annotated tag object, the ref resolves to a commit, and the notes became that commit's
+      message. The record is public, and every timestamp below is a field of one API object
+      (`gh api repos/<owner>/<repo>/releases/tags/<tag>`):
+
+        - `2026-09-22T12:59:47Z`, `created_at`: the tag object is created.
+        - `2026-09-22T13:01:19Z`, `published_at` with `author.login` = `github-actions[bot]`: the
+          workflow publishes `v1.0.0-rc1`, the first release it ever made, and its body is the
+          message of commit `fb71b16`, "State
+          the trailer claim as a boundary, and check it against the history too". Not the tag's
+          subject. Nothing failed: the run is green and the release page looks finished.
+        - `2026-09-22T13:04:51Z`, `updated_at`: the notes are replaced by hand with
+          `gh release edit --notes-file`, which is the only reason the published body matches the
+          signed message today.
+
+      Three and a half minutes separate a false claim from a true one, and **the first version of
+      this entry got it wrong in exactly that gap**: it was written from a measurement taken after
+      the hand edit and said the claim "was true and unverified". A repaired artifact cannot
+      testify about the state it was repaired from. Recording the correction in clear is worth
+      more than having been right, because an unchecked claim about its own history, inside the
+      document that keeps this rule's count, is the failure this rule describes rather than an
+      exception to it.
+
+      The workflow now derives the notes from the tag object, fails on a tag it cannot read an
+      annotation from, and reads the published body back from the API to compare. Guarded by
+      `tools/release_notes.py` and `tests/test_release_notes.py`, which plants the unfetched-tag
+      condition as a lightweight tag and fails if the commit message is accepted in its place.
 
     Nine instances is not an anecdote: the class is that an ABSENT input produces a WELL-FORMED
     output, and well-formed output is what gets reviewed. The last five extend it past code. A

@@ -96,14 +96,20 @@ published SECOND. Connecting afterwards archives nothing retroactively.
    `--notes-file`, and reads the published body back from the API to check it is the signed text.
    The job fails if it is not, and it fails on a tag whose annotation it cannot read at all. That
    check exists because the workflow used to pass `--notes-from-tag` under a depth-1 checkout and
-   assert the result in a comment without checking it; measured afterwards, the published notes
-   did match, which is the point of gate rule 10's ninth instance rather than a reason to drop it.
-   Zenodo mints the DOI on detection.
+   assert the result in a comment instead of checking it: the first release it published carried
+   the COMMIT message as its notes, and the text was corrected by hand afterwards, which hides the
+   defect from anyone reading the release page later (gate rule 10's ninth instance, with the
+   timestamps). Zenodo mints the DOI on detection.
 4. **Record both DOIs, in different places, because they answer different questions.** The VERSION
    DOI resolves to the exact deposit and goes in `CITATION.cff`, because a citation must point at
    what the reader actually read. The CONCEPT DOI always resolves to the latest version and goes in
    `README.md`, where drifting to the current version is the desired behaviour. Commit both as a
    follow-up: a DOI cannot be inside the artifact it names.
 
-`v1.0.0-rc1` is the current tag. `v1.0.0` is reserved for 19 October 2026, when the disclosure
-window closes, because minting a DOI before that date would break a commitment made in writing.
+The current tag is whichever one
+[releases/latest](https://github.com/marcosmatalab/mcp-fanout/releases/latest) resolves to, and
+that link is the answer rather than a tag name written here, which would be right until the next
+tag and wrong afterwards with nothing to notice.
+`tests/test_no_stale_release_pointer.py` fails if a document names a pre-release as the current
+one. `v1.0.0` is reserved for 19 October 2026, when the disclosure window closes, because minting
+a DOI before that date would break a commitment made in writing.
