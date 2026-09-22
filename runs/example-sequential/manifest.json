@@ -1,0 +1,140 @@
+{
+  "corpus_sha256": "e1125f2b1ed7a2d50e668a14c2210a6ac6f9579f6a7a036e54952993c33d9733",
+  "created": "2026-09-19T11:55:41.003490+00:00",
+  "credential_presence": {},
+  "k": 22,
+  "notes": "REDACTED example run, derived from 20260919T115452Z-sequential by tools/redact_run.py. Committed so the six numbers reproduce in a clean clone with no Docker, no network and no credentials. Server ids are indices, tool names are indices, destinations are class labels and addresses are RFC 5737 documentation addresses. See runs/README.md.",
+  "pass_name": "sequential",
+  "redaction": {
+    "declared_destinations": {
+      "list_name": "declared-destinations",
+      "path": "registry/declared-destinations.json",
+      "servers": {
+        "server-0": {
+          "basis": "relabelled from the committed declaration; the basis names the server and is therefore not carried",
+          "call_supplied": false,
+          "hosts": [],
+          "known_undeclared": {},
+          "launch_tool": "npx"
+        },
+        "server-1": {
+          "basis": "relabelled from the committed declaration; the basis names the server and is therefore not carried",
+          "call_supplied": false,
+          "hosts": [],
+          "known_undeclared": {},
+          "launch_tool": "npx"
+        },
+        "server-2": {
+          "basis": "relabelled from the committed declaration; the basis names the server and is therefore not carried",
+          "call_supplied": false,
+          "hosts": [],
+          "known_undeclared": {},
+          "launch_tool": "npx"
+        },
+        "server-3": {
+          "basis": "relabelled from the committed declaration; the basis names the server and is therefore not carried",
+          "call_supplied": false,
+          "hosts": [],
+          "known_undeclared": {},
+          "launch_tool": "npx"
+        },
+        "server-4": {
+          "basis": "relabelled from the committed declaration; the basis names the server and is therefore not carried",
+          "call_supplied": false,
+          "hosts": [],
+          "known_undeclared": {},
+          "launch_tool": "uvx"
+        },
+        "server-5": {
+          "basis": "relabelled from the committed declaration; the basis names the server and is therefore not carried",
+          "call_supplied": false,
+          "hosts": [],
+          "known_undeclared": {},
+          "launch_tool": "uvx"
+        },
+        "server-6": {
+          "basis": "relabelled from the committed declaration; the basis names the server and is therefore not carried",
+          "call_supplied": true,
+          "hosts": [
+            "third-party-a"
+          ],
+          "known_undeclared": {
+            "package-registry-a": "carried from the declaration; the finding is in docs/DISCLOSURE-LOG.md"
+          },
+          "launch_tool": "uvx"
+        },
+        "server-7": {
+          "basis": "relabelled from the committed declaration; the basis names the server and is therefore not carried",
+          "call_supplied": false,
+          "hosts": [],
+          "known_undeclared": {},
+          "launch_tool": "npx"
+        },
+        "server-8": {
+          "basis": "relabelled from the committed declaration; the basis names the server and is therefore not carried",
+          "call_supplied": false,
+          "hosts": [],
+          "known_undeclared": {},
+          "launch_tool": "npx"
+        },
+        "server-9": {
+          "basis": "relabelled from the committed declaration; the basis names the server and is therefore not carried",
+          "call_supplied": true,
+          "hosts": [
+            "third-party-a"
+          ],
+          "known_undeclared": {
+            "third-party-b": "carried from the declaration; the finding is in docs/DISCLOSURE-LOG.md",
+            "third-party-c": "carried from the declaration; the finding is in docs/DISCLOSURE-LOG.md"
+          },
+          "launch_tool": "npx"
+        }
+      },
+      "sha256": "fd9874c41c14fa96224fb2b39d402cbb4193371102966397ff7a5d6e2025f7db",
+      "version": "2026-09-19b"
+    },
+    "destination_labels": [
+      "package-registry-a",
+      "third-party-a",
+      "third-party-b",
+      "third-party-c"
+    ],
+    "package_infrastructure_path": "registry/package-infrastructure.json",
+    "package_infrastructure_sha256": "3137eb3defc936d9ef5a06485242589a9adfb233d9573fae3489318157f9ceb0",
+    "source_run_id": "20260919T115452Z-sequential",
+    "tool": "tools/redact_run.py",
+    "what_was_kept": "salted digests, byte counts, timestamps, protocol revisions, phases, grades' inputs and every field the six numbers are computed from",
+    "what_was_replaced": "server ids, tool names, call ids, destination hosts, destination addresses and error messages"
+  },
+  "run_id": "example-sequential",
+  "salt_fixed": true,
+  "server_ids": [
+    "server-0",
+    "server-1",
+    "server-2",
+    "server-3",
+    "server-4",
+    "server-5",
+    "server-6",
+    "server-7",
+    "server-8",
+    "server-9"
+  ],
+  "server_protocol_versions": {
+    "server-0": "2025-11-25",
+    "server-1": "2025-11-25",
+    "server-2": "2025-11-25",
+    "server-3": "2025-11-25",
+    "server-4": "2025-11-25",
+    "server-5": "2025-11-25",
+    "server-6": "2025-11-25",
+    "server-7": "2024-11-05",
+    "server-8": "2024-11-05",
+    "server-9": "2024-11-05"
+  },
+  "servers_expecting_egress": [],
+  "tool_versions": {
+    "note": "pinned at capture; the pins identify the servers and are in registry/servers.yaml, not here"
+  },
+  "w": 8
+}

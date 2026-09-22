@@ -1,8 +1,26 @@
-# Runs and captured artifacts. NEVER commit a run: it may contain salted digests
-# tied to a specific server. The gate (docs/THE-GATE.md rule 3) forbids server or
-# org names in anything published; the simplest enforcement is to not track runs.
-/runs/
+# Runs and captured artifacts. NEVER commit a captured run: it states, per server, where that
+# server went and when, which is the who-calls-whom dataset this project says it does not publish,
+# and gate rule 3 (docs/THE-GATE.md) forbids a server, host or org name in anything published.
+#
+# The two exceptions below are not captured runs: they are REDACTED runs, produced by
+# tools/redact_run.py, where every server id, tool name, destination host and address has been
+# replaced by a stable label and every digest kept. They exist so `make n1` and `make reproduce`
+# work in a clean clone with no Docker and no network, which is what the repository's own
+# reproducibility claim promised and could not deliver. runs/README.md carries the three commands
+# that prove they leak nothing, and tests/test_example_runs.py fails if they stop reproducing the
+# published figures.
+#
+# The exception is by directory and by file: a run's disclosure.json and any other by-product a
+# command writes into the directory stays untracked, so running the gates never dirties the tree.
+/runs/*
+!/runs/README.md
+!/runs/example-sequential/
+!/runs/example-concurrent/
+/runs/example-*/disclosure.json
+/runs/example-*/numbers.json
+/runs/example-*/control/
 *.pcap
+!/runs/example-*/backstop.pcap
 *.mitm
 
 # Python
