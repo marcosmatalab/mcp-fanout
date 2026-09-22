@@ -47,12 +47,12 @@ the rules, it names them and points at their source.
   **rule 6**, no published figure without a command that measures it, which applies to the README
   and to this file as much as to a figure; and **rule 10**, every instrument needs a test that goes
   red when the instrument is ABSENT and not only when it is wrong, because a wrong number gets
-  investigated and a green gets published. `docs/PROTOCOL.md` lists the nine times this repository
+  investigated and a green gets published. `docs/PROTOCOL.md` lists the ten times this repository
   produced that failure, and what a test has to do to catch it.
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 688
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 692
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only**, and the list of what counts as the core is
@@ -147,7 +147,7 @@ README's argument and read as unfinished work inside the code.
 ```bash
 source .venv/bin/activate
 make gates       # EVERYTHING CI runs, in the order CI runs it. This is the one to use
-make verify      # 688 tests, no Docker, no network
+make verify      # 692 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make reproduce   # the headline number end to end from the committed example runs
 make numbers     # the six numbers from a run (RUN defaults to the committed example-concurrent)

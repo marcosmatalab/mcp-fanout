@@ -38,6 +38,10 @@ make honesty-curve     # 0.05 s. No network, no keys, no Docker
    rule that does not manufacture false attributions. Over 87 measured tool schemas: **38%** are
    attributable from the schema alone, **22%** never can be, **40%** are not knowable until a value
    is seen. `make argument-shapes`, no capture and no network.
+4. **A pinned server is not pinned code.** `mcp-server-fetch`, pinned to an exact version and
+   installed with `uvx`, pulls in ReadabiliPy, which runs `npm install` INSIDE the tool call: **41
+   packages** from unpinned ranges, no lockfile, 87 registry requests one day and 82 the next. Two
+   runs of the same pinned server can execute different code, and an egress allowlist for the npm registry allows everything that registry serves ([issue](https://github.com/alan-turing-institute/ReadabiliPy/issues/122), [issue](https://github.com/modelcontextprotocol/servers/issues/4830), threat 17).
 
 ![The observation chain: a tool call enters a server process, which can reach a third party through a proxy-honouring client, through Node's global fetch, or through a pinned client. The environment-variable proxy observes the first. The packet capture underneath observes all of them](docs/figures/observation-chain.svg)
 
@@ -136,13 +140,9 @@ make run                                # a NEW capture. The only one needing Do
 ## What was found in the measured environment
 
 Two behaviours, both disclosed to their maintainers on 2026-09-19 with a publication window, before
-any of this was written ([`docs/DISCLOSURE-LOG.md`](docs/DISCLOSURE-LOG.md)):
-- A tool call that runs `npm install` while it is running, pulling **41 packages** from unpinned
-  ranges with no lockfile, in 82 registry requests one day and 87 the day before
-  ([issue](https://github.com/alan-turing-institute/ReadabiliPy/issues/122),
-  [issue](https://github.com/modelcontextprotocol/servers/issues/4830), threat 17).
-- A server whose embedded browser reaches destinations its documentation never declares, established
-  by a control run rather than by reading a hostname (threat 15).
+any of this was written ([`docs/DISCLOSURE-LOG.md`](docs/DISCLOSURE-LOG.md)). One is point 4 above.
+The other: a server whose embedded browser reaches destinations its documentation never declares,
+established by a control run rather than by reading a hostname (threat 15).
 
 ## Status
 
@@ -178,8 +178,8 @@ The harness is the part worth judging: the measurements, the sealed thresholds a
 decision are the author's, and generated text is plausible faster than it is true, so the gates
 exist to make it falsifiable before publishing. Rule 10 is the sharpest of them and earned its
 place by being violated: **an instrument needs a test that fails when it is ABSENT, not only when it
-is wrong.** Nine instances are recorded in [`docs/PROTOCOL.md`](docs/PROTOCOL.md), five of them in
-prose, figures, a version string, a release workflow and this history rather than in code.
+is wrong.** Ten instances are recorded in [`docs/PROTOCOL.md`](docs/PROTOCOL.md), six outside the
+measurement code: prose, figures, a version string, a release workflow, a gate and this history.
 **Signing begins at `a167a54`**; earlier commits are deliberately not re-signed, because
 back-signing replaces real provenance with manufactured provenance.
 
