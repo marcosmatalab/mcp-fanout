@@ -328,6 +328,7 @@ commit that follows the release.
 | The gate, the phases and the stop criteria, in one document | [`docs/PROTOCOL.md`](docs/PROTOCOL.md) |
 | How the matcher was calibrated, and what the chosen k cost | [`docs/CALIBRATION.md`](docs/CALIBRATION.md) |
 | What was disclosed, to whom, and when | [`docs/DISCLOSURE-LOG.md`](docs/DISCLOSURE-LOG.md) |
+| How a finding about YOUR project would be reported, decided before it was needed | [`SECURITY.md`](SECURITY.md) |
 | How to run the gates locally, and what each one caught | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | A map of the seven documents, with what each is for and how long it is | [`docs/README.md`](docs/README.md) |
 
