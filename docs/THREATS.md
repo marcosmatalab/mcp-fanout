@@ -82,7 +82,7 @@ gate rule 6. Each names the threat and what it does to the numbers.
    any published number**, and a reader comparing the two runs would see no difference and conclude
    the credential did not matter. It mattered; the capture layer cannot see it.
 
-   What this costs the lab-accounts decision is written in `docs/LAB-ACCOUNTS.md` section 1: for
+   What this costs the lab-accounts decision is written in `docs/METHOD.md` section 1: for
    any server whose client ignores the proxy environment, an account buys nothing measurable until
    the capture layer changes, and that is a fact about our instrument, not about the server.
 
@@ -172,7 +172,7 @@ gate rule 6. Each names the threat and what it does to the numbers.
 9. **Nothing here has been driven under capture yet.** Everything above comes from `initialize`
    plus `tools/list`, which is the probe, not the measurement. The probe never calls a tool, so it
    produces no egress and therefore no fan-out. The alignment makes a future run countable; it
-   does not itself count anything. No number in `docs/THE-SIX-NUMBERS.md` has a measured value as
+   does not itself count anything. No number in `docs/METHOD.md` has a measured value as
    of this writing, and an aligned corpus must not be mistaken for a result.
 
 10. **A tool call is not atomic: `mcp-server-fetch` reaches a package registry mid-call.** Named
@@ -212,7 +212,7 @@ gate rule 6. Each names the threat and what it does to the numbers.
     `CONTENT_MATCH_UNCONTESTED`, for a strong-attribution fraction of 0.0. Under the previous
     single-column model this same run read as 90 `DECLARADO` and an `EFECTIVO` fraction of 0.011,
     which asserted temporal correlation for 87 flows that cannot carry an argument at all. See
-    `docs/DOCTRINE.md`, the evidence model, and `docs/THE-SIX-NUMBERS.md`, numbers 1 and 5.
+    `docs/DOCTRINE.md`, the evidence model, and `docs/METHOD.md`, numbers 1 and 5.
 
     Not generalised from one server. Whether other servers install at call time is unmeasured;
     this says only that one of the ten does, and that the raw-versus-excluded gap is where to
@@ -234,7 +234,7 @@ gate rule 6. Each names the threat and what it does to the numbers.
     second satisfies rules 3 and 4. See `docs/PROTOCOL.md`, rules 1 and 4.
 
 11. **The canary is only detectable where the client does not re-encode it.** Numbers 4 and 5
-    match the request target and the body byte-literally (`docs/THE-SIX-NUMBERS.md`, "The two
+    match the request target and the body byte-literally (`docs/METHOD.md`, "The two
     matched channels"). A value the server percent-encodes, base64s, splits across parameters, or
     puts in a header we do not match is a false negative: the flow grades `TEMPORAL_ONLY` when it
     was causally ours. Every such miss pushes the attributable share **down**, so the published

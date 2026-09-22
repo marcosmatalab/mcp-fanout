@@ -197,7 +197,7 @@ that path returns to HEAD with it. Back up outside the repository before mutatin
 
 No published figure exists without a command that measures it. Every one of the six numbers has
 a `make` target and an `aggregate` subcommand behind it. A claim in a README that cannot be
-reproduced by running a command is not allowed to ship. See `docs/THE-SIX-NUMBERS.md`.
+reproduced by running a command is not allowed to ship. See `docs/METHOD.md`.
 
 ## Rule 10: an absent instrument must fail, not pass quietly
 

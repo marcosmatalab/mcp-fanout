@@ -492,7 +492,7 @@ because it is the counterfactual.** Without credentials:
 **brave-search stays uncredentialed, on purpose.** Its free tier requires a credit card (checked
 2026-09-19), which is the same reason Google Maps was rejected, and consistency beat convenience.
 So the next capture still contains one server that fails at launch, and that is a recorded
-condition of the run rather than a defect in it (`docs/LAB-ACCOUNTS.md` section 2).
+condition of the run rather than a defect in it (`docs/METHOD.md` section 2).
 
 ## 15. Number 5 from persisted data. Run `20260919T193121Z-concurrent`, 2026-09-19.
 
@@ -536,7 +536,7 @@ irrelevant.
 It was not irrelevant; the instrument cannot see it. That distinction is the whole reason this
 paragraph exists, and it is the strongest argument in the repository for why threats 5 and 8 alone
 never explained the gap: **threat 6 does, and it is an instrument limit rather than a sampling
-one.** `docs/LAB-ACCOUNTS.md` section 1 carries the consequence: no more credentials for servers
+one.** `docs/METHOD.md` section 1 carries the consequence: no more credentials for servers
 whose clients ignore the proxy until transparent interception or eBPF exists.
 
 ## 16. The instrument was blind, and with it fixed the threshold is NOT met. 2026-09-19.
@@ -598,7 +598,7 @@ of that. Nothing measured so far estimates that distribution.
 
 ### The credential, re-assessed a second time
 
-`docs/LAB-ACCOUNTS.md` recorded that the GitHub token changed no published number and concluded
+`docs/METHOD.md` recorded that the GitHub token changed no published number and concluded
 the benefit was zero. That conclusion was wrong, and it was wrong for an instructive reason: the
 benefit was invisible, not absent. With the proxy fixed, the same credential moves the content
 denominator from 21 to 38 and the content fraction from 0.8095 to 0.6579, which is the single

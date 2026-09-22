@@ -2,7 +2,7 @@
 
 Why this file exists
 --------------------
-Numbers 4 and 5 (see docs/THE-SIX-NUMBERS.md) ask whether a fragment of one byte string
+Numbers 4 and 5 (see docs/METHOD.md) ask whether a fragment of one byte string
 (a context file, or the arguments of a tool call) appears *literally* inside another byte
 string (an outbound request body). This is the classic Indexed Document Matching problem
 (rolling hashes over overlapping fragments), the same technique DLP vendors have shipped for

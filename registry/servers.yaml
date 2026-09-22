@@ -202,7 +202,7 @@ servers:
     # Declared by NAME only; the value is read from the environment and lives outside this
     # repository (gate rule 5). Every call in both corpora is a read of public data, so the token
     # this names is minted with zero scopes: see docs/PREREG-F2.md section 14 for the exact scope
-    # and docs/LAB-ACCOUNTS.md for why not one permission more.
+    # and docs/METHOD.md for why not one permission more.
     secret_env: ["GITHUB_PERSONAL_ACCESS_TOKEN"]
     protocol_version_answered: "2024-11-05"
     deprecated_upstream: "2025-04-08"      # last npm release; superseded by GitHub's own Go server
