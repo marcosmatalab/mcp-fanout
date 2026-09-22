@@ -24,7 +24,10 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-PHASES = REPO / "docs" / "PHASES.md"
+# The sealed block moved into docs/PROTOCOL.md when the three governance documents were
+# merged. Moving it is safe exactly because of the digest below: the block travelled byte
+# for byte and this test is what proves it did.
+PHASES = REPO / "docs" / "PROTOCOL.md"
 
 BEGIN = "<!-- PREREGISTERED:BEGIN -->"
 END = "<!-- PREREGISTERED:END -->"

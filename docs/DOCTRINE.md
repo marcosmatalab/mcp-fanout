@@ -161,7 +161,7 @@ clothes.
 So `CONTENT_UNIQUE` requires `active_calls_in_window > 1`. **Today the harness emits none**, and
 `tests/test_evidence_model.py` asserts that it emits none. The question this project exists to
 answer, whether content matching recovers attribution when time cannot, is answerable only with
-concurrent calls, which is phase C (`docs/PHASES.md`). Strong attribution counts
+concurrent calls, which is phase C (`docs/PROTOCOL.md`). Strong attribution counts
 `TRACE_PROPAGATED` and `CONTENT_UNIQUE` only; `CONTENT_MATCH_UNCONTESTED` is deliberately
 excluded from it.
 
@@ -210,7 +210,7 @@ against, a version number that two files of this repository disagreed about whil
 README that contradicted three measured facts for four days, and four calibration figures that
 stopped reproducing for eight commits while a test that checked their SHAPE stayed green. The last
 three extend the rule past code: a document is an artifact, so is a metadata field, and so is a
-committed figure. Full statement and all seven instances in `docs/THE-GATE.md`, rule 10.
+committed figure. Full statement and all seven instances in `docs/PROTOCOL.md`, rule 10.
 
 The rule applies to itself: a detector must be shown to detect a planted instance, in the same
 run, through the same code path, before its clean report means anything.
@@ -219,7 +219,7 @@ run, through the same code path, before its clean report means anything.
 
 If a server egresses to a destination its own documentation does not declare, the run stops and
 flags it, and nothing that locates that server is published until authorized. Aggregate output
-names no server, host, or tool. See `docs/THE-GATE.md`, rules 3 and 7.
+names no server, host, or tool. See `docs/PROTOCOL.md`, rules 3 and 7.
 
 ## What this doctrine costs
 

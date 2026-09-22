@@ -1,6 +1,6 @@
 # Runs and captured artifacts. NEVER commit a captured run: it states, per server, where that
 # server went and when, which is the who-calls-whom dataset this project says it does not publish,
-# and gate rule 3 (docs/THE-GATE.md) forbids a server, host or org name in anything published.
+# and gate rule 3 (docs/PROTOCOL.md) forbids a server, host or org name in anything published.
 #
 # The two exceptions below are not captured runs: they are REDACTED runs, produced by
 # tools/redact_run.py, where every server id, tool name, destination host and address has been

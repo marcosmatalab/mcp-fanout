@@ -222,7 +222,7 @@ def publishable(report: dict, *, control_run_id: str, subject_run_id: str,
     """
     if not authorisation.strip():
         raise ValueError("publishable() needs the authorisation record: a named instance may not "
-                         "be committed without one (docs/THE-GATE.md, rule 7)")
+                         "be committed without one (docs/PROTOCOL.md, rule 7)")
     return {
         "normalized": True,
         "names_an_instance": True,

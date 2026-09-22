@@ -187,7 +187,7 @@ def main() -> int:
         pass_name=PASS_BENCH,
         server_protocol_versions={server_id: "2025-11-25"},
         notes=("PHASE A BENCH run, not a measurement of any third-party server. Ground truth is "
-               "the bench's own ledger; see docs/PHASES.md and mcpfanout.bench_metrics."),
+               "the bench's own ledger; see docs/PROTOCOL.md and mcpfanout.bench_metrics."),
     ))
     # calls.jsonl is what the aggregate reads, so the bench's calls are written there too.
     write_jsonl(run_dir / "calls.jsonl", all_calls)

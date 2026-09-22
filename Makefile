@@ -32,14 +32,14 @@ selftest:
 
 # Phase B, SEQUENTIAL pass: one call in flight per server, from corpus/calls/. This is the pass
 # numbers 1, 2, 3 and 4 are read from. Needs Docker + network + the capture extra.
-# Writes runs/<timestamp>-sequential/flows.jsonl. See docs/PHASES.md and docs/THE-GATE.md.
+# Writes runs/<timestamp>-sequential/flows.jsonl. See docs/PROTOCOL.md and docs/PROTOCOL.md.
 run:
 > python3 -m mcpfanout.cli run --registry registry/servers.yaml --out runs/ --pass sequential
 
 # Phase B, CONCURRENT pass: waves of N calls in flight per server, from corpus/concurrent/, with N
 # on the bench's own ladder (2, 5, 10) capped per server. This is the ONLY pass number 5 may be
 # read from: with one call in flight the strongest grade is unreachable by construction.
-# A separate run and a separate figure, never merged with the sequential one (docs/PHASES.md).
+# A separate run and a separate figure, never merged with the sequential one (docs/PROTOCOL.md).
 run-concurrent:
 > python3 -m mcpfanout.cli run --registry registry/servers.yaml --out runs/ --pass concurrent
 
@@ -171,7 +171,7 @@ control-publish:
 
 # Write the latest run's normalized aggregate into docs/figures/ as a committed artifact.
 # This is what makes a figure quoted in a document re-derivable without committing the run
-# itself (docs/THE-GATE.md, rules 1 and 4). Counts only: no host, no server id, no digest.
+# itself (docs/PROTOCOL.md, rules 1 and 4). Counts only: no host, no server id, no digest.
 figures:
 > python3 -m mcpfanout.cli figures --run $(RUN) --out docs/figures
 

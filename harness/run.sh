@@ -22,7 +22,7 @@ CONTROL_DWELL=12
 CONTROL_AUTHORISATION=""
 CONTROL_SERVER="puppeteer"
 # Which phase B pass to drive. One run holds one pass and the run id says which, because the two
-# are separate experimental conditions whose figures are published separately (docs/PHASES.md,
+# are separate experimental conditions whose figures are published separately (docs/PROTOCOL.md,
 # phase B). drive_all.py refuses to write a second pass into a run that already holds one.
 PASS="sequential"
 while [[ $# -gt 0 ]]; do

@@ -35,7 +35,7 @@ def _instrument_artifacts() -> list[Path]:
     return sorted(FIGURES.glob("*-instrument.json"))
 
 
-# Runs driven BEFORE the two-pass split existed (docs/PHASES.md, phase B). Their manifests carry no
+# Runs driven BEFORE the two-pass split existed (docs/PROTOCOL.md, phase B). Their manifests carry no
 # pass, so their artifacts say "unlabelled", which is the honest value: the driving condition was not
 # recorded and deriving it from the notes afterwards would be a guess dressed as provenance. Named
 # here explicitly so a NEW artifact cannot be unlabelled -- the list does not grow.
@@ -82,7 +82,7 @@ def test_number_5_publishes_the_per_window_breakdown(path):
 
     "Strong attribution was 30%" is unreadable without the N it was measured at, and the shape of
     the decay across N is the phase B result that the pre-registered prediction is about
-    (docs/PHASES.md, prediction B1).
+    (docs/PROTOCOL.md, prediction B1).
     """
     n5 = _numbers_of(path)[5]
     assert "grades_by_window_size" in n5
@@ -262,7 +262,7 @@ def test_the_instrument_artifact_publishes_no_destination_host(path):
 
 @pytest.mark.parametrize("path", _instrument_artifacts(), ids=lambda p: p.name)
 def test_the_committed_instrument_result_passes_the_sensor_gate(path):
-    """The four pre-registered criteria of docs/PHASES.md, read out of the artifact.
+    """The four pre-registered criteria of docs/PROTOCOL.md, read out of the artifact.
 
     Written as a test rather than left in prose because gate rule 8 turns this on a threshold,
     and a threshold nobody checks is a sentence. If a future bench run regresses, this fails and

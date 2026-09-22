@@ -1,6 +1,6 @@
 """Compute the six numbers from a run. One function per number (doctrine rule 6).
 
-Aggregate output is anonymous by construction (docs/THE-GATE.md rule 3): it emits counts,
+Aggregate output is anonymous by construction (docs/PROTOCOL.md rule 3): it emits counts,
 ratios and category breakdowns, never a server id, a tool name, or a destination host. The
 raw records under runs/ keep those for the local operator; aggregation strips them.
 
@@ -493,7 +493,7 @@ def structural_instrument_state(run: Run) -> dict:
             "instrument did not run: a driver that stopped publishing token_digests produces "
             "exactly this, and number 5's grades would then come from the k-gram matcher under "
             "the structural one's name. Check before reading any figure here as a finding "
-            "(docs/THE-GATE.md rule 10)")
+            "(docs/PROTOCOL.md rule 10)")
     return out
 
 
@@ -622,7 +622,7 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
     the strong-attribution figure as an answer to whether content matching recovers attribution.
 
     WHICH PASS THIS RUN IS, AND WHY THE FIGURE CARRIES IT. Phase B is driven twice, and the two
-    passes are two experimental conditions, not two samples of one (docs/PHASES.md). Under the
+    passes are two experimental conditions, not two samples of one (docs/PROTOCOL.md). Under the
     sequential pass every window holds one call, so the grade distribution is a restatement of the
     driving regime; under the concurrent pass the same distribution is the measurement. Publishing
     them as one figure would average two conditions, so the pass label is emitted here and the
@@ -729,14 +729,14 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
             "CONTENT_MATCH_UNCONTESTED. This is the expected outcome of the sequential pass and "
             "is reported as such, never as a finding about content matching. The distribution "
             "that answers whether content matching discriminates comes from the concurrent pass; "
-            "see docs/PHASES.md, phase B")
+            "see docs/PROTOCOL.md, phase B")
     else:
         out["concurrent_driving_note"] = (
             f"flows were seen with up to {max_window} calls in flight, so the grades below are a "
             "measurement rather than a restatement of the driving regime. There is NO ground "
             "truth in this pass: nothing here says a strong attribution was correct. Attribution "
             "precision has a denominator only on the phase A bench, where we caused every "
-            "transfer, and it was measured there (docs/PHASES.md, sensor gate). What this pass "
+            "transfer, and it was measured there (docs/PROTOCOL.md, sensor gate). What this pass "
             "measures is how the grades are DISTRIBUTED over real traffic")
     out["exclusion_list"] = ({"loaded": True, **exclusions.citation()} if exclusions
                              else {"loaded": False,

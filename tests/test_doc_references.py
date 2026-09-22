@@ -1,6 +1,7 @@
 """Every docs/ path referenced from code or from another doc must exist.
 
-Written because the evidence-model commit cited docs/PHASES.md one commit before it existed. A
+Written because the evidence-model commit cited a governance document one commit before it
+existed. A
 dangling reference in a governance document is worse than a missing section: it reads as though
 the rule is written down somewhere, so nobody writes it.
 
@@ -63,14 +64,24 @@ def test_every_referenced_repo_path_exists():
         f"  {ref}  <- {', '.join(src)}" for ref, src in missing.items())
 
 
-def test_the_phase_and_gate_documents_exist_and_cross_reference():
-    """These two carry gate rule 8 between them, so a break here silently drops the rule."""
-    phases = (REPO / "docs" / "PHASES.md").read_text()
-    gate = (REPO / "docs" / "THE-GATE.md").read_text()
-    assert "docs/PHASES.md" in gate, "the gate must point at the phase definitions"
-    assert "rule 8" in phases.lower(), "phases must name the gate rule that enforces the order"
+def test_the_protocol_document_carries_the_gate_the_phases_and_the_stop_criteria():
+    """Gate rule 8 is a claim about the ORDER of two things, so both have to be in one place.
+
+    This used to check that two documents pointed at each other, which is the weaker property: two
+    documents that cross-reference correctly can still disagree, and they did. They are one file
+    now, so the check is that the file still contains every part the rule spans.
+    """
+    protocol = (REPO / "docs" / "PROTOCOL.md").read_text()
+    assert "rule 8" in protocol.lower(), "the protocol must name the rule that enforces the order"
     for phase in ("Phase A", "Phase B", "Phase C"):
-        assert phase in phases
+        assert phase in protocol, f"{phase} is missing from docs/PROTOCOL.md"
+    for part in ("## Part 1: the gate", "## Part 2: the three phases",
+                 "### Product gate", "### Stop gate"):
+        assert part in protocol, f"{part!r} is missing from docs/PROTOCOL.md"
+    # The ten gate rules, by their numbering, so a merge that dropped one fails here.
+    for rule in range(1, 11):
+        assert f"\n{rule}. **" in protocol or f"\n{rule:>2}. **" in protocol, (
+            f"gate rule {rule} is missing from docs/PROTOCOL.md")
 
 
 THRESHOLD_HEADING = "Thresholds, because an instrument has a specification."
@@ -84,9 +95,9 @@ def _sensor_gate_rows() -> dict[str, str]:
     match would read the results table and silently stop checking the commitments, which is the
     failure mode this whole file exists to prevent.
     """
-    phases = (REPO / "docs" / "PHASES.md").read_text()
-    assert phases.count(THRESHOLD_HEADING) == 1, "the threshold table's heading is not unique"
-    section = phases.split(THRESHOLD_HEADING)[1].split("### Product gate")[0]
+    protocol = (REPO / "docs" / "PROTOCOL.md").read_text()
+    assert protocol.count(THRESHOLD_HEADING) == 1, "the threshold table's heading is not unique"
+    section = protocol.split(THRESHOLD_HEADING)[1].split("### Product gate")[0]
     rows = {}
     for line in section.splitlines():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
@@ -122,8 +133,8 @@ def test_false_strong_attribution_tolerance_stays_at_zero():
 
 def test_the_product_gate_has_no_invented_threshold():
     """A bar with no baseline behind it kills good projects and passes bad ones equally well."""
-    phases = (REPO / "docs" / "PHASES.md").read_text()
-    product = phases.split("### Product gate")[1].split("### Stop gate")[0]
+    protocol = (REPO / "docs" / "PROTOCOL.md").read_text()
+    product = protocol.split("### Product gate")[1].split("### Stop gate")[0]
     assert "WITHOUT a threshold" in product or "without a threshold" in product
     # No percentage may appear in the product-gate section at all.
     assert not re.search(r"\d+\s*%", product), (

@@ -1,6 +1,6 @@
 # Calibrating the matcher before measuring volume
 
-**This blocks phase B.** Not as advice: as gate rule 9 (`docs/THE-GATE.md`).
+**This blocks phase B.** Not as advice: as gate rule 9 (`docs/PROTOCOL.md`).
 
 ## Why
 
@@ -120,7 +120,7 @@ information-disjoint calls produce a content match that implicates the wrong cal
 with no weighting. (At the k the sweep chose it is zero on this corpus; the reasoning below is what
 that k had to fix.) In the grade vocabulary that is not a false `CONTENT_UNIQUE`: an extra
 implicated candidate turns what should be `CONTENT_UNIQUE` into `CONTENT_AMBIGUOUS`, which is the
-safe direction and is exactly what prediction B1 in `docs/PHASES.md` says will dominate. It becomes
+safe direction and is exactly what prediction B1 in `docs/PROTOCOL.md` says will dominate. It becomes
 a false `CONTENT_UNIQUE` only when the true cause's own material does not reach the wire while a
 bystander's does, which the `search_query` family shows is not hypothetical: there, encoding
 suppresses the true match and any surviving bystander run would win uncontested.

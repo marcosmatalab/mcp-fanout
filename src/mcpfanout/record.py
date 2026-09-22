@@ -6,7 +6,7 @@ A run is three files under runs/<timestamp>/:
   - flows.jsonl   : one Flow per line. Every outbound connection observed, already redacted.
 
 Why JSONL for calls and flows: append-only, one independent record per line, greppable, and
-diffable between two runs to prove reproducibility (docs/THE-GATE.md rule 1). Why a separate
+diffable between two runs to prove reproducibility (docs/PROTOCOL.md rule 1). Why a separate
 JSON manifest: it is read whole, once, and carries the run-level provenance.
 
 Records are content-free by construction. A Flow holds counts, a host, a state and a list of
@@ -25,7 +25,7 @@ T = TypeVar("T")
 
 # WHICH PASS PRODUCED A RUN. A run is driven under exactly one of these conditions and the label
 # travels with it, because the conditions are not comparable and a figure from one must never be
-# read as a figure from the other (docs/PHASES.md, phase B: two passes).
+# read as a figure from the other (docs/PROTOCOL.md, phase B: two passes).
 #
 #   sequential  one call in flight per server. Numbers 1, 2, 3 and 4 are read from this pass.
 #               CONTENT_UNIQUE is unreachable here BY CONSTRUCTION, so the attribution grades of

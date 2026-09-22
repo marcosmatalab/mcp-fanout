@@ -393,7 +393,7 @@ def grade_attribution(*, traceparent_present: bool, argument_match: bool,
     So today, with sequential driving, this function emits no CONTENT_UNIQUE at all, and a test
     asserts that. The question the project exists to answer, whether content matching recovers
     attribution when time cannot, is answerable only in phase C with concurrent calls
-    (docs/PHASES.md). The code says so instead of pretending otherwise.
+    (docs/PROTOCOL.md). The code says so instead of pretending otherwise.
 
     ELIGIBILITY ONLY DOWNGRADES THE WEAKEST GRADE. It is checked after trace and content
     evidence, never before. A package-registry flow that did carry our traceparent, or a literal

@@ -22,7 +22,7 @@ Design decisions
   it is stated rather than hidden.
 
 - Fixed default salt for reproducibility. `make verify` and any published measurement must be
-  reproducible byte for byte (docs/THE-GATE.md rule 1). A fixed salt makes stored digests
+  reproducible byte for byte (docs/PROTOCOL.md rule 1). A fixed salt makes stored digests
   identical across runs. The NUMBERS are invariant to the salt regardless (they are counts and
   ratios over set intersections), so a secret salt in a real deployment changes what is stored
   but never what is reported.

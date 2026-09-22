@@ -11,7 +11,7 @@ The commands read the latest run under `runs/`. Build a run with `make run` (rea
 The figures divide into two blocks that answer different questions and must not be mixed in one
 claim.
 
-**Instrument block. Bench only (phase A, `docs/PHASES.md`), where ground truth is known because
+**Instrument block. Bench only (phase A, `docs/PROTOCOL.md`), where ground truth is known because
 we built the servers and the destinations.**
 
 | Metric | Question |
@@ -204,7 +204,7 @@ nothing had been told apart. It is replaced by the full distribution, which cann
 one flattering ratio.
 
 **Which pass it may be read from, and the output says which one produced it.** Phase B is driven
-twice (`docs/PHASES.md`). Under the SEQUENTIAL pass the number emits `sequential_driving: true`,
+twice (`docs/PROTOCOL.md`). Under the SEQUENTIAL pass the number emits `sequential_driving: true`,
 every flow was seen with at most one call in flight, `CONTENT_UNIQUE` is unreachable by
 construction, and the strong-attribution figure must not be read as an answer to whether content
 matching recovers attribution where time cannot: it is a restatement of the driving regime. Under
@@ -219,7 +219,7 @@ exists to prevent.
 
 **Reported per rung, not only pooled.** `grades_by_window_size` gives the grade counts keyed by how
 many calls were in flight. A pooled figure cannot show how discrimination behaves as concurrency
-grows, which is the shape the pre-registered prediction in `docs/PHASES.md` is about, and "strong
+grows, which is the shape the pre-registered prediction in `docs/PROTOCOL.md` is about, and "strong
 attribution was X%" is unreadable without the N it was measured at.
 
 **Published as a lower bound, and it may not be published without saying so.** Number 5 is published as a LOWER BOUND, not as an estimate, because the sensor's self-match recall on realistic argument material is below 1:
