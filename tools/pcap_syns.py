@@ -25,7 +25,11 @@ from pathlib import Path
 # Link layers we have actually seen out of the harness. Anything else is refused rather than
 # guessed: a wrong header offset silently yields zero SYNs, which reads as "nothing left the
 # machine" and is gate rule 10's failure mode in a parser.
-L2_LEN = {1: 14, 101: 4, 113: 16, 276: 20}   # EN10MB, RAW, LINUX_SLL, LINUX_SLL2
+# DLT_RAW is 0 bytes of link layer, not 4: the IP header starts at byte zero. The 4 belongs to
+# DLT_NULL, which prefixes a host-order address-family word. Correcting it rather than leaving it:
+# a wrong offset here does not error, it reads the IP header at the wrong place, matches nothing
+# and reports zero outbound connections, which is the one answer that reads as a finding.
+L2_LEN = {0: 4, 1: 14, 101: 0, 113: 16, 276: 20}   # NULL, EN10MB, RAW, LINUX_SLL, LINUX_SLL2
 
 
 def syn_counts(path: Path) -> dict:
@@ -68,9 +72,15 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
     args = ap.parse_args()
-    pcap = Path(args.run) / "backstop.pcap"
-    if not pcap.is_file():
-        raise SystemExit(f"{pcap} not found: the run was driven without the pcap backstop")
+    # Same resolution rule as the CLI: a bare name is a run under runs/, a path is a path. The
+    # two commands take the same RUN= from the Makefile and disagreeing about what it means is a
+    # difference nobody expects to have to know about.
+    candidates = [Path(args.run) / "backstop.pcap",
+                  Path("runs") / args.run / "backstop.pcap"]
+    pcap = next((p for p in candidates if p.is_file()), None)
+    if pcap is None:
+        raise SystemExit(f"no backstop.pcap in {' or '.join(str(c.parent) for c in candidates)}: "
+                         f"the run was driven without the pcap backstop")
     out = syn_counts(pcap)
     # A destination is an IP, never a hostname: gate rule 3 governs aggregate output, and this is
     # a diagnostic, but resolving here would put a hostname in something easy to paste anyway.

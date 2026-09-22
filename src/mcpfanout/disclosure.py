@@ -44,6 +44,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .classify import matches_suffix
+from .record import DEST_PACKAGE_INFRASTRUCTURE
 from .record import PHASES_NOT_CALL_CAUSED as _PHASES_NOT_CALL_CAUSED
 
 DECLARED_DESTINATIONS_PATH = "registry/declared-destinations.json"
@@ -121,6 +122,37 @@ class DeclaredDestinations:
         return cls(name=data.get("list_name", p.stem), version=data.get("version", ""),
                    sha256=hashlib.sha256(raw).hexdigest(), path=str(path), servers=servers)
 
+    @classmethod
+    def carried(cls, block: dict) -> "DeclaredDestinations":
+        """The declaration a REDACTED run carries, relabelled through the run's own map.
+
+        A redacted run's servers are indices and its destinations are class labels, so the
+        committed declaration, which is keyed by server id and phrased in terms of what a named
+        server's documentation says, cannot be applied to it. `tools/redact_run.py` relabels both
+        sides of the comparison through the same injective map and stores the result in the
+        manifest, so the check still RUNS rather than being replayed: relabelling both sides of a
+        set comparison cannot change its answer.
+
+        What it is not is a fresh reading of anybody's documentation, and `path` says so, because
+        a citation that pointed at registry/declared-destinations.json would claim a check against
+        today's file that was in fact made against the file named by the digest below.
+        """
+        servers = {
+            sid: ServerDeclaration(
+                server_id=sid,
+                call_supplied=bool(entry.get("call_supplied", False)),
+                hosts=tuple(entry.get("hosts", ())),
+                known_undeclared=dict(entry.get("known_undeclared", {})),
+                basis=entry.get("basis", ""),
+                launch_tool=entry.get("launch_tool", ""),
+            )
+            for sid, entry in block.get("servers", {}).items()
+        }
+        return cls(name=block.get("list_name", "declared-destinations"),
+                   version=block.get("version", ""), sha256=block.get("sha256", ""),
+                   path=f"carried by the run, relabelled from {block.get('path', '')}",
+                   servers=servers)
+
     def citation(self) -> dict:
         """Identifiers only, so the citation can travel even where hostnames may not."""
         p = Path(self.path)
@@ -157,8 +189,14 @@ def check(flows, declared: DeclaredDestinations | None, package_infrastructure=N
         sid = getattr(f, "server_id", "") or UNKNOWN_SERVER
         if getattr(f, "phase", "") in _PHASES_NOT_CALL_CAUSED:
             decl = declared.servers.get(sid) if declared else None
-            is_package_host = bool(package_infrastructure
-                                   and package_infrastructure.matches(host))
+            # Same two paths as aggregate._on_package_infrastructure: a captured run is
+            # classified here from its hostname, a redacted one carries the answer because its
+            # hostname is gone. Asking the list about a class label would answer "not package
+            # infrastructure" for every one of them and send ten servers to review.
+            dest_class = getattr(f, "dest_class", "") or ""
+            is_package_host = (dest_class == DEST_PACKAGE_INFRASTRUCTURE if dest_class
+                               else bool(package_infrastructure
+                                         and package_infrastructure.matches(host)))
             launched_by_a_launcher = bool(decl and decl.launch_tool in PACKAGE_LAUNCHERS)
             if is_package_host and launched_by_a_launcher:
                 # Branch one of the decision procedure: the launcher's traffic. Recorded apart, no

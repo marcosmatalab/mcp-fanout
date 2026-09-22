@@ -50,6 +50,52 @@ def _call_caused_possible(flow: Flow) -> bool:
     return flow.phase not in _record.PHASES_NOT_CALL_CAUSED
 
 
+def _on_package_infrastructure(flow: Flow, exclusions: ExclusionList | None) -> bool:
+    """Is this flow's destination on the declared package-infrastructure list?
+
+    Two paths, and the RECORD decides which, not a flag somebody passes in:
+
+    - A captured run carries the hostname, so the declared list is applied to it here, at
+      aggregation time. That is what lets a newer list re-answer an old run, which is the same
+      argument that keeps the attribution grade out of the record.
+    - A REDACTED run (tools/redact_run.py) has no hostname to apply a list to: the hostname is
+      what makes a run unpublishable, so it is gone. The answer was computed before it was
+      destroyed and carried in `dest_class`, and the manifest records the digest of the list it
+      was computed against. Cost, stated: that answer is frozen, and a reader who wants it
+      re-derived needs the capture, not the published run. `exclusion_citation` reports the
+      carried digest beside the current one so a divergence is visible rather than silent.
+
+    A flow with no class and no list is not on the list, which is the same answer both paths give
+    when nothing declares anything.
+    """
+    if flow.dest_class:
+        return flow.dest_class == _record.DEST_PACKAGE_INFRASTRUCTURE
+    return exclusions is not None and exclusions.matches(flow.dest_host)
+
+
+def _classification_is_carried(run: Run) -> bool:
+    """True when the run's destinations were classified before its hostnames were redacted."""
+    return any(f.dest_class for f in run.flows)
+
+
+def _carried_classification_note(run: Run, exclusions: ExclusionList | None) -> dict:
+    """What a reader needs to check a carried classification, including when it has gone stale."""
+    carried = (run.manifest.redaction or {}).get("package_infrastructure_sha256", "")
+    out = {
+        "classification": "carried by the record: this run is redacted and has no hostnames to "
+                          "apply the list to (tools/redact_run.py)",
+        "computed_against_sha256": carried or "unrecorded",
+    }
+    if exclusions is not None and carried:
+        out["list_digest_still_matches"] = (carried == exclusions.sha256)
+        if carried != exclusions.sha256:
+            out["divergence"] = (
+                "the committed list has changed since this run was redacted, so the excluded "
+                "figure describes the list as it was and not as it is. Re-derive it from the "
+                "capture, or re-redact the run")
+    return out
+
+
 def _launcher_flows(run: Run) -> list[Flow]:
     return [f for f in run.flows if not _call_caused_possible(f)]
 
@@ -168,11 +214,14 @@ def number_1(run: Run, exclusions: ExclusionList | None = None) -> dict:
         }
         return out
 
-    kept = [len([f for f in fs if not exclusions.matches(f.dest_host)]) for fs in grouped.values()]
-    excluded_total = sum(1 for f in run.flows if exclusions.matches(f.dest_host))
+    kept = [len([f for f in fs if not _on_package_infrastructure(f, exclusions)])
+            for fs in grouped.values()]
+    excluded_total = sum(1 for f in run.flows if _on_package_infrastructure(f, exclusions))
     out["connections_excluding_package_infrastructure"] = _dist(kept + zeros)
     out["package_infrastructure_connections"] = excluded_total
     out["exclusion_list"] = {"loaded": True, **exclusions.citation()}
+    if _classification_is_carried(run):
+        out["exclusion_list"].update(_carried_classification_note(run, exclusions))
     return out
 
 
@@ -482,7 +531,7 @@ def _denominators(run: Run, strong: int, total: int, constant_paths,
     # arguments, so counting them measures how noisy a package manager is.
     attributable = [f for f in run.flows
                     if _call_caused_possible(f)
-                    and not (exclusions is not None and exclusions.matches(f.dest_host))]
+                    and not _on_package_infrastructure(f, exclusions)]
     out = {
         "attributable_denominator": len(attributable),
         "attributable_fraction": (round(strong / len(attributable), 4) if attributable else None),
@@ -589,7 +638,7 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
     reasons: dict[str, int] = {}
     by_channel = {_match.CHANNEL_TARGET: 0, _match.CHANNEL_BODY: 0, _match.CHANNEL_BOTH: 0}
     for f in run.flows:
-        eligible = not (exclusions is not None and exclusions.matches(f.dest_host))
+        eligible = not _on_package_infrastructure(f, exclusions)
         grade, reason = _match.grade_attribution(
             traceparent_present=f.our_traceparent_present,
             argument_match=_attributing_match(f),
@@ -614,7 +663,7 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
     # inputs, so the two views cannot disagree.
     by_window: dict[str, dict[str, int]] = {}
     for f in run.flows:
-        eligible = not (exclusions is not None and exclusions.matches(f.dest_host))
+        eligible = not _on_package_infrastructure(f, exclusions)
         grade, _ = _match.grade_attribution(
             traceparent_present=f.our_traceparent_present,
             argument_match=_attributing_match(f),
@@ -699,7 +748,20 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
 def number_6(run: Run, registry: Registry | None = None) -> dict:
     """Fraction of touched third parties that are themselves self-hostable. Sizes the recursion."""
     hosts = {f.dest_host for f in run.flows if f.dest_host}
-    frac, counts = selfhostable_fraction(hosts, registry)
+    if _classification_is_carried(run):
+        # A redacted run has label-shaped hostnames, so classifying them by suffix would put every
+        # node in the default bucket and report a fraction about the labels. The category was
+        # computed per flow at capture time and travels in the record, so it is read back here,
+        # per distinct destination, and the output says that it was.
+        by_host = {f.dest_host: f.node_category for f in run.flows if f.dest_host}
+        counts = {c: 0 for c in (_classify.LOCAL, _classify.SELF_HOSTABLE, _classify.REMOTE_LEAF)}
+        for category in by_host.values():
+            counts[category] = counts.get(category, 0) + 1
+        total = sum(counts.values())
+        recursable = counts.get(_classify.LOCAL, 0) + counts.get(_classify.SELF_HOSTABLE, 0)
+        frac = (recursable / total) if total else 0.0
+    else:
+        frac, counts = selfhostable_fraction(hosts, registry)
     obs = observability_by_server(run)
     out = {"number": 6, "name": "selfhostable_third_parties",
            "selfhostable_fraction": round(frac, 4),
@@ -707,6 +769,13 @@ def number_6(run: Run, registry: Registry | None = None) -> dict:
            "category_counts": counts,
            "observability": obs,
            "command": "make n6"}
+    if _classification_is_carried(run):
+        out["node_categories"] = (
+            "read back from the record. This run is redacted, so its destinations carry a class "
+            "label instead of a hostname and nothing can be re-classified from it "
+            "(tools/redact_run.py). The categories were computed at capture time, against the "
+            "suffix registry as it stood then, and the manifest's redaction block records the "
+            "run they came from")
     if obs["egress_unobserved"]:
         # The node set is the set of hosts the PROXY saw. A server the proxy could not see
         # contributes none of its destinations, so this fraction is computed over a truncated

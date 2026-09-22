@@ -42,10 +42,14 @@ def _resolve_run(run_arg: str, runs_root: Path = Path("runs")) -> Path:
     get wrong, while the manifest is what every other command reads the pass from.
     """
     if run_arg != "latest" and not run_arg.startswith("latest-"):
-        p = Path(run_arg)
-        if not (p / "manifest.json").exists():
-            sys.exit(f"error: {p} is not a run directory (no manifest.json)")
-        return p
+        # A bare name is resolved under runs/ as well as taken as a path. The README and the
+        # Makefile pass RUN=example-concurrent, which is how a reader refers to a run, and
+        # requiring runs/ in front of it turns the first command in the Quickstart into a typo.
+        for p in (Path(run_arg), runs_root / run_arg):
+            if (p / "manifest.json").exists():
+                return p
+        sys.exit(f"error: {run_arg} is not a run directory (no manifest.json in {run_arg} or in "
+                 f"{runs_root / run_arg})")
     if not runs_root.exists():
         sys.exit("error: no runs/ directory yet. Run `make selftest` or `make run` first.")
     candidates = [d for d in runs_root.iterdir() if (d / "manifest.json").exists()]
@@ -335,13 +339,29 @@ def _cmd_disclosure_check(args: argparse.Namespace) -> int:
     from .disclosure import DECLARED_DESTINATIONS_PATH, DeclaredDestinations, VERDICT_CLEAR, check
     run_dir = _resolve_run(args.run)
     run = Run.load(run_dir)
-    declared = DeclaredDestinations.load(args.declared or DECLARED_DESTINATIONS_PATH)
+    carried = (run.manifest.redaction or {}).get("declared_destinations")
+    if carried and not args.declared:
+        # A redacted run carries its own relabelled copy of the declaration, because its server
+        # ids are indices and its destinations are class labels: the committed file cannot be
+        # applied to it at all. See DeclaredDestinations.carried for why this is still a check.
+        declared = DeclaredDestinations.carried(carried)
+    else:
+        declared = DeclaredDestinations.load(args.declared or DECLARED_DESTINATIONS_PATH)
     # The package-infrastructure list is the declared, versioned, cited answer to "is this host a
     # package registry". Branch one of gate rule 7's procedure needs it, and inferring it from a
     # hostname instead would be the plausible guess this repository keeps finding in its history.
     report = check(run.flows, declared, ExclusionList.load(PACKAGE_INFRASTRUCTURE_PATH))
     report["run_id"] = run.manifest.run_id
     report["pass"] = run.manifest.pass_name or "unlabelled"
+    if carried:
+        report["_redacted_run"] = (
+            "this run is redacted: both the observed destinations and the declaration are class "
+            "labels, relabelled from "
+            f"{carried.get('path', '')}@{carried.get('sha256', '')[:12]} by tools/redact_run.py. "
+            "The comparison is real and its answer is the answer on the capture, because the "
+            "relabelling is injective. What it cannot do is evaluate a destination nobody "
+            "declared against documentation, which is gate rule 7's second half and needs the "
+            "capture")
     report["command"] = f"python -m mcpfanout.cli disclosure-check --run runs/{run.manifest.run_id}"
     # Printed BEFORE it is saved, and the save is allowed to fail. The verdict is the product of
     # this command; the file is a convenience, and a run directory written by the container is

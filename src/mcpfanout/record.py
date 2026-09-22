@@ -74,6 +74,21 @@ PHASES_LIFECYCLE = (PHASE_LAUNCHER, PHASE_HANDSHAKE, PHASE_DRIVING, PHASE_DRAINE
 # declared package-infrastructure list rather than by guessing from the phase.
 PHASES_NOT_CALL_CAUSED = (PHASE_LAUNCHER, PHASE_HANDSHAKE)
 
+# WHAT KIND OF DESTINATION A FLOW REACHED. Empty on a captured run, where the hostname is in
+# the record and every list in registry/ can be applied to it at aggregation time, and re-applied
+# when a list changes. Set only on a REDACTED run (tools/redact_run.py), where the hostname has
+# been replaced by a class label and there is nothing left to apply a host list to.
+#
+# The trade-off, stated because it is a real cost: on a redacted run the classification is frozen
+# at redaction time and a newer registry cannot re-answer it. What keeps that auditable is the
+# manifest's `redaction` block, which records the digest of the list the classification was
+# computed against, and the aggregate, which reports whether that digest still matches the file in
+# the tree instead of assuming it does.
+DEST_PACKAGE_INFRASTRUCTURE = "package_infrastructure"
+DEST_THIRD_PARTY = "third_party"
+DEST_LOCAL = "local"
+DEST_CLASSES = (DEST_PACKAGE_INFRASTRUCTURE, DEST_THIRD_PARTY, DEST_LOCAL)
+
 PASS_SEQUENTIAL = "sequential"
 PASS_CONCURRENT = "concurrent"
 PASS_BENCH = "bench"
@@ -199,6 +214,11 @@ class Flow:
     # "unrecorded" rather than guessed: "we did not record the phase" and "the phase was driving"
     # are different claims and only one of them licenses attributing the flow to a call.
     phase: str = ""
+    # The destination's class (DEST_CLASSES), or "" on a captured run. See the vocabulary above:
+    # this exists so that a run whose hostnames were redacted still answers the two questions a
+    # hostname is used for, which list the destination is on and what kind of node it is, without
+    # carrying the hostname that makes a run unpublishable.
+    dest_class: str = ""
 
 
 @dataclass
@@ -235,6 +255,12 @@ class RunManifest:
     # blind spot (docs/THREATS.md threat 19). Empty list means the run predates this field, and
     # aggregate.observability_by_server says so rather than guessing.
     servers_expecting_egress: list = field(default_factory=list)
+    # Present only on a run produced by tools/redact_run.py, and empty on a captured one. It
+    # records what the redaction replaced, what it kept, and the digest of every registry list
+    # whose answer had to be computed before the hostnames were destroyed. A redacted run is a
+    # derived artifact and says so in its own manifest, so no reader has to infer it from the
+    # absence of hostnames.
+    redaction: dict = field(default_factory=dict)
 
 
 def write_jsonl(path: str | Path, rows: Iterable) -> None:
