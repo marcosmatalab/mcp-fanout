@@ -2,7 +2,7 @@
 
 Run inside the harness container by run.sh, after mitmdump is up.
 
-TWO PASSES, AND WHY THEY CANNOT BE ONE RUN (docs/PHASES.md, phase B).
+TWO PASSES, AND WHY THEY CANNOT BE ONE RUN (docs/PROTOCOL.md, phase B).
 
   --mode sequential   one call in flight per server, from `corpus_ref`. This is what numbers 1,
                       2, 3 and 4 are read from: fan-out, distinct domains, traceparent
@@ -260,7 +260,7 @@ def main() -> int:
     ap.add_argument("--salt", default="")
     ap.add_argument("--mode", choices=[PASS_SEQUENTIAL, PASS_CONCURRENT], default=PASS_SEQUENTIAL,
                     help="which phase B pass to drive. See the module docstring and "
-                         "docs/PHASES.md: the two are separate runs and separate figures.")
+                         "docs/PROTOCOL.md: the two are separate runs and separate figures.")
     ap.add_argument("--only", action="append", default=[], metavar="ID",
                     help="drive only these server ids (repeatable). Default: all of them.")
     ap.add_argument("--warm", action="store_true",
@@ -288,7 +288,7 @@ def main() -> int:
         if prior and prior != args.mode:
             raise SystemExit(
                 f"[drive_all] refusing to drive the {args.mode} pass into {run_dir}: it already "
-                f"holds the {prior} pass. One pass per run (docs/PHASES.md, phase B). Point "
+                f"holds the {prior} pass. One pass per run (docs/PROTOCOL.md, phase B). Point "
                 f"--run-dir at a new directory.")
 
     # Every server process inherits the proxy so its HTTP(S) egress passes through mitmdump.
@@ -387,7 +387,7 @@ def main() -> int:
         credential_presence=credential_presence(selected),
         servers_expecting_egress=[s["id"] for s in selected if s.get("expects_egress")],
         pass_name=args.mode,
-        notes=(f"Capture run, {args.mode} pass. See docs/THE-GATE.md before publishing any number."
+        notes=(f"Capture run, {args.mode} pass. See docs/PROTOCOL.md before publishing any number."
                + (" Numbers 1 to 4 are read from this pass; its attribution grades are "
                   "CONTENT_MATCH_UNCONTESTED by construction." if args.mode == PASS_SEQUENTIAL else
                   f" Waves at N in {list(CONCURRENCY_LADDER)} capped per server; number 5 is read "

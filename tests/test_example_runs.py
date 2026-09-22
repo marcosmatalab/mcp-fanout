@@ -20,6 +20,7 @@ would also ignore a new field that changed a number.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -52,9 +53,24 @@ ADDED_BY_REDACTION = {
 }
 
 
+# A note whose text cites a repository document is prose about the repository, not a measurement.
+# Three governance documents were merged into docs/PROTOCOL.md, so the aggregator's notes name a
+# file the figures published before the merge could not name. Document names are therefore
+# normalised inside these strings and ONLY inside them, and any other difference in one still
+# fails: the point of this file is that the numbers reproduce, and a note is not a number.
+DOC_PATH = re.compile(r"docs/[A-Z0-9-]+\.md")
+
+
+def _normalise_doc_paths(value: str) -> str:
+    return DOC_PATH.sub("docs/<a document>", value)
+
+
 def _differences(redacted, published, path=""):
     """Every point where two aggregates differ, as (kind, path) pairs."""
     out = []
+    if isinstance(redacted, str) and isinstance(published, str):
+        if _normalise_doc_paths(redacted) == _normalise_doc_paths(published):
+            return out
     if isinstance(redacted, dict) and isinstance(published, dict):
         for key in sorted(set(redacted) | set(published)):
             here = f"{path}/{key}"

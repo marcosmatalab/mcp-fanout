@@ -1,6 +1,6 @@
 """Gate rule 10 for the structural matcher: does it go red when the instrument is ABSENT.
 
-The three instances in docs/THE-GATE.md rule 10 all passed their suites while doing nothing. The
+The three instances in docs/PROTOCOL.md rule 10 all passed their suites while doing nothing. The
 structural path has the same shape and one extra trap: aggregate._attributing_match falls back to
 the k-gram signal for flows with no structural fields, which is correct for a pre-F2 run and would
 silently launder a post-F2 run whose driver stopped publishing token_digests.

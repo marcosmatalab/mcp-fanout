@@ -11,7 +11,7 @@ Subcommands:
              output: it names servers and hosts, so it is written into the run and never published.
   selftest   Build a synthetic run and compute its numbers, with no Docker and no network.
   run        Drive the pinned servers under capture and write a real run (delegates to harness/).
-             --pass picks which phase B pass to drive; the two are separate runs (docs/PHASES.md).
+             --pass picks which phase B pass to drive; the two are separate runs (docs/PROTOCOL.md).
 
 Aggregate and selftest are pure standard library. `run` needs the 'capture' extra and Docker;
 it is intentionally a thin delegator so the heavy, environment-specific orchestration lives in
@@ -506,7 +506,7 @@ def _cmd_figures(args: argparse.Namespace) -> int:
                            ConstantPathList.load(CONSTANT_PATHS_PATH))
     # The pass sits in provenance because it is a property of how the run was driven, and it is
     # NOT optional: a grade distribution whose driving condition is unknown cannot be read at all
-    # (docs/PHASES.md, phase B: two passes, published separately and labelled by pass).
+    # (docs/PROTOCOL.md, phase B: two passes, published separately and labelled by pass).
     payload["provenance"]["pass"] = computed["pass"]
     # Driving alongside the numbers, never inside them: it is the denominator (how many calls
     # errored, at which wave size), and a reader who has the six without it cannot tell a server
@@ -705,7 +705,7 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--pass", dest="pass_name", default="sequential",
                    choices=["sequential", "concurrent"],
                    help="which phase B pass to drive (default: sequential). The two are separate "
-                        "runs and separate published figures; see docs/PHASES.md, phase B.")
+                        "runs and separate published figures; see docs/PROTOCOL.md, phase B.")
     r.add_argument("--bench", action="store_true",
                    help="phase A: drive concurrent waves against our own bench server and sink")
     r.add_argument("--control", action="store_true",

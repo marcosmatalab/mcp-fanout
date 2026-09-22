@@ -74,7 +74,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 # Phase A bench destinations. One hostname per call in a bench run, all resolving to loopback,
 # so each call has a DISTINCT destination and the comparator can join a truth-ledger row to an
 # observed flow exactly. They are separate names rather than one name on many ports because the
-# capture records the destination host and not the port. See bench/server.py and docs/PHASES.md.
+# capture records the destination host and not the port. See bench/server.py and docs/PROTOCOL.md.
 RUN python3 -c "print('\n'.join('127.0.0.1 sink%03d.bench.invalid' % i for i in range(128)))" \
     >> /etc/hosts.bench \
  && cat /etc/hosts.bench

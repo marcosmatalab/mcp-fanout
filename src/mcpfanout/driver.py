@@ -3,7 +3,7 @@
 This is the "agent" side, minus the LLM. We do not need a model to make an MCP server call a
 third party: we speak the protocol directly and send a fixed, deterministic corpus of tool
 calls. Determinism here is a requirement, not a convenience: a reproducible measurement cannot
-depend on what a model decided to do this time (docs/THE-GATE.md rule 1).
+depend on what a model decided to do this time (docs/PROTOCOL.md rule 1).
 
 Protocol revisions. Three separate claims, three separate sources; conflating them is how the
 constant below came to disagree with the wire for a whole release.

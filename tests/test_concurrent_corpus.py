@@ -13,7 +13,7 @@ The second half enforces the REALISM RULE, which is the exact inverse of the ben
 because a bench whose fragments collide measures its own collisions. This corpus fails if the
 arguments DO NOT collide, because a corpus whose arguments are artificially distinct replicates the
 bench on a real server and measures something already known (`corpus/concurrent/README.md`,
-`docs/PHASES.md` phase B, prediction B1).
+`docs/PROTOCOL.md` phase B, prediction B1).
 
 "Realistic" cannot be asserted directly. What can be asserted is its mechanical consequence: real
 arguments sent by one agent in one wave share structure, so at least one pair of calls per server

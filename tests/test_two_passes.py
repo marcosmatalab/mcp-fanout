@@ -1,7 +1,7 @@
 """The two phase B passes: labelled, never merged, and reported under the condition that produced them.
 
 Phase B is driven twice, sequentially and concurrently, and the two results are two experimental
-conditions rather than two samples of one (docs/PHASES.md, phase B). Everything here protects that
+conditions rather than two samples of one (docs/PROTOCOL.md, phase B). Everything here protects that
 separation, because the way it fails is silent: one distribution over two conditions, with a label
 naming one of them, is unreadable afterwards and looks fine.
 

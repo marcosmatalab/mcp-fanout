@@ -1,5 +1,5 @@
 {
-  "_what_this_is": "The phase A bench plan. A WAVE is a set of tool calls driven CONCURRENTLY, which is the only configuration in which CONTENT_UNIQUE can exist and therefore the only one in which the project's thesis is measurable. Read docs/PHASES.md first.",
+  "_what_this_is": "The phase A bench plan. A WAVE is a set of tool calls driven CONCURRENTLY, which is the only configuration in which CONTENT_UNIQUE can exist and therefore the only one in which the project's thesis is measurable. Read docs/PROTOCOL.md first.",
   "_why_the_weighting": "The four discrimination cells below are the experiment. The sensor cases after them check that the instrument does not lose or miscount traffic, which is necessary but is not the thesis. Built with equal weight, the thing that matters would get one eleventh of the effort.",
   "_fragments": "Each fragment is 40 bytes of unique, greppable synthetic material, well over k=16 so a literal run is detectable and not coincidental. Nothing here is a real secret (docs/DOCTRINE.md).",
   "_slots": "slot is an INTEGER, never a hostname. The bench server maps it to sinkNN.bench.invalid itself, so the destination name cannot enter the matchable argument material and manufacture a content match out of the destination.",

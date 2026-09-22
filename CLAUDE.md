@@ -52,7 +52,7 @@ Full text in `docs/DOCTRINE.md`.
 
 Every instrument needs a test that goes red when the instrument is ABSENT, not only when it is
 wrong. A wrong number gets investigated; a green gets published. This repo has produced that
-failure seven times, listed in `docs/THE-GATE.md`: an addon that did not load and finished green
+failure seven times, listed in `docs/PROTOCOL.md`: an addon that did not load and finished green
 with zero flows, a k constant that diverged and silently stopped matching, a selftest that
 serialised the structural fields without ever populating one, and, past code, a README and four
 calibration figures that went on stating what the measurements no longer said. Asserting a field is
@@ -60,7 +60,7 @@ PRESENT is not enough, every one of them had its fields. Asserting the SHAPE of 
 enough either. Assert the value only a working instrument could compute, through its real entry
 point, and for a committed artifact that means regenerating it and comparing.
 The rule applies to itself: a detector must catch a planted instance in the same run before its
-clean report counts. Full text in `docs/THE-GATE.md` rule 10.
+clean report counts. Full text in `docs/PROTOCOL.md` rule 10.
 
 ## Rule 6: no number without a command
 
@@ -69,7 +69,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 575
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 603
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only.** `shingle`, `redact`, `match`, `classify`,
@@ -100,7 +100,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## The gate
 
-Before any number from a run is reported, `docs/THE-GATE.md` must hold: reproducible, a command
+Before any number from a run is reported, `docs/PROTOCOL.md` must hold: reproducible, a command
 behind every number, no names in aggregate output, no content stored, container only and no real
 credentials, threats to validity written, responsible disclosure if a server egresses somewhere
 its documentation does not declare, the instrument passing before the phenomenon is measured, and
@@ -148,7 +148,7 @@ tests/           the core test suite plus a mock MCP server
 
 ```bash
 source .venv/bin/activate
-make verify      # 575 tests, no Docker, no network
+make verify      # 603 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make numbers     # the six numbers from the latest run
 make figures     # commit the latest run's normalized aggregate to docs/figures/
@@ -172,7 +172,7 @@ make bench-verify    # the instrument block from a bench run
 4; `corpus/concurrent/` in waves for number 5. Driven sequentially, strong attribution is 0.0 by
 construction, so a single sequential phase B run does not measure the thesis, it makes it
 unobservable. Driven concurrently, a per-call fan-out figure is a figure about our own wave size.
-`docs/PHASES.md` carries the full argument and the pre-registered predictions, which are frozen by
+`docs/PROTOCOL.md` carries the full argument and the pre-registered predictions, which are frozen by
 digest in `tests/test_phase_b_prediction.py`: editing them after a result fails the suite.
 
 ## Measured facts already established (do not rediscover)
@@ -288,16 +288,16 @@ of `fetch` has run end to end.
 Phase A is built and it passes its pre-registered sensor gate: capture recall 1.0, zero false
 strong attributions over 33 strong claims, false provenance 0.0, normalized result reproducible
 across two runs. Content matching discriminates between concurrent calls at N up to 10. Measured
-figures and the cells in `docs/PHASES.md`; committed artifact under `docs/figures/`.
+figures and the cells in `docs/PROTOCOL.md`; committed artifact under `docs/figures/`.
 
 **The sequential phase B pass is done, published and clear of gate rule 7.** Run
 `20260919T115452Z-sequential`, artifact `docs/figures/20260919T115452Z-sequential.json`, cells in
-`docs/PHASES.md`, "Observed, sequential pass". Its two undeclared destinations were attributed to
+`docs/PROTOCOL.md`, "Observed, sequential pass". Its two undeclared destinations were attributed to
 the browser one server embeds, by a control run rather than by reading a hostname (`make control`,
 threat 15), carried nothing on either channel, and were disclosed (`docs/DISCLOSURE-LOG.md`).
 
 1. **The concurrent phase B pass.** `make run-concurrent`. It is the only pass number 5 may be read
-   from, and the pre-registered predictions B1 and B2 in `docs/PHASES.md` are frozen by digest:
+   from, and the pre-registered predictions B1 and B2 in `docs/PROTOCOL.md` are frozen by digest:
    fill the "Observed, concurrent pass" section from the committed artifact and do NOT edit the
    prediction block when you do.
 2. **Then** phase C, attacking attribution adversarially: the same fragment across concurrent

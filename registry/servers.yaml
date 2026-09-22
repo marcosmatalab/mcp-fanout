@@ -27,7 +27,7 @@
 # docs/THREATS.md, threat 8.
 #
 # TWO PASSES, TWO CORPORA. Phase B is driven twice and the two results are published separately
-# (docs/PHASES.md, phase B). `corpus_ref` is the SEQUENTIAL corpus: one call at a time, which is
+# (docs/PROTOCOL.md, phase B). `corpus_ref` is the SEQUENTIAL corpus: one call at a time, which is
 # what numbers 1, 2, 3 and 4 are read from. `concurrent_corpus_ref` is the CONCURRENT corpus,
 # driven as waves of N calls in flight at once, which is the only condition in which the
 # attribution grades of number 5 can be anything but CONTENT_MATCH_UNCONTESTED.

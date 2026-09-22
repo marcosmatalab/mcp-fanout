@@ -1,6 +1,6 @@
 # Disclosure log
 
-Gate rule 7 (`docs/THE-GATE.md`) says that a destination a server's documentation does not declare
+Gate rule 7 (`docs/PROTOCOL.md`) says that a destination a server's documentation does not declare
 is a stop: nothing that locates that server is published until the finding has been raised with
 whoever can act on it. This file is the record of those raisings, with dates, so "we told them" is
 a fact with a timestamp rather than a recollection.

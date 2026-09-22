@@ -124,7 +124,7 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
         # segmentation rather than collapsing to a single bucket and proving nothing about it.
         server_protocol_versions={"s1": "2025-11-25", "s2": "2024-11-05"},
         # Labelled, like every other run. "selftest" is its own pass value precisely so a synthetic
-        # figure can never be mistaken for either phase B condition (docs/PHASES.md).
+        # figure can never be mistaken for either phase B condition (docs/PROTOCOL.md).
         pass_name=PASS_SELFTEST,
         notes="Synthetic selftest run. Not a measurement.",
     )

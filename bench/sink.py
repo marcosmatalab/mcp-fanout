@@ -12,7 +12,7 @@ and RECALL through the proxy, and both are observable on an HTTP request line an
 bench therefore does NOT cover is a TLS-specific capture defect: a failure that only appears when
 mitmproxy terminates a real handshake would pass the sensor gate here and show up in phase B. The
 alternative, serving TLS from the sink with a cert mitmproxy would then have to distrust upstream,
-buys a narrower gap than it costs in moving parts. Recorded in docs/PHASES.md as a bench limit.
+buys a narrower gap than it costs in moving parts. Recorded in docs/PROTOCOL.md as a bench limit.
 
 One listening port serves every sink hostname. The hostnames (sink00.bench.invalid and up, mapped
 to loopback in the image) exist to give each concurrent call a DISTINCT destination, which is the

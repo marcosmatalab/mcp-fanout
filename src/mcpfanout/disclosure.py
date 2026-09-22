@@ -1,6 +1,6 @@
 """Gate rule 7 as a command: which destinations of a run nobody declared.
 
-Gate rule 7 (docs/THE-GATE.md) says that if a server egresses to a destination its documentation
+Gate rule 7 (docs/PROTOCOL.md) says that if a server egresses to a destination its documentation
 does not declare, we stop and flag it before publishing anything. Until now that rule was a
 sentence, and the way it would be honoured was: read a list of hostnames after a run and
 remember which ones are supposed to be there. That works for one server and fails for ten,

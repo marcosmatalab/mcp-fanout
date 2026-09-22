@@ -101,7 +101,7 @@ gate rule 6. Each names the threat and what it does to the numbers.
    denominator for how much was missed.
 
 7. **Each phase B pass can only answer half the question, and neither half may be quoted as the
-   other.** Phase B is driven twice (`docs/PHASES.md`), and the split exists because a single pass
+   other.** Phase B is driven twice (`docs/PROTOCOL.md`), and the split exists because a single pass
    is wrong whichever way it is driven.
 
    Driven **sequentially**, exactly one call is in flight per server. That is what makes numbers 1
@@ -231,7 +231,7 @@ gate rule 6. Each names the threat and what it does to the numbers.
     notice they govern different objects: the AGGREGATE is counts and category breakdowns with no
     host, no server id and no payload digest, while the RUN holds per-flow records and salted
     digests tied to specific servers. Committing the first satisfies rule 2; not committing the
-    second satisfies rules 3 and 4. See `docs/THE-GATE.md`, rules 1 and 4.
+    second satisfies rules 3 and 4. See `docs/PROTOCOL.md`, rules 1 and 4.
 
 11. **The canary is only detectable where the client does not re-encode it.** Numbers 4 and 5
     match the request target and the body byte-literally (`docs/THE-SIX-NUMBERS.md`, "The two
@@ -303,7 +303,7 @@ gate rule 6. Each names the threat and what it does to the numbers.
     not claim a cause it did not have" is an instrument property, measured on the bench and gated by
     rule 8. "How the grades are distributed over real traffic" is a phenomenon property, and it is
     what phase B measures. The reading to refuse is the one that treats a phase B strong-attribution
-    count as a verified one. The pre-registered prediction in `docs/PHASES.md` names this asymmetry
+    count as a verified one. The pre-registered prediction in `docs/PROTOCOL.md` names this asymmetry
     explicitly, because it is exactly the half of the prediction that the pass cannot falsify.
 
 

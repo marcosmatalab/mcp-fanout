@@ -15,7 +15,7 @@ The instrument is measured before the phenomenon: a controlled bench of our own 
 then the real pinned servers (phase B), then an attack on our own attribution with concurrent
 calls (phase C). Phase A blocks phase B, as gate rule 8. Recall and precision exist only on the
 bench, because only there is there a denominator of transfers we caused and a known cause to check
-a claim against. Full definitions, cases and pre-registered gates: `docs/PHASES.md`.
+a claim against. Full definitions, cases and pre-registered gates: `docs/PROTOCOL.md`.
 
 ## Why measure before building
 
@@ -210,4 +210,4 @@ runs in Docker on one machine; **0 EUR** of paid APIs, the only credential being
 GitHub token; **138 seconds** of actual driving across 21 capture runs; **two days** of wall
 clock. The money cost is genuinely zero and the real cost is attention.
 
-It touches nothing outside a container and starts no server against real credentials. The stop criteria (docs/STOP-CRITERIA.md) say when to stop spending.
+It touches nothing outside a container and starts no server against real credentials. The stop criteria (docs/PROTOCOL.md) say when to stop spending.

@@ -3,7 +3,7 @@
 These three exist ONLY for the phase A bench and cannot be computed anywhere else. Recall needs a
 denominator of transfers we caused on purpose; precision needs a known cause to check a claim
 against. A third-party server supplies neither, so a recall figure quoted from a phase B run
-would be a number with no denominator (docs/PHASES.md, gate rule 8).
+would be a number with no denominator (docs/PROTOCOL.md, gate rule 8).
 
 THREE FILES, THREE AUTHORS, and that is what makes the comparison mean anything:
 
