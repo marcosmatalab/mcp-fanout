@@ -29,6 +29,21 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+      # And even with both of those, `actions/checkout` on a TAG PUSH leaves a LIGHTWEIGHT tag
+      # behind: it writes refs/tags/<tag> pointing straight at the commit, and because the ref
+      # already exists nothing replaces it, so `fetch-depth: 0` and `fetch-tags` do not help.
+      # Every command that reads a message from that ref then reads a commit's. Measured, in
+      # public: run 35747403738, the first tag pushed with the notes check in place, stopped here
+      # rather than publishing (docs/PROTOCOL.md, gate rule 10, ninth instance).
+      #
+      # So the object is force-fetched over the ref, and then CHECKED to be what the fetch was
+      # supposed to bring. `git fetch` succeeding is not evidence that the ref is now a tag
+      # object; `git cat-file -t` saying `tag` is.
+      - name: Fetch the annotated tag object, and check that it is one
+        run: |
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          test "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" = tag
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

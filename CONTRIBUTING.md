@@ -91,9 +91,11 @@ published SECOND. Connecting afterwards archives nothing retroactively.
 2. Record the disclosure outcome in [`docs/DISCLOSURE-LOG.md`](docs/DISCLOSURE-LOG.md) BEFORE
    tagging: either the maintainers' responses, or `no response as of the publication date`. The
    absence of a reply is itself data, and the log is the procedure.
-3. Tag, signed, and push it. `.github/workflows/release.yml` runs every gate, then derives the
-   release notes from the **tag object** with `tools/release_notes.py`, publishes with
-   `--notes-file`, and reads the published body back from the API to check it is the signed text.
+3. Tag, signed, and push it. `.github/workflows/release.yml` force-fetches the annotated tag
+   object and checks it is one (a tag push leaves a LIGHTWEIGHT tag in the checkout, whatever the
+   fetch depth), runs every gate, then derives the release notes from the **tag object** with
+   `tools/release_notes.py`, publishes with `--notes-file`, and reads the published body back
+   from the API to check it is the signed text.
    The job fails if it is not, and it fails on a tag whose annotation it cannot read at all. That
    check exists because the workflow used to pass `--notes-from-tag` under a depth-1 checkout and
    assert the result in a comment instead of checking it: the first release it published carried

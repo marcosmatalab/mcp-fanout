@@ -7,7 +7,7 @@ of them.
 | Document | Read it for | Size |
 | --- | --- | --- |
 | [`METHOD.md`](METHOD.md) | how the observation works, what each of the six numbers is, and what the eventual product would be. The one to read first after the README | 3,700 words |
-| [`PROTOCOL.md`](PROTOCOL.md) | part 1 is the ten gate rules, and it is their single source; parts 2 and 3 are the three phases, the two phase B passes with their measured results, the sealed predictions, and when to stop | 6,600 words |
+| [`PROTOCOL.md`](PROTOCOL.md) | part 1 is the ten gate rules, and it is their single source; parts 2 and 3 are the three phases, the two phase B passes with their measured results, the sealed predictions, and when to stop | 6,800 words |
 | [`THREATS.md`](THREATS.md) | nineteen ways the measurement could be wrong, each with what it does to the numbers. **Threat 19 is the headline result** and threat 17 is second | 6,700 words |
 | [`PREREG-F2.md`](PREREG-F2.md) | what was predicted before the structural matcher existed, frozen by digest, including the prediction that turned out false | 6,900 words |
 | [`CALIBRATION.md`](CALIBRATION.md) | how the matcher was calibrated on language that shares structure and no information, and what the chosen k cost | 4,200 words |
@@ -27,7 +27,7 @@ in the wrong order.
 ## The word budget, declared rather than chased
 
 Across every tracked markdown file in this repository, **29,770 words** of findings and
-**12,358 words** of operation, plus 30 words of corpus material that is
+**12,630 words** of operation, plus 30 words of corpus material that is
 measurement input rather than prose about it. `make words` prints both figures and
 `tools/word_budget.py` decides, file by file and by section for the one document that is both,
 which side of the line each belongs on.
