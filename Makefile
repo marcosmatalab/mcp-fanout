@@ -6,7 +6,7 @@
 .RECIPEPREFIX = >
 .PHONY: help install verify test selftest run run-concurrent numbers n1 n2 n3 n4 n5 n6 figures bench \
         bench-verify disclosure control control-publish fp fp-calibration ksweep positive rarity \
-        inventory f2 f2-reserved corpus-check backstop honesty-curve argument-shapes clean \
+        inventory f2 f2-reserved corpus-check backstop honesty-curve argument-shapes words clean \
         figures-check curve-svg chain-svg lint types cov claims-check reproduce gates
 
 # The default run is the committed, redacted example (runs/README.md), not "whatever ran last".
@@ -31,6 +31,7 @@ help:
 > @echo "  make argument-shapes   how much of a tool surface is attributable, from schemas alone"
 > @echo "  make backstop RUN=...  outbound SYNs per destination: what the proxy could NOT see"
 > @echo "  make fp / ksweep / inventory / rarity   the calibration block (docs/CALIBRATION.md)"
+> @echo "  make words             the documentation budget: findings against rules of operation"
 > @echo ""
 > @echo "The gates, individually:"
 > @echo "  make verify claims-check figures-check corpus-check lint types cov"
@@ -93,6 +94,13 @@ backstop:
 # Every observability fix lowered it. That shape is the write-up's argument about method.
 honesty-curve:
 > @python3 tools/honesty_curve.py
+
+# The documentation's own budget: how many words are measured findings and how many are rules of
+# operation and front matter. Declared in docs/README.md and gated by tests/test_word_budget.py,
+# because the cheapest way to hit a total word count is to delete evidence, and a declared split
+# is worth more than a reached total. Rule 6 applied to a number ABOUT the documents.
+words:
+> @python3 tools/word_budget.py --summary
 
 # The argument-shape distribution over every probed tool schema. Turns the paper's most
 # actionable claim from qualitative into measured. Reads registry/probes/ only, no run needed.

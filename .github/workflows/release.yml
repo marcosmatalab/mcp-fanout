@@ -4,6 +4,10 @@
 #
 # It fires on a tag, and it runs the gates FIRST: a tag that does not pass them does not become a
 # release. That ordering is the point of having this file at all.
+#
+# The notes are DERIVED from the signed tag object and then VERIFIED against what GitHub actually
+# published. This file used to assert that property in a comment and not have it: see
+# tools/release_notes.py, which carries the whole failure and is gate rule 10's ninth instance.
 name: release
 on:
   push:
@@ -17,7 +21,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth 0 and fetch-tags, because the notes come out of the ANNOTATED TAG OBJECT and
+      # the default depth-1 checkout does not fetch it. `make gates` needs the full history too,
+      # for tests/test_history_claims.py. Without this the ref resolves to a commit and every
+      # command that reads a tag message quietly reads something else.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -36,16 +47,33 @@ jobs:
           tar -czf example-runs.tar.gz runs/README.md runs/example-sequential runs/example-concurrent
           sha256sum figures.tar.gz example-runs.tar.gz > SHA256SUMS
 
+      # The notes, derived explicitly from the tag object rather than left to a flag's fallback.
+      # This step FAILS on a tag it cannot read an annotation from, which is the depth-1 case, so
+      # the condition that used to produce a plausible release with unsigned notes now stops it.
+      - name: Derive the release notes from the signed tag
+        run: python tools/release_notes.py write "${GITHUB_REF_NAME}" release-notes.md
+
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # --verify-tag: the release must come from a tag that exists and is pushed, never from a
-          # ref this workflow invented. --notes-from-tag: the signed tag's own message is the
-          # notes, so the text that is signed is the text that is published.
+          # ref this workflow invented. --notes-file: the bytes written above, with no second
+          # source of notes anywhere in this job.
           gh release create "${GITHUB_REF_NAME}" \
             --verify-tag \
             --title "${GITHUB_REF_NAME}" \
-            --notes-from-tag \
+            --notes-file release-notes.md \
             $( [[ "${GITHUB_REF_NAME}" == *-rc* ]] && echo --prerelease ) \
             figures.tar.gz example-runs.tar.gz SHA256SUMS
+
+      # Verify, do not assert. The previous version of this file claimed in a comment that the
+      # signed text was the published text; reading the body back from the API is the only thing
+      # that can tell the claim from the fact, and a release whose notes are not the signed
+      # message fails the job rather than staying up with a green check beside it.
+      - name: The published notes must be the signed tag's message
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${GITHUB_REF_NAME}" --json body --jq .body > published-notes.md
+          python tools/release_notes.py verify "${GITHUB_REF_NAME}" published-notes.md
