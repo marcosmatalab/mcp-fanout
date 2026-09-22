@@ -2,13 +2,13 @@
 
 Operating rules for any agent working in this repository. Read this before touching anything.
 
-**This file is a deliberate artifact of the method, not leftover scaffolding.** This repository was
-written with the assistance of a coding agent, and the rules below were fixed BEFORE the agent
-started rather than derived from what it produced: four hard negatives, ten gate rules, and rule 6,
-no published figure without a command that measures it. It is kept in the repository root, and
-declared in the README under "How this was built", because 48 of the first 50 commits carry a
-`Co-Authored-By` trailer and a public history is not something a deleted file hides. The doctrine
-in `docs/DOCTRINE.md` is the same argument written for a reader rather than for the agent.
+**This file is a deliberate artifact of the method, not leftover scaffolding.** The code here was
+implemented with Claude Code, inside rules fixed BEFORE the first commit rather than derived from
+what came out of it. It stays in the repository root, and is declared in the README under "How this
+was built", because 48 of the first 50 commits carry a `Co-Authored-By` trailer and a public history
+is not something a deleted file hides. What is worth judging is the harness, not the authorship: the
+rules below, the gates behind `make gates`, and the sealed pre-registration are what an agent may
+not talk its way past.
 
 ## What this repo is
 
@@ -31,46 +31,28 @@ second environment is an adapter rather than a rewrite.
   hedging. If something he proposes is wrong, say it is wrong and why.
 - In documents written for him: **no em dashes**. Use commas or colons.
 
-## The four negatives (never)
+## The rules, and the one place each of them lives
 
-These are not style preferences. They are the product thesis. Violating one invalidates the work.
+Three files and one source per rule, because a rule written twice is a rule that goes wrong in one
+of the two places and stays right in the other, which is how it survives review. This file is the
+operating manual: what to run, what is already measured, what not to rediscover. It does not restate
+the rules, it names them and points at their source.
 
-1. **Never inject.** Nothing is planted inside a third party: no marker, no token, no code, no
-   identifier smuggled into a call toward someone else's system. The observer lives at the own
-   edge.
-2. **Never store content.** Only salted digests and references. Raw payloads exist in memory
-   during the hashing pass and nowhere else. Enforced in `src/mcpfanout/redact.py`.
-3. **Never infer.** Byte-literal matching only. No paraphrase detection, no semantic propagation,
-   no model in the loop guessing what a server forwarded. A miss is a false negative and that is
-   the safe direction.
-4. **Never act on what is observed.** Observe and record. Do not block, redact in flight, alter,
-   or intervene.
-
-Full text in `docs/DOCTRINE.md`.
-
-## Rule 10: an absent instrument must fail, not pass quietly
-
-Every instrument needs a test that goes red when the instrument is ABSENT, not only when it is
-wrong. A wrong number gets investigated; a green gets published. This repo has produced that
-failure eight times, listed in `docs/PROTOCOL.md`: an addon that did not load and finished green
-with zero flows, a k constant that diverged and silently stopped matching, a selftest that
-serialised the structural fields without ever populating one, and, past code, a README, four
-calibration figures and a claim about where this history is signed, all of which went on stating
-what the artifacts no longer said. Asserting a field is
-PRESENT is not enough, every one of them had its fields. Asserting the SHAPE of an artifact is not
-enough either. Assert the value only a working instrument could compute, through its real entry
-point, and for a committed artifact that means regenerating it and comparing.
-The rule applies to itself: a detector must catch a planted instance in the same run before its
-clean report counts. Full text in `docs/PROTOCOL.md` rule 10.
-
-## Rule 6: no number without a command
-
-Every published figure has a `make` target and an `aggregate` subcommand behind it. If you add a
-claim, add the command that measures it, or do not add the claim. This applies to the README too.
+- **The four negatives**, which are the product thesis and not style preferences: **never inject**,
+  **never store content**, **never infer**, **never act on what is observed**. Violating one
+  invalidates the work. Defined, each with its why and what it costs, in `docs/DOCTRINE.md`. Read
+  them there before the first edit; the four clauses above are an index, not the rule.
+- **The ten gate rules**, the conditions a run must pass before any number from it is reported, are
+  defined in `docs/PROTOCOL.md`, part 1. Two of them bind every task here and not only a capture:
+  **rule 6**, no published figure without a command that measures it, which applies to the README
+  and to this file as much as to a figure; and **rule 10**, every instrument needs a test that goes
+  red when the instrument is ABSENT and not only when it is wrong, because a wrong number gets
+  investigated and a green gets published. `docs/PROTOCOL.md` lists the nine times this repository
+  produced that failure, and what a test has to do to catch it.
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 668
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 683
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only**, and the list of what counts as the core is
@@ -112,15 +94,6 @@ claim, add the command that measures it, or do not add the claim. This applies t
 - **A committed artifact is never hand-edited**, not even to repair a renamed path. It records what
   the code said when the run was taken; `make figures-check` fails on any edit to one.
 
-## The gate
-
-Before any number from a run is reported, `docs/PROTOCOL.md` must hold: reproducible, a command
-behind every number, no names in aggregate output, no content stored, container only and no real
-credentials, threats to validity written, responsible disclosure if a server egresses somewhere
-its documentation does not declare, the instrument passing before the phenomenon is measured, and
-the matcher calibrated on real language before any volume is measured (rule 9,
-`docs/CALIBRATION.md`).
-
 ## Layout
 
 ```
@@ -143,7 +116,10 @@ corpus/background/  the documents whose k-gram frequencies define "common" for F
 bench/           phase A: our own MCP server, our own HTTP sink, the wave plan.
                  server.py and sink.py import NOTHING from mcpfanout, by test
 tools/           generators for data that must be re-derivable rather than hand-edited, plus
-                 redact_run.py (a capture to a publishable run) and the two SVG renderers
+                 redact_run.py (a capture to a publishable run), the two SVG renderers,
+                 word_budget.py (the declared documentation budget) and release_notes.py (the
+                 release's notes, derived from the signed tag and verified against what was
+                 published)
 registry/        servers.yaml (what to measure, with max_concurrency per server),
                  client-constant-paths.json (the number 5 content denominator, FROZEN by sha256
                  in docs/PREREG-F2.md: adding an entry moves a pre-registered denominator),
@@ -171,7 +147,7 @@ README's argument and read as unfinished work inside the code.
 ```bash
 source .venv/bin/activate
 make gates       # EVERYTHING CI runs, in the order CI runs it. This is the one to use
-make verify      # 668 tests, no Docker, no network
+make verify      # 683 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make reproduce   # the headline number end to end from the committed example runs
 make numbers     # the six numbers from a run (RUN defaults to the committed example-concurrent)
@@ -187,6 +163,8 @@ make control     # gate rule 7's second half: launch a bare browser through the 
                  # control did NOT explain the finding. Docker + network
 make control-publish AUTH="..."  # commit the comparison as a figure that NAMES the instance.
                  # Refuses without the authorisation record (docs/DISCLOSURE-LOG.md)
+make words       # the documentation budget: findings against rules of operation. Declared in
+                 # docs/README.md and gated by tests/test_word_budget.py
 make fp          # gate rule 9: the matcher's false-positive rate on the RESERVED half (published)
 make fp-calibration  # the same rate on the calibration half: this is the one to look at while working
 make ksweep      # F1.2: the false-positive and recall curves against k, and the k the rule picks

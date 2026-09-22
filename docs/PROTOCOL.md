@@ -8,7 +8,10 @@ answered. Nothing here is advice. Every item is a condition, and most of them ha
 
 ## Part 1: the gate
 
-Ten conditions a run must pass before any number from it is reported.
+Ten conditions a run must pass before any number from it is reported. **This part is their single
+source.** [`../CLAUDE.md`](../CLAUDE.md) names rules 6 and 10 as the two that bind every task and
+links here rather than restating them, and the README does the same; the four negatives the rules
+serve are in [`DOCTRINE.md`](DOCTRINE.md).
 
 1. **Reproducible, at two levels.** The levels differ because the things being reproduced differ,
    and one standard for both produced a rule that failed for the wrong reason.
@@ -156,7 +159,7 @@ Ten conditions a run must pass before any number from it is reported.
     **a green gets published**. An absent instrument produces a clean run, a passing suite and an
     empty result that reads as a finding.
 
-    **The class is established by eight instances, not argued from one.**
+    **The class is established by nine instances, not argued from one.**
 
     - `capture_addon.py` used a relative import. mitmproxy loads an addon by path under a synthetic
       package name, so the import raised, mitmdump logged it and carried on proxying. The run
@@ -193,12 +196,26 @@ Ten conditions a run must pass before any number from it is reported.
       check, because every other figure here has a command behind it and this class did not.
       Guarded by `tests/test_history_claims.py`, which reads the boundary out of the prose and
       checks it against the commit objects.
+    - `.github/workflows/release.yml` published with `--notes-from-tag` under a depth-1 checkout
+      and a comment asserting the consequence: "the signed tag's own message is the notes, so the
+      text that is signed is the text that is published." Nothing in the job checked it, and a ref
+      whose annotated object was never fetched resolves to a commit, whose message then becomes a
+      plausible set of release notes that nobody signed. **This one was measured before it was
+      written down, and the claim held**: the live `v1.0.0-rc1` release body is the signed tag's
+      message. That is the instance rather than a reason to drop it, because for the whole life of
+      the workflow nothing could have told a true claim from a false one, and this rule is about
+      what a green result is allowed to mean. The workflow now derives the notes from the tag
+      object, fails on a tag it cannot read an annotation from, and reads the published body back
+      from the API to compare. Guarded by `tools/release_notes.py` and
+      `tests/test_release_notes.py`, which plants the unfetched-tag condition as a lightweight tag.
 
-    Eight instances is not an anecdote: the class is that an ABSENT input produces a WELL-FORMED
-    output, and well-formed output is what gets reviewed. The last four extend it past code. A
-    document is an artifact, a figure is an artifact, a commit history is an artifact, and an
-    artifact that omits or contradicts the result it is measured against fails at the one job it
-    has.
+    Nine instances is not an anecdote: the class is that an ABSENT input produces a WELL-FORMED
+    output, and well-formed output is what gets reviewed. The last five extend it past code. A
+    document is an artifact, a figure is an artifact, a commit history is an artifact, a published
+    release is an artifact, and an artifact that omits or contradicts the result it is measured
+    against fails at the one job it has. Four of the nine were caught by a comment, a document or a
+    workflow claiming a property rather than checking it, which is why each guard above verifies
+    instead of asserting.
 
     **What the test has to do, since "we have tests" was true in every case above.** It must
     exercise the instrument's real entry point, with the real loader where there is one, and assert
@@ -542,9 +559,11 @@ destination is a finding to be handled responsibly before it is a data point.
 
 Measured rather than estimated, because an earlier version of this paragraph guessed "one afternoon
 and about 10 EUR of compute" and both figures were wrong: **0 EUR** of cloud compute, everything in
-Docker on one machine; **0 EUR** of paid APIs, the only credential being a free-tier GitHub token;
-**138 seconds** of actual driving across 21 capture runs; **two days** of wall clock. The money
-cost is genuinely zero and the real cost is attention.
+Docker on one machine; **0 EUR** of paid APIs, the only credential being a free-tier GitHub token
+(Brave and Google Maps were declined because their free tiers ask for a card); **138 seconds** of
+actual driving across 21 capture runs, the longest single run **25 s**; **two days** of wall clock;
+**1.8 GB** of Docker image and **292 MB** of untracked runs on disk. The money cost is genuinely
+zero and the real cost is attention.
 
 What it does not decide:
 

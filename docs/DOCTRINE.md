@@ -1,9 +1,13 @@
 # Doctrine
 
 The standing rules this repository operates under. Every design decision in the code cites one of
-them: when a comment says "negative 3" or "rule 6", this is the referent. The operating rules for
-an agent working here are in [`../CLAUDE.md`](../CLAUDE.md); the conditions a run must satisfy
-before a number is reported are in [`PROTOCOL.md`](PROTOCOL.md). This file is the why.
+them: when a comment says "negative 3" or "rule 6", this is the referent.
+
+**This file is the single source of the four negatives**, and of the evidence model they produce.
+[`../CLAUDE.md`](../CLAUDE.md) and [`../README.md`](../README.md) name them and link here; neither
+restates them, because the same rule written in three files is a rule that stays right in two of
+them and wrong in the one somebody reads. The conditions a run must satisfy before a number from it
+is reported are the ten gate rules, and their single source is [`PROTOCOL.md`](PROTOCOL.md) part 1.
 
 ## The four negatives (never)
 
@@ -94,9 +98,19 @@ appear together in one sentence**, because a sentence that joins them is the con
 
 An unreadable request yields provenance `unknown`, never `none`: "we looked and found nothing" and
 "we could not look" are different findings, and collapsing them is how a blind spot reads as a clean
-result. A context match is a leak claim; an argument match is a causal key. The six attribution
-grades are listed in the README; a grade is a claim about the QUALITY OF THE EVIDENCE, never about
-certainty of cause.
+result. A context match is a leak claim; an argument match is a causal key.
+
+The attribution grades, strongest first. A grade claims a QUALITY OF EVIDENCE, never certainty of
+cause, and strong attribution counts the first two only.
+
+| Grade | Evidence |
+| --- | --- |
+| `TRACE_PROPAGATED` | our exact W3C `traceparent` was in the outbound request |
+| `CONTENT_UNIQUE` | several calls in flight, matched fragment present in exactly one |
+| `CONTENT_AMBIGUOUS` | several calls in flight, fragment in several: content did not discriminate |
+| `CONTENT_MATCH_UNCONTESTED` | a match with only one call in flight, so nothing was told apart |
+| `TEMPORAL_ONLY` | a time window and a pid, nothing else |
+| `UNATTRIBUTED` | no evidence, or ineligible, always with a named reason |
 
 **The tautology this design exists to avoid.** If `CONTENT_UNIQUE` meant "the fragment matched and
 nothing competed", it would be true of every match under sequential driving by construction, and the

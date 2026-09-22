@@ -19,6 +19,36 @@ concurrent connections to distinct domains, the union is the whole product and c
 critical infrastructure. These are two different systems, and the measurement picks which one is
 real.
 
+## What the eventual product would be, and the category it is not in
+
+Moved here out of `README.md`, which now states the six numbers and links to this: the positioning
+is an argument, and an argument belongs where it can be read in full.
+
+> **Runtime provenance and evidence for autonomous agents.**
+
+**The answer is not published as a verdict, and that is deliberate.** The instrument failed its own
+pre-registered threshold (0.6579 against 0.80), which says the measuring apparatus is not good
+enough to settle the product question, not that the product question is settled. The product
+verdict was therefore left unfrozen on purpose, and that refusal is itself inside the sealed
+pre-registration block so it could not be replaced by a verdict once a result existed:
+[`PREREG-F2.md`](PREREG-F2.md) section 8 names the two threats that made a verdict from this sample
+unsound.
+
+MCP is the **first supported environment**, not the category. Both of the obvious alternative
+framings are wrong in a way that costs money.
+
+- **Not "MCP security".** It ties the product to one protocol that is still changing under it (the
+  current revision removed the session, the handshake and three methods in a single release) and to
+  a function that a gateway absorbs as a feature the moment it is worth having.
+- **Not "data lineage".** That is Cyberhaven's category. Entering an occupied category with a
+  smaller version of the incumbent's story is not a positioning, it is a comparison you lose by
+  default.
+
+What "runtime provenance and evidence" claims is narrower than either: at the moment an autonomous
+agent acts, what left, where it went, and what evidence ties the two to the action that caused it.
+Runtime rather than configuration, evidence rather than inference, provenance rather than policy.
+The agent is the subject; the protocol it happens to speak is an adapter.
+
 ## The observation model: the own edge
 
 Three questions matter, and all three are answered without injecting anything, because all three

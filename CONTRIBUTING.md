@@ -22,7 +22,7 @@ Docker is needed only to take a NEW capture (`make run`, `make run-concurrent`, 
 make gates
 ```
 
-That is the whole pipeline. **58 seconds** on the machine this was measured on, of which the
+That is the whole pipeline. **61 seconds** on the machine this was measured on, of which the
 suite is 16 and `figures-check` is most of the rest, because it regenerates every calibration
 artifact rather than inspecting it. Individually:
 
@@ -91,7 +91,14 @@ published SECOND. Connecting afterwards archives nothing retroactively.
 2. Record the disclosure outcome in [`docs/DISCLOSURE-LOG.md`](docs/DISCLOSURE-LOG.md) BEFORE
    tagging: either the maintainers' responses, or `no response as of the publication date`. The
    absence of a reply is itself data, and the log is the procedure.
-3. Tag, signed, and publish the release from the tag. Zenodo mints the DOI on detection.
+3. Tag, signed, and push it. `.github/workflows/release.yml` runs every gate, then derives the
+   release notes from the **tag object** with `tools/release_notes.py`, publishes with
+   `--notes-file`, and reads the published body back from the API to check it is the signed text.
+   The job fails if it is not, and it fails on a tag whose annotation it cannot read at all. That
+   check exists because the workflow used to pass `--notes-from-tag` under a depth-1 checkout and
+   assert the result in a comment without checking it; measured afterwards, the published notes
+   did match, which is the point of gate rule 10's ninth instance rather than a reason to drop it.
+   Zenodo mints the DOI on detection.
 4. **Record both DOIs, in different places, because they answer different questions.** The VERSION
    DOI resolves to the exact deposit and goes in `CITATION.cff`, because a citation must point at
    what the reader actually read. The CONCEPT DOI always resolves to the latest version and goes in

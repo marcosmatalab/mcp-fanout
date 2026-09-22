@@ -9,12 +9,13 @@ authors:
   - family-names: "Mata García"
     given-names: "Marcos"
     email: "matagarciamarcos@gmail.com"
-# Written with the assistance of a coding agent under a written doctrine (CLAUDE.md,
-# docs/DOCTRINE.md). 48 of the first 50 commits carry a Co-Authored-By trailer recording
-# it, and every commit since does; tests/test_history_claims.py checks that against the
-# history.
-# The measurements, the pre-registered thresholds and the disclosure decisions are the author's;
-# the agent wrote code and prose against rules fixed before the work started.
+# Implemented with Claude Code, inside a doctrine and a set of CI gates fixed before the
+# work started (CLAUDE.md, docs/DOCTRINE.md). 48 of the first 50 commits carry a
+# Co-Authored-By trailer recording it, and every commit since does;
+# tests/test_history_claims.py checks that against the history.
+# The measurements, the pre-registered thresholds and the disclosure decisions are the author's.
+# Nothing an agent added is published until it passes `make gates`, which is the part of this
+# method that is worth citing.
 repository-code: "https://github.com/marcosmatalab/mcp-fanout"
 version: "1.0.0"
 # doi: filled in from the Zenodo VERSION DOI after the release is published, in a follow-up
