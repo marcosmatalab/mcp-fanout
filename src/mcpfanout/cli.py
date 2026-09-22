@@ -395,6 +395,32 @@ def _cmd_disclosure_check(args: argparse.Namespace) -> int:
     return 0 if report["verdict"] == VERDICT_CLEAR else 1
 
 
+def _publish_control_comparison(args: argparse.Namespace, out: dict[str, Any], control_run: Run,
+                                subject_run: Run, driving: dict[str, Any]) -> None:
+    """Write the comparison as a figure that NAMES a server, under gate rule 7's authorisation.
+
+    The only path in this repository that puts an instance name into docs/, which is why it is
+    separated from the comparison itself: computing the verdict is a measurement, publishing it
+    under a name is a decision somebody signed for, and the authorisation record travels into the
+    artifact rather than being asserted in a commit message.
+    """
+    from .control import publishable
+
+    art = publishable(
+        out, control_run_id=control_run.manifest.run_id,
+        subject_run_id=subject_run.manifest.run_id,
+        repetitions=int(driving.get("repetitions", len(control_run.calls))),
+        dwell_seconds=float(driving.get("dwell_seconds", args.dwell)),
+        url_source=str(driving.get("navigation_url_source", args.corpus)),
+        authorisation=args.authorisation)
+    art["control_driving"] = driving
+    out_dir = Path(args.publish)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{control_run.manifest.run_id}-vs-{args.server}.json"
+    path.write_text(json.dumps(art, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"[control-compare] published {path}", file=sys.stderr)
+
+
 def _cmd_control_compare(args: argparse.Namespace) -> int:
     """Did a bare component, with no MCP server, reach the destinations the server was flagged for?
 
@@ -408,7 +434,7 @@ def _cmd_control_compare(args: argparse.Namespace) -> int:
     is the only path that writes a named artifact into docs/, and it demands the authorisation
     record that gate rule 7 requires before an instance may be named at all.
     """
-    from .control import compare, publishable
+    from .control import compare
     from .disclosure import DECLARED_DESTINATIONS_PATH, DeclaredDestinations
     from .disclosure import check as disclosure_check
 
@@ -463,19 +489,7 @@ def _cmd_control_compare(args: argparse.Namespace) -> int:
               f"exit code still stand", file=sys.stderr)
 
     if args.publish:
-        art = publishable(
-            out, control_run_id=control_run.manifest.run_id,
-            subject_run_id=subject_run.manifest.run_id,
-            repetitions=int(driving.get("repetitions", len(control_run.calls))),
-            dwell_seconds=float(driving.get("dwell_seconds", args.dwell)),
-            url_source=str(driving.get("navigation_url_source", args.corpus)),
-            authorisation=args.authorisation)
-        art["control_driving"] = driving
-        out_dir = Path(args.publish)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        path = out_dir / f"{control_run.manifest.run_id}-vs-{args.server}.json"
-        path.write_text(json.dumps(art, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        print(f"[control-compare] published {path}", file=sys.stderr)
+        _publish_control_comparison(args, out, control_run, subject_run, driving)
 
     from .control import VERDICT_REPRODUCED
     return 0 if out["verdict"] == VERDICT_REPRODUCED else 1

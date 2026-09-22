@@ -30,35 +30,19 @@ DEMO_CONTEXT: dict[str, bytes] = {
 }
 
 
-def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
-    out_dir = Path(out_dir)
-    redactor = Redactor(salt=salt)
-    run_id = "selftest"
+def _demo_raw_flows() -> list[dict[str, Any]]:
+    """The fixture itself: one hand-built outbound request per intended grade.
 
-    # Index the context once (number 4 reference side).
-    context_index = _match.build_reference_index(DEMO_CONTEXT, redactor)
-
-    # Two calls: call A carries the secret in its arguments; call B carries no arguments.
-    args_a = json.dumps({"query": "load creds", "token": _SECRET.decode()}).encode()
-    calls = [
-        # wave_size 1: the selftest models the SEQUENTIAL shape, one call in flight, which is what
-        # makes its grade of CONTENT_MATCH_UNCONTESTED the correct expected output of the fixture.
-        ToolCall(run_id, "s1", "cA", "search", args_present=True, traceparent="00-aaaa-bbbb-01",
-                 wave_size=1),
-        ToolCall(run_id, "s2", "cB", "list_files", args_present=False,
-                 traceparent="00-cccc-dddd-01", wave_size=1),
-    ]
-    args_digests = {
-        "cA": redactor.kgram_digest_set(args_a),
-        "cB": frozenset(),  # argument-less call: nothing can travel, so nothing to match
-    }
-
+    Data, kept apart from the code that grades it, because this list IS the selftest:
+    every entry exists to make one path through the evidence model observable, and a
+    reader checking that coverage should not have to read the assembly loop to do it.
+    """
     # Hand-built outbound bodies, one per intended state.
     body_efectivo = (b"POST /ingest {\"payload\":\"" + _SECRET
                      + b"\",\"note\":\"DB_PASSWORD=hunter2\"}")
     body_declarado = b"GET /health?ts=now (no session content here, only a timing correlation)"
 
-    raw_flows: list[dict[str, Any]] = [
+    return [
         # Content match via the BODY: the secret (in call A args) and an .env fragment both appear
         # literally in the payload.
         dict(server_id="s1", call_id="cA", dest_host="api.unknown-vendor.com",
@@ -88,6 +72,53 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
              our_traceparent_present=False, has_time_and_pid=False,
              active_calls_in_window=1),
     ]
+
+
+
+def _demo_manifest(run_id: str, args_a: bytes, redactor: Redactor,
+                   salt: bytes) -> RunManifest:
+    """The synthetic run's manifest, kept apart from the flows it describes."""
+    corpus_sha = hashlib.sha256(args_a + b"|list_files").hexdigest()
+    manifest = RunManifest(
+        run_id=run_id, created="1970-01-01T00:00:00Z", salt_fixed=(salt == DEFAULT_SALT),
+        k=redactor.k, w=redactor.w, corpus_sha256=corpus_sha,
+        server_ids=["s1", "s2"], tool_versions={"harness": "selftest"},
+        # Two different answered revisions on purpose, so the selftest exercises number 3's
+        # segmentation rather than collapsing to a single bucket and proving nothing about it.
+        server_protocol_versions={"s1": "2025-11-25", "s2": "2024-11-05"},
+        # Labelled, like every other run. "selftest" is its own pass value precisely so a synthetic
+        # figure can never be mistaken for either phase B condition (docs/PROTOCOL.md).
+        pass_name=PASS_SELFTEST,
+        notes="Synthetic selftest run. Not a measurement.",
+    )
+
+    return manifest
+
+
+def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
+    out_dir = Path(out_dir)
+    redactor = Redactor(salt=salt)
+    run_id = "selftest"
+
+    # Index the context once (number 4 reference side).
+    context_index = _match.build_reference_index(DEMO_CONTEXT, redactor)
+
+    # Two calls: call A carries the secret in its arguments; call B carries no arguments.
+    args_a = json.dumps({"query": "load creds", "token": _SECRET.decode()}).encode()
+    calls = [
+        # wave_size 1: the selftest models the SEQUENTIAL shape, one call in flight, which is what
+        # makes its grade of CONTENT_MATCH_UNCONTESTED the correct expected output of the fixture.
+        ToolCall(run_id, "s1", "cA", "search", args_present=True, traceparent="00-aaaa-bbbb-01",
+                 wave_size=1),
+        ToolCall(run_id, "s2", "cB", "list_files", args_present=False,
+                 traceparent="00-cccc-dddd-01", wave_size=1),
+    ]
+    args_digests = {
+        "cA": redactor.kgram_digest_set(args_a),
+        "cB": frozenset(),  # argument-less call: nothing can travel, so nothing to match
+    }
+
+    raw_flows = _demo_raw_flows()
 
     flows: list[Flow] = []
     for i, rf in enumerate(raw_flows):
@@ -123,20 +154,7 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
             matching_calls_in_window=(1 if result.causal else 0),
         ))
 
-    corpus_sha = hashlib.sha256(args_a + b"|list_files").hexdigest()
-    manifest = RunManifest(
-        run_id=run_id, created="1970-01-01T00:00:00Z", salt_fixed=(salt == DEFAULT_SALT),
-        k=redactor.k, w=redactor.w, corpus_sha256=corpus_sha,
-        server_ids=["s1", "s2"], tool_versions={"harness": "selftest"},
-        # Two different answered revisions on purpose, so the selftest exercises number 3's
-        # segmentation rather than collapsing to a single bucket and proving nothing about it.
-        server_protocol_versions={"s1": "2025-11-25", "s2": "2024-11-05"},
-        # Labelled, like every other run. "selftest" is its own pass value precisely so a synthetic
-        # figure can never be mistaken for either phase B condition (docs/PROTOCOL.md).
-        pass_name=PASS_SELFTEST,
-        notes="Synthetic selftest run. Not a measurement.",
-    )
-
+    manifest = _demo_manifest(run_id, args_a, redactor, salt)
     write_manifest(out_dir / "manifest.json", manifest)
     write_jsonl(out_dir / "calls.jsonl", calls)
     write_jsonl(out_dir / "flows.jsonl", flows)

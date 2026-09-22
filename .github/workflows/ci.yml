@@ -1,12 +1,18 @@
-# CI runs the measurement CORE only: stdlib-only, no Docker, no network. This is the part that
-# must be reproducible and green on every push (gate rule 1). The capture layer is deliberately
-# not exercised here; it needs Docker, real servers, and network, none of which belong in CI.
+# Every gate this repository has, on every push. None of them needs Docker, a network or a
+# credential: that is a property of the measurement core and of the two committed redacted runs,
+# and it is what makes "it reproduces" checkable by anyone rather than asserted.
+#
+# What each gate caught is in CONTRIBUTING.md. Two of them exist because a test that INSPECTS an
+# artifact cannot tell a stale one from a current one, so they regenerate instead: figures-check
+# rebuilds every calibration figure and both SVGs, and reproduce recomputes the headline number
+# from the committed runs. Gate rule 10, applied to the pipeline itself.
 name: ci
 on:
   push:
   pull_request:
+
 jobs:
-  core:
+  gates:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,5 +21,74 @@ jobs:
           python-version: "3.11"
       - name: Install (dev extras)
         run: python -m pip install -e ".[dev]"
-      - name: Verify core is reproducible and correct
+
+      - name: tests
         run: make verify
+
+      # Gate 2. Every figure in the README's six-number table, against the committed aggregate of
+      # the pass that is allowed to publish it, plus the k curve in shingle.py's docstring.
+      - name: claims-check
+        run: make claims-check
+
+      # Gate 3. Regenerates every calibration artifact and both SVGs and fails on a non-empty
+      # diff, or on an untracked figure.
+      - name: figures-check
+        run: make figures-check
+
+      # Gate 4. The generated halves of the negative corpus were not hand-edited.
+      - name: corpus-check
+        run: make corpus-check
+
+      # Gate 5. The pre-registered F2 predictions still reproduce, on both halves.
+      - name: prereg
+        run: |
+          make f2 > /dev/null
+          make f2-reserved > /dev/null
+
+      # Gate 6. The headline number still comes out of the committed example runs.
+      - name: reproduce
+        run: make reproduce | grep -q 0.6579
+
+      - name: lint
+        run: make lint
+
+      - name: types
+        run: make types
+
+      # Gate 9. Coverage floors, declared in pyproject.toml so a local run checks the same number.
+      - name: coverage
+        run: make cov
+
+  # Gate 10, and it needs its own job: the contract is that the measurement core imports the
+  # standard library and nothing else, and the only way to check that is an environment where
+  # nothing else is installed. Installing without the `capture` extra and importing the core is
+  # what catches a dependency that arrives at call time or through another dependency, neither of
+  # which the static check in tests/test_core_has_no_dependencies.py can see.
+  core-isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install WITHOUT the capture extra
+        run: python -m pip install -e .
+      - name: Nothing from the capture layer may be installed
+        run: |
+          if python -m pip list --format=freeze | grep -iE '^(mitmproxy|PyYAML)='; then
+            echo "the capture extra is installed in the isolation job; it proves nothing" >&2
+            exit 1
+          fi
+      - name: Import every core module and compute a number
+        run: |
+          python - <<'PY'
+          import importlib
+          for module in ("aggregate", "calibrate", "classify", "cli", "control", "demo",
+                         "disclosure", "match", "rarity", "record", "redact", "shingle",
+                         "structure", "bench_metrics"):
+              importlib.import_module(f"mcpfanout.{module}")
+          # Not just an import: compute something, so a dependency reached for at call time in the
+          # path that produces a figure fails here too.
+          from mcpfanout.cli import main
+          raise SystemExit(main(["aggregate", "--run", "example-concurrent", "--number", "5"]))
+          PY

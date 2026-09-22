@@ -605,6 +605,42 @@ def _discrimination_summary(run: Run) -> dict[str, Any]:
             "refused as a candidate. Both are threat 18 made visible in the output"),
         "command": "make n5"}}
 
+def _grade_every_flow(
+    run: Run, exclusions: ExclusionList | None
+) -> tuple[dict[str, int], dict[str, int], dict[str, int], dict[str, dict[str, int]]]:
+    """Grade each flow ONCE and return the four views of that grading.
+
+    Once, and not once per view: the pooled distribution and the per-window breakdown used to be
+    two loops making the identical call with the identical arguments, which is two chances for
+    them to stop agreeing while both keep producing a plausible table.
+    """
+    grades = {g: 0 for g in _match.ATTRIBUTION_GRADES}
+    reasons: dict[str, int] = {}
+    by_channel = {_match.CHANNEL_TARGET: 0, _match.CHANNEL_BODY: 0, _match.CHANNEL_BOTH: 0}
+    by_window: dict[str, dict[str, int]] = {}
+    for f in run.flows:
+        grade, reason = _match.grade_attribution(
+            traceparent_present=f.our_traceparent_present,
+            argument_match=_attributing_match(f),
+            active_calls_in_window=f.active_calls_in_window,
+            matching_calls_in_window=_attributing_candidates(f),
+            eligible=not _on_package_infrastructure(f, exclusions),
+            has_time_and_pid=f.has_time_and_pid,
+            call_caused_possible=_call_caused_possible(f),
+            candidate_token_count=f.candidate_token_count,
+        )
+        grades[grade] = grades.get(grade, 0) + 1
+        reasons[reason] = reasons.get(reason, 0) + 1
+        bucket = by_window.setdefault(str(f.active_calls_in_window), {})
+        bucket[grade] = bucket.get(grade, 0) + 1
+        # Channel split over every flow whose argument material matched, WHATEVER grade it ended
+        # at. Not conditioned on the grade: a flow that matched by body and then graded
+        # TRACE_PROPAGATED still matched by body, and hiding it would understate the body channel.
+        if f.causal and f.causal_channel in by_channel:
+            by_channel[f.causal_channel] += 1
+    return grades, reasons, by_channel, by_window
+
+
 def number_5(run: Run, exclusions: ExclusionList | None = None,
              constant_paths: ConstantPathList | None = None) -> dict[str, Any]:
     """Distribution of attribution grades. The decisive number, and the honest shape of it.
@@ -636,49 +672,7 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
     as N grows, which a pooled figure cannot show at all. The keys are stringified integers so the
     JSON is stable and sorts predictably.
     """
-    grades = {g: 0 for g in _match.ATTRIBUTION_GRADES}
-    reasons: dict[str, int] = {}
-    by_channel = {_match.CHANNEL_TARGET: 0, _match.CHANNEL_BODY: 0, _match.CHANNEL_BOTH: 0}
-    for f in run.flows:
-        eligible = not _on_package_infrastructure(f, exclusions)
-        grade, reason = _match.grade_attribution(
-            traceparent_present=f.our_traceparent_present,
-            argument_match=_attributing_match(f),
-            active_calls_in_window=f.active_calls_in_window,
-            matching_calls_in_window=_attributing_candidates(f),
-            eligible=eligible,
-            has_time_and_pid=f.has_time_and_pid,
-            call_caused_possible=_call_caused_possible(f),
-            candidate_token_count=f.candidate_token_count,
-        )
-        grades[grade] = grades.get(grade, 0) + 1
-        reasons[reason] = reasons.get(reason, 0) + 1
-        # Channel split over every flow whose argument material matched, WHATEVER grade it
-        # ended at. Not conditioned on the grade: a flow that matched by body and then graded
-        # TRACE_PROPAGATED still matched by body, and hiding it would understate the body
-        # channel. This split exists so a content figure cannot be quietly inflated with URLs.
-        if f.causal and f.causal_channel in by_channel:
-            by_channel[f.causal_channel] += 1
-
-    # The same grading, split by how many calls were in flight. Recomputed rather than tallied
-    # inside the loop above only for readability; it is the identical call with the identical
-    # inputs, so the two views cannot disagree.
-    by_window: dict[str, dict[str, int]] = {}
-    for f in run.flows:
-        eligible = not _on_package_infrastructure(f, exclusions)
-        grade, _ = _match.grade_attribution(
-            traceparent_present=f.our_traceparent_present,
-            argument_match=_attributing_match(f),
-            active_calls_in_window=f.active_calls_in_window,
-            matching_calls_in_window=_attributing_candidates(f),
-            eligible=eligible,
-            has_time_and_pid=f.has_time_and_pid,
-            call_caused_possible=_call_caused_possible(f),
-            candidate_token_count=f.candidate_token_count,
-        )
-        bucket = by_window.setdefault(str(f.active_calls_in_window), {})
-        bucket[grade] = bucket.get(grade, 0) + 1
-
+    grades, reasons, by_channel, by_window = _grade_every_flow(run, exclusions)
     total = len(run.flows)
     strong = sum(grades[g] for g in _match.STRONG_ATTRIBUTION)
     max_window = max((f.active_calls_in_window for f in run.flows), default=0)
@@ -718,6 +712,22 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
            "sequential_driving": (None if total == 0 else max_window <= 1),
            "max_active_calls_in_window": max_window,
            "command": "make n5"}
+    out.update(_driving_regime_note(total, max_window, pass_name))
+    out["exclusion_list"] = ({"loaded": True, **exclusions.citation()} if exclusions
+                             else {"loaded": False,
+                                   "reason": "no exclusion list, so no flow was graded "
+                                             "ineligible; package traffic falls to TEMPORAL_ONLY"})
+    return out
+
+
+def _driving_regime_note(total: int, max_window: int, pass_name: str) -> dict[str, str]:
+    """The one sentence a reader must not be allowed to skip, chosen by what was observed.
+
+    Three branches and not two: no flows at all is not the same claim as sequential driving, and
+    a figure that said "sequential" about a run with nothing in it would be asserting a regime
+    the flows cannot witness.
+    """
+    out: dict[str, str] = {}
     if total == 0:
         out["no_flows_note"] = (
             f"no outbound connection was observed at all, so no grade was assigned and nothing "
@@ -740,10 +750,6 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
             "precision has a denominator only on the phase A bench, where we caused every "
             "transfer, and it was measured there (docs/PROTOCOL.md, sensor gate). What this pass "
             "measures is how the grades are DISTRIBUTED over real traffic")
-    out["exclusion_list"] = ({"loaded": True, **exclusions.citation()} if exclusions
-                             else {"loaded": False,
-                                   "reason": "no exclusion list, so no flow was graded "
-                                             "ineligible; package traffic falls to TEMPORAL_ONLY"})
     return out
 
 

@@ -505,6 +505,49 @@ def longest_common_run(a: bytes, b: bytes) -> int:
     return best
 
 
+def _bait_by_bucket(bucket: Callable[[int], str], bait_dir: str | Path,
+                    root: str | Path) -> dict[str, int]:
+    """Every planted CANARY_ token in the context files, counted by which floor it clears.
+
+    Population 1 of three: material we control and sized on purpose, which is what makes the
+    self-match ceiling attributable to ordinary argument material rather than to our own bait.
+    """
+    import re
+
+    bait: dict[str, list[int]] = {}
+    for path in sorted((Path(root) / bait_dir).rglob("*")):
+        if not path.is_file():
+            continue
+        for tok in re.findall(r"CANARY_[A-Za-z0-9_.:@/-]+", path.read_text(errors="replace")):
+            bait.setdefault(bucket(len(tok)), []).append(len(tok))
+    return {b: len(v) for b, v in sorted(bait.items())}
+
+
+def _families_by_bucket(corpus: NegativeCorpus, redactor: Redactor,
+                        bucket: Callable[[int], str]) -> dict[str, dict[str, Any]]:
+    """Population 2: the longest run each call shares with its OWN request, per family.
+
+    Per family, because the families fail for different reasons and a pooled figure hides which:
+    one family never puts its JSON envelope on the wire at all, another breaks at the first space.
+    """
+    families: dict[str, dict[str, Any]] = {}
+    for call in corpus.calls:
+        run = longest_common_run(args_bytes(call.arguments), call.target + b"\x00" + call.body)
+        fam = families.setdefault(call.family, {"calls": 0, "self_matched": 0, "runs": [],
+                                                "buckets": {}})
+        fam["calls"] += 1
+        fam["runs"].append(run)
+        fam["buckets"][bucket(run)] = fam["buckets"].get(bucket(run), 0) + 1
+        if claims_match(call, call, redactor):
+            fam["self_matched"] += 1
+    for fam in families.values():
+        runs = sorted(fam.pop("runs"))
+        fam["longest_common_run"] = {"min": runs[0], "median": runs[len(runs) // 2],
+                                     "max": runs[-1]}
+        fam["self_match_recall"] = round(fam["self_matched"] / fam["calls"], 4)
+    return families
+
+
 def detectability_inventory(corpus: NegativeCorpus, transfers: list[PositiveTransfer],
                             redactor: Redactor, bait_dir: str | Path = "corpus/context",
                             root: str | Path = ".") -> dict[str, Any]:
@@ -524,7 +567,6 @@ def detectability_inventory(corpus: NegativeCorpus, transfers: list[PositiveTran
     over; the phase A transfers are the keyed digests, present as the contrast that shows how far
     from realistic the bench's own material is.
     """
-    import re
 
     floor_exact = redactor.k
     floor_winnowed = redactor.k + redactor.w - 1
@@ -536,34 +578,8 @@ def detectability_inventory(corpus: NegativeCorpus, transfers: list[PositiveTran
             return "matched_but_below_winnowing_floor"
         return "below_k_invisible"
 
-    # 1. The planted bait: every CANARY_ token in the context files, by length.
-    bait: dict[str, list[int]] = {}
-    for path in sorted((Path(root) / bait_dir).rglob("*")):
-        if not path.is_file():
-            continue
-        for tok in re.findall(r"CANARY_[A-Za-z0-9_.:@/-]+",
-                              path.read_text(errors="replace")):
-            bait.setdefault(bucket(len(tok)), []).append(len(tok))
-    bait_counts = {b: len(v) for b, v in sorted(bait.items())}
-
-    # 2. The realistic arguments: the longest run each call shares with its OWN request, which is
-    #    the quantity self-match thresholds. Per family, because the families fail for different
-    #    reasons and a pooled figure hides which.
-    families: dict[str, dict[str, Any]] = {}
-    for call in corpus.calls:
-        run = longest_common_run(args_bytes(call.arguments), call.target + b"\x00" + call.body)
-        fam = families.setdefault(call.family, {"calls": 0, "self_matched": 0, "runs": [],
-                                                "buckets": {}})
-        fam["calls"] += 1
-        fam["runs"].append(run)
-        fam["buckets"][bucket(run)] = fam["buckets"].get(bucket(run), 0) + 1
-        if claims_match(call, call, redactor):
-            fam["self_matched"] += 1
-    for fam in families.values():
-        runs = sorted(fam.pop("runs"))
-        fam["longest_common_run"] = {"min": runs[0], "median": runs[len(runs) // 2],
-                                     "max": runs[-1]}
-        fam["self_match_recall"] = round(fam["self_matched"] / fam["calls"], 4)
+    bait_counts = _bait_by_bucket(bucket, bait_dir, root)
+    families = _families_by_bucket(corpus, redactor, bucket)
 
     # 3. The phase A transfers, as the contrast.
     bench_runs = sorted(longest_common_run(args_bytes(t.arguments), t.target + b"\x00" + t.body)
