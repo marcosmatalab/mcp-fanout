@@ -9,6 +9,9 @@ authors:
   - family-names: "Mata García"
     given-names: "Marcos"
     email: "matagarciamarcos@gmail.com"
+# The measurements, the pre-registered thresholds and the disclosure decisions are the author's.
+# Nothing is published until it passes `make gates`, which is the part of this method that is
+# worth citing.
 repository-code: "https://github.com/marcosmatalab/mcp-fanout"
 version: "1.0.0"
 # doi: filled in from the Zenodo VERSION DOI after the release is published, in a follow-up
