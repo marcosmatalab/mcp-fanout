@@ -19,10 +19,12 @@ Every repair to the instrument **lowered** the headline: **0.8947, then 0.8095, 
 against a threshold of 0.80 sealed before any measurement existed. A measurement whose headline
 improves when its instrument improves is measuring the instrument. This one did the opposite.
 
-Reproduce it on your machine in five seconds, with no network and no keys:
+Reproduce it on your machine. The install wants a package index once; the measurement wants
+nothing, because the measurement core has no dependencies at all:
 
 ```bash
-make install && make honesty-curve
+make install           # pip, once
+make honesty-curve     # 0.05 s. No network, no keys, no Docker
 ```
 
 ![The honesty curve: the headline figure measured three times, 0.8947 then 0.8095 then 0.6579, falling below the pre-registered threshold of 0.80 as each blind spot in the instrument was removed](docs/figures/honesty-curve.svg)
@@ -71,9 +73,14 @@ result rather than hidden.
 Measured across two runs, published separately and never merged
 ([`docs/PROTOCOL.md`](docs/PROTOCOL.md)): `20260919T115452Z-sequential`, 26 calls one at a time,
 which numbers 1 to 4 are read from, and `20260919T194649Z-concurrent`, 130 calls in waves of 2, 5
-and 10, which is the only pass number 5 may be read from. Ten pinned MCP servers, of which three
-egress at all and six are local by design: numbers 1, 2 and 6 therefore rest on two servers, and
-that is stated here rather than in a footnote.
+and 10, which is the only pass number 5 may be read from.
+
+**Ten pinned MCP servers, and the sample is smaller than ten.** Six are local by design and produce
+no egress at all, which is the correct answer for them. One never starts without a key it was not
+given. Three reach a third party, and only two of those were visible to the proxy until the blind
+client above was found. So numbers 1 and 2 rest on the **two** servers that egressed in the
+sequential pass and number 6 on the **three** that did in the corrected concurrent one. That is
+stated here, in the same paragraph as the numbers, rather than in a footnote.
 
 Every server is pinned to an exact version in [`registry/servers.yaml`](registry/servers.yaml) and
 its tool schemas are committed under `registry/probes/`. We do not claim they are the ten most
@@ -218,7 +225,7 @@ make run                            # and make run-concurrent, a separate run an
 
 The gates that keep all of the above honest are `make claims-check`, `make figures-check`,
 `make corpus-check` and `make reproduce`, and `make gates` runs every one of them in the order CI
-does. What each gate caught, and why an inspecting test could not have caught it, is in
+does, in **58 seconds**. What each gate caught, and why an inspecting test could not have caught it, is in
 [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 See [`docs/METHOD.md`](docs/METHOD.md) for the observation model and the capture layers, and

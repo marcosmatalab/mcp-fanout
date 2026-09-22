@@ -22,7 +22,9 @@ Docker is needed only to take a NEW capture (`make run`, `make run-concurrent`, 
 make gates
 ```
 
-That is the whole pipeline and it takes under three minutes. Individually:
+That is the whole pipeline. **58 seconds** on the machine this was measured on, of which the
+suite is 16 and `figures-check` is most of the rest, because it regenerates every calibration
+artifact rather than inspecting it. Individually:
 
 | Gate | Command | What it checks, and what it caught |
 | --- | --- | --- |
