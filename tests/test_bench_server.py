@@ -10,7 +10,6 @@ run, exercised there; what is checked here is everything else.
 """
 
 import json
-import socket
 import subprocess
 import sys
 import threading
@@ -18,6 +17,7 @@ import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from socketserver import ThreadingMixIn
+from typing import ClassVar
 
 import pytest
 
@@ -28,7 +28,7 @@ FRAG = "BENCHFRAG_unit_0123456789abcdef0123456"
 
 class _Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
-    seen: list = []
+    seen: ClassVar[list] = []
 
     def _ack(self):
         length = int(self.headers.get("content-length") or 0)
@@ -155,7 +155,7 @@ def test_the_fragment_lands_in_the_channel_the_ledger_claims(tmp_path, sink):
     got = handler.seen
     assert any(FRAG in r["path"] for r in got), "target channel: fragment not in the query"
     assert any(FRAG.encode() in r["body"] for r in got), "body channel: fragment not in the body"
-    assert any(FRAG == r["headers"].get("x-bench-fragment") for r in got), "header channel"
+    assert any(r["headers"].get("x-bench-fragment") == FRAG for r in got), "header channel"
 
 
 def test_concurrent_calls_overlap_on_the_wire(tmp_path, sink):

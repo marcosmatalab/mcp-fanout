@@ -28,9 +28,9 @@ from pathlib import Path
 
 import pytest
 import yaml
+from test_corpus_matches_probes import CANARY, META_KEYS, _strings, _validate
 
 from mcpfanout.redact import Redactor
-from test_corpus_matches_probes import CANARY, META_KEYS, _strings, _validate
 
 ROOT = Path(__file__).resolve().parent.parent
 CONCURRENT_DIR = ROOT / "corpus" / "concurrent"
@@ -84,7 +84,8 @@ def test_no_orphan_corpus_files():
     """A file nobody drives is a corpus that looks measured and is not."""
     declared = {Path(s["concurrent_corpus_ref"]).name for s in _servers()}
     on_disk = {p.name for p in CONCURRENT_DIR.glob("*.json")}
-    assert on_disk == declared, f"orphans: {sorted(on_disk - declared)}, missing: {sorted(declared - on_disk)}"
+    assert on_disk == declared, (f"orphans: {sorted(on_disk - declared)}, "
+                                 f"missing: {sorted(declared - on_disk)}")
 
 
 @pytest.mark.parametrize("server", _servers(), ids=_ids())
@@ -175,6 +176,8 @@ def test_no_planted_canary_in_the_concurrent_corpus(server):
 
 
 def test_the_two_corpora_are_different_files():
-    """Driving the sequential corpus under concurrency would make the pass a duplicate, not a pass."""
+    """Driving the sequential corpus under concurrency would make the pass a duplicate, not a pass.
+
+    """
     for server in _servers():
         assert server["corpus_ref"] != server["concurrent_corpus_ref"], server["id"]

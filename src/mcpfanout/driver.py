@@ -47,9 +47,12 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 from . import structure
 from .record import PHASE_DRAINED, PHASE_DRIVING, PHASE_HANDSHAKE, PHASE_LAUNCHER
+from .redact import Redactor
 
 # The revision whose wire format this module actually speaks. Claim 1 of the module docstring.
 # Rejected: "2026-07-28", the current revision. It is the newest and it is where SEP-414 went
@@ -83,7 +86,7 @@ def new_traceparent() -> str:
 class CallSpec:
     """One entry of the corpus: which tool, with which arguments."""
     tool_name: str
-    arguments: dict
+    arguments: dict[str, Any]
 
 
 @dataclass
@@ -107,16 +110,16 @@ class StdioMCPClient:
     measurement.
     """
 
-    def __init__(self, command: list[str], env: dict | None = None, *,
+    def __init__(self, command: list[str], env: dict[str, Any] | None = None, *,
                  read_timeout: float = DEFAULT_READ_TIMEOUT_S) -> None:
         self.command = command
         self.env = {**os.environ, **(env or {})}
         self.read_timeout = read_timeout
-        self.proc: subprocess.Popen | None = None
+        self.proc: subprocess.Popen[str] | None = None
         self._id = 0
         self._stderr_tail: list[str] = []
         # Lines arrive on a reader thread so no read can block the harness indefinitely.
-        self._stdout_q: "queue.Queue[str | None]" = queue.Queue()
+        self._stdout_q: queue.Queue[str | None] = queue.Queue()
         # Non-JSON-RPC lines seen on stdout. See _read().
         self.stdout_noise_lines = 0
         self._noise_tail: list[str] = []
@@ -124,9 +127,9 @@ class StdioMCPClient:
         # more than one request is in flight: without it, await_response would DISCARD another
         # call's answer while looking for its own, and concurrent driving would hang on the
         # calls whose responses were thrown away.
-        self._pending: dict[int, dict] = {}
+        self._pending: dict[int, dict[str, Any]] = {}
 
-    def __enter__(self) -> "StdioMCPClient":
+    def __enter__(self) -> StdioMCPClient:
         self.proc = subprocess.Popen(
             self.command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, env=self.env, bufsize=1, text=True,
@@ -138,7 +141,7 @@ class StdioMCPClient:
         threading.Thread(target=self._drain_stdout, daemon=True).start()
         return self
 
-    def __exit__(self, *exc) -> None:
+    def __exit__(self, *exc: object) -> None:
         if self.proc and self.proc.poll() is None:
             self.proc.terminate()
             try:
@@ -163,12 +166,12 @@ class StdioMCPClient:
         self._id += 1
         return self._id
 
-    def _send(self, obj: dict) -> None:
+    def _send(self, obj: dict[str, Any]) -> None:
         assert self.proc and self.proc.stdin
         self.proc.stdin.write(json.dumps(obj) + "\n")
         self.proc.stdin.flush()
 
-    def _read(self, deadline: float) -> dict:
+    def _read(self, deadline: float) -> dict[str, Any]:
         """Read the next JSON-RPC message, skipping lines that are not one.
 
         MCP stdio reserves stdout for the protocol and directs logging to stderr, but real
@@ -200,14 +203,15 @@ class StdioMCPClient:
                 self.stdout_noise_lines += 1
                 continue
             try:
-                return json.loads(line)
+                message: dict[str, Any] = json.loads(line)
+                return message
             except json.JSONDecodeError:
                 self.stdout_noise_lines += 1
                 self._noise_tail.append(line.rstrip()[:200])
                 del self._noise_tail[:-10]
                 continue
 
-    def send_request(self, method: str, params: dict | None = None) -> int:
+    def send_request(self, method: str, params: dict[str, Any] | None = None) -> int:
         """Send a request WITHOUT waiting, returning its JSON-RPC id.
 
         Split out from request() so several calls can be in flight at once, which is the whole
@@ -218,7 +222,8 @@ class StdioMCPClient:
         self._send({"jsonrpc": "2.0", "id": rid, "method": method, "params": params or {}})
         return rid
 
-    def await_response(self, rid: int, *, method: str = "", timeout: float | None = None) -> dict:
+    def await_response(self, rid: int, *, method: str = "",
+                       timeout: float | None = None) -> dict[str, Any]:
         """Wait for one id's response, stashing any other response that arrives first.
 
         Stashing rather than skipping is the correctness requirement under concurrency. Server
@@ -228,7 +233,8 @@ class StdioMCPClient:
             msg = self._pending.pop(rid)
             if "error" in msg:
                 raise RuntimeError(f"{method or 'request'} error: {msg['error']}")
-            return msg.get("result", {})
+            result: dict[str, Any] = msg.get("result", {})
+            return result
         # One budget for the whole wait, not one per read: a server that emits an unrelated
         # notification just inside every per-read window would otherwise stall us forever while
         # looking responsive. Rejected: per-read timeout, for exactly that reason.
@@ -243,17 +249,18 @@ class StdioMCPClient:
                 continue
             if "error" in msg:
                 raise RuntimeError(f"{method or 'request'} error: {msg['error']}")
-            return msg.get("result", {})
+            payload: dict[str, Any] = msg.get("result", {})
+            return payload
 
-    def request(self, method: str, params: dict | None = None,
-                *, timeout: float | None = None) -> dict:
+    def request(self, method: str, params: dict[str, Any] | None = None,
+                *, timeout: float | None = None) -> dict[str, Any]:
         rid = self.send_request(method, params)
         return self.await_response(rid, method=method, timeout=timeout)
 
-    def notify(self, method: str, params: dict | None = None) -> None:
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
         self._send({"jsonrpc": "2.0", "method": method, "params": params or {}})
 
-    def initialize(self, *, timeout: float | None = None) -> dict:
+    def initialize(self, *, timeout: float | None = None) -> dict[str, Any]:
         # Separate budget on purpose: with npx/uvx the package download runs inside our own
         # subprocess, so the first response can be a cold minute away while every later one is
         # milliseconds. One shared timeout would have to be the slow one, which would mean a
@@ -266,10 +273,11 @@ class StdioMCPClient:
         self.notify("notifications/initialized")
         return result
 
-    def list_tools(self) -> list[dict]:
-        return self.request("tools/list").get("tools", [])
+    def list_tools(self) -> list[dict[str, Any]]:
+        tools: list[dict[str, Any]] = self.request("tools/list").get("tools", [])
+        return tools
 
-    def call_tool(self, spec: CallSpec, traceparent: str) -> dict:
+    def call_tool(self, spec: CallSpec, traceparent: str) -> dict[str, Any]:
         # SEP-414: trace context rides in params._meta. This is the reserved field, not a payload
         # we smuggle into a third party.
         return self.request("tools/call", {
@@ -279,7 +287,7 @@ class StdioMCPClient:
         })
 
 
-def _write_active_calls(control_dir, payload: dict) -> None:
+def _write_active_calls(control_dir: str | Path | None, payload: dict[str, Any]) -> None:
     """Atomically publish the set of IN-FLIGHT calls so the addon can attribute egress.
 
     A LIST, not a single call, and the name says so. Today the corpus is driven sequentially so
@@ -295,14 +303,16 @@ def _write_active_calls(control_dir, payload: dict) -> None:
     import json as _json
     import os as _os
     from pathlib import Path as _Path
-    control_dir = _Path(control_dir)
-    control_dir.mkdir(parents=True, exist_ok=True)
-    tmp = control_dir / "active_calls.json.tmp"
+    if control_dir is None:
+        return
+    directory = _Path(control_dir)
+    directory.mkdir(parents=True, exist_ok=True)
+    tmp = directory / "active_calls.json.tmp"
     tmp.write_text(_json.dumps(payload), encoding="utf-8")
-    _os.replace(tmp, control_dir / "active_calls.json")
+    _os.replace(tmp, directory / "active_calls.json")
 
 
-def args_bytes(arguments: dict) -> bytes:
+def args_bytes(arguments: dict[str, Any]) -> bytes:
     """The exact bytes a call's arguments are matched as. ONE definition, on purpose.
 
     Sorted keys so two runs over the same call produce the same digests (gate rule 1). Exposed
@@ -313,14 +323,14 @@ def args_bytes(arguments: dict) -> bytes:
     return json.dumps(arguments, sort_keys=True).encode()
 
 
-def args_digests_for(spec: CallSpec, redactor) -> list[str]:
+def args_digests_for(spec: CallSpec, redactor: Redactor) -> list[str]:
     """The sorted digest set of one call's arguments, or empty when it carries none."""
     if not spec.arguments:
         return []
     return sorted(redactor.kgram_digest_set(args_bytes(spec.arguments)))
 
 
-def token_digests_for(spec: CallSpec, redactor) -> list[str]:
+def token_digests_for(spec: CallSpec, redactor: Redactor) -> list[str]:
     """The sorted digest set of one call's STRUCTURAL TOKENS. Number 5's side of the join.
 
     Published alongside args_digests, not instead of it: number 4 still matches k-grams against
@@ -339,8 +349,8 @@ def token_digests_for(spec: CallSpec, redactor) -> list[str]:
     return sorted(redactor.token_digest_set(structure.tokens_of_arguments(spec.arguments)))
 
 
-def publish_active_calls(control_dir, run_id: str, server_id: str,
-                         entries: list[dict], phase: str = "") -> None:
+def publish_active_calls(control_dir: str | Path | None, run_id: str, server_id: str,
+                         entries: list[dict[str, Any]], phase: str = "") -> None:
     """Publish the in-flight set the capture addon reads. Pass [] to declare none in flight.
 
     Exposed so the phase A bench driver publishes through the same function the sequential
@@ -358,8 +368,8 @@ def publish_active_calls(control_dir, run_id: str, server_id: str,
                                       "active_calls": entries, "phase": phase})
 
 
-def drive_wave(client: "StdioMCPClient", specs: list[CallSpec], run_id: str, server_id: str,
-               *, redactor, control_dir, start_index: int = 0,
+def drive_wave(client: StdioMCPClient, specs: list[CallSpec], run_id: str, server_id: str,
+               *, redactor: Redactor, control_dir: str | Path | None, start_index: int = 0,
                timeout: float | None = None) -> list[DriveResult]:
     """Drive several calls CONCURRENTLY over one connection, as a single wave.
 
@@ -373,7 +383,7 @@ def drive_wave(client: "StdioMCPClient", specs: list[CallSpec], run_id: str, ser
     "task still alive after the response" case exists to demonstrate: a time window cannot
     attribute what happens outside it.
     """
-    entries = []
+    entries: list[dict[str, Any]] = []
     for i, spec in enumerate(specs):
         entries.append({
             "call_id": f"{server_id}-c{start_index + i:03d}",
@@ -391,16 +401,16 @@ def drive_wave(client: "StdioMCPClient", specs: list[CallSpec], run_id: str, ser
             "_meta": {"traceparent": entry["traceparent"]},
         }))
 
-    results = []
-    for spec, entry, rid in zip(specs, entries, rids):
+    results: list[DriveResult] = []
+    for spec, entry, rid in zip(specs, entries, rids, strict=True):
         try:
             client.await_response(rid, method="tools/call", timeout=timeout)
             ok, err = True, ""
-        except Exception as exc:  # a failing call is data, not a crash
+        except Exception as exc:  # noqa: BLE001  # a failing call is data, not a crash
             ok, err = False, f"{type(exc).__name__}: {exc}"
         results.append(DriveResult(
-            call_id=entry["call_id"], tool_name=spec.tool_name,
-            args_present=entry["args_present"], traceparent=entry["traceparent"],
+            call_id=str(entry["call_id"]), tool_name=spec.tool_name,
+            args_present=bool(entry["args_present"]), traceparent=str(entry["traceparent"]),
             ok=ok, error=err, stdout_noise_lines=0))
 
     publish_active_calls(control_dir, run_id, server_id, [], phase=PHASE_DRAINED)
@@ -408,8 +418,9 @@ def drive_wave(client: "StdioMCPClient", specs: list[CallSpec], run_id: str, ser
 
 
 def drive(command: list[str], corpus: list[CallSpec], run_id: str, server_id: str,
-          env: dict | None = None, *, redactor=None, control_dir=None,
-          calls_path=None) -> list[DriveResult]:
+          env: dict[str, Any] | None = None, *, redactor: Redactor | None = None,
+          control_dir: str | Path | None = None,
+          calls_path: str | Path | None = None) -> list[DriveResult]:
     """Run the handshake and the corpus against one server, returning the driven calls.
 
     When ``control_dir`` and ``redactor`` are given, the driver publishes the active call (with
@@ -426,14 +437,17 @@ def drive(command: list[str], corpus: list[CallSpec], run_id: str, server_id: st
     not driven, with the reason, and the run continues: "this server did not start" is exactly the
     kind of finding the registry exists to hold.
     """
-    from .record import ToolCall, write_jsonl  # local import: record is core, avoids a cycle at import time
+    from .record import (  # local import: record is core, avoids a cycle at import time
+        ToolCall,
+        write_jsonl,
+    )
 
     results: list[DriveResult] = []
-    tool_calls = []
+    tool_calls: list[Any] = []
     try:
         _drive_corpus(command, corpus, run_id, server_id, env, redactor=redactor,
                       control_dir=control_dir, results=results, tool_calls=tool_calls)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         # Startup, teardown, or a failure that killed the connection mid-corpus. Whatever was
         # already driven is kept; the rest is recorded as not driven, once each, with the reason.
         err = f"{type(exc).__name__}: {exc}"
@@ -453,8 +467,10 @@ def drive(command: list[str], corpus: list[CallSpec], run_id: str, server_id: st
     return results
 
 
-def _drive_corpus(command, corpus, run_id, server_id, env, *, redactor, control_dir,
-                  results, tool_calls) -> None:
+def _drive_corpus(command: list[str], corpus: list[CallSpec], run_id: str, server_id: str,
+                  env: dict[str, Any] | None, *, redactor: Redactor | None,
+                  control_dir: str | Path | None, results: list[DriveResult],
+                  tool_calls: list[Any]) -> None:
     """The driving loop itself, so ``drive`` can wrap it whole. Appends to the caller's lists.
 
     Split out rather than nested in a try inside drive() so that the two concerns stay legible:
@@ -462,6 +478,9 @@ def _drive_corpus(command, corpus, run_id, server_id, env, *, redactor, control_
     """
     from .record import ToolCall
 
+    # Both or neither: the addon needs the digests to attribute, and the digests need a
+    # redactor to exist. mypy reads the pair the same way the code does, so the narrowed
+    # `redactor is not None` travels with it instead of being asserted again further down.
     published = control_dir is not None and redactor is not None
     if published:
         # BEFORE the subprocess exists. `npx -y pkg@ver` and `uvx pkg@ver` resolve and may download
@@ -480,7 +499,7 @@ def _drive_corpus(command, corpus, run_id, server_id, env, *, redactor, control_
             call_id = f"{server_id}-c{i:03d}"
             args_present = bool(spec.arguments)
 
-            if published:
+            if published and redactor is not None:
                 # One entry, because this path is sequential. drive_wave publishes several.
                 publish_active_calls(control_dir, run_id, server_id, [{
                     "call_id": call_id, "traceparent": tp, "args_present": args_present,
@@ -492,7 +511,7 @@ def _drive_corpus(command, corpus, run_id, server_id, env, *, redactor, control_
             try:
                 client.call_tool(spec, tp)
                 ok, err = True, ""
-            except Exception as exc:  # a failing call is data, not a crash: record and continue
+            except Exception as exc:  # noqa: BLE001  # a failing call is data, not a crash: record and continue
                 ok, err = False, f"{type(exc).__name__}: {exc}"
 
             noise = client.stdout_noise_lines - noise_before

@@ -17,8 +17,6 @@ import os
 import sys
 from pathlib import Path
 
-import pytest
-
 ADDON = Path(__file__).resolve().parent.parent / "src" / "mcpfanout" / "capture_addon.py"
 
 

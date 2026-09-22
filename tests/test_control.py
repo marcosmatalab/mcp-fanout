@@ -29,10 +29,22 @@ from types import SimpleNamespace
 
 import pytest
 
-from mcpfanout.control import (CONTROL_SERVER_ID, VERDICT_NOT_REPRODUCED,
-                               VERDICT_NOTHING_TO_EXPLAIN, VERDICT_PARTIAL, VERDICT_REPRODUCED,
-                               compare, publishable)
-from mcpfanout.record import PASS_CONTROL, PASSES, PASSES_MEASURING_A_SERVER, PHASE_DRIVING, PHASE_HANDSHAKE
+from mcpfanout.control import (
+    CONTROL_SERVER_ID,
+    VERDICT_NOT_REPRODUCED,
+    VERDICT_NOTHING_TO_EXPLAIN,
+    VERDICT_PARTIAL,
+    VERDICT_REPRODUCED,
+    compare,
+    publishable,
+)
+from mcpfanout.record import (
+    PASS_CONTROL,
+    PASSES,
+    PASSES_MEASURING_A_SERVER,
+    PHASE_DRIVING,
+    PHASE_HANDSHAKE,
+)
 
 REPO = Path(__file__).resolve().parent.parent
 

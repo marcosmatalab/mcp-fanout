@@ -100,7 +100,8 @@ def test_matched_refs_are_sorted_for_byte_identical_artifacts():
     """
     r = _r()
     index = match.build_reference_index(
-        {"b.md": b"beta content with enough bytes here", "a.md": b"alpha content with bytes here"}, r)
+        {"b.md": b"beta content with enough bytes here",
+            "a.md": b"alpha content with bytes here"}, r)
     res = match.match_request(b"/?x=alpha content with bytes here",
                               b"beta content with enough bytes here", index, frozenset(), r)
     assert res.matched_refs == sorted(res.matched_refs)

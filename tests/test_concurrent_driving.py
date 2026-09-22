@@ -10,10 +10,13 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
-
-from mcpfanout.driver import (CallSpec, StdioMCPClient, args_digests_for, drive_wave,
-                              publish_active_calls)
+from mcpfanout.driver import (
+    CallSpec,
+    StdioMCPClient,
+    args_digests_for,
+    drive_wave,
+    publish_active_calls,
+)
 from mcpfanout.redact import Redactor
 
 

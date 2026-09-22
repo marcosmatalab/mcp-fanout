@@ -68,9 +68,9 @@ def _normalise_doc_paths(value: str) -> str:
 def _differences(redacted, published, path=""):
     """Every point where two aggregates differ, as (kind, path) pairs."""
     out = []
-    if isinstance(redacted, str) and isinstance(published, str):
-        if _normalise_doc_paths(redacted) == _normalise_doc_paths(published):
-            return out
+    if (isinstance(redacted, str) and isinstance(published, str)
+            and _normalise_doc_paths(redacted) == _normalise_doc_paths(published)):
+        return out
     if isinstance(redacted, dict) and isinstance(published, dict):
         for key in sorted(set(redacted) | set(published)):
             here = f"{path}/{key}"

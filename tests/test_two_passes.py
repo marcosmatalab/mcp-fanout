@@ -1,4 +1,5 @@
-"""The two phase B passes: labelled, never merged, and reported under the condition that produced them.
+"""The two phase B passes: labelled, never merged, and reported under the condition that produced
+them.
 
 Phase B is driven twice, sequentially and concurrently, and the two results are two experimental
 conditions rather than two samples of one (docs/PROTOCOL.md, phase B). Everything here protects that
@@ -24,8 +25,14 @@ from pathlib import Path
 import pytest
 
 from mcpfanout.aggregate import Run, number_5
-from mcpfanout.record import (PASS_CONCURRENT, PASS_SEQUENTIAL, Flow, RunManifest, ToolCall,
-                              write_jsonl, write_manifest)
+from mcpfanout.record import (
+    PASS_CONCURRENT,
+    PASS_SEQUENTIAL,
+    Flow,
+    RunManifest,
+    ToolCall,
+    write_manifest,
+)
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -84,7 +91,9 @@ def test_the_ladder_respects_both_the_declared_cap_and_the_corpus(cap, corpus, e
 
 
 def test_every_registry_server_reaches_at_least_the_first_rung():
-    """A server that cannot be driven at N >= 2 would be in the concurrent run contributing nothing."""
+    """A server that cannot be driven at N >= 2 would be in the concurrent run contributing nothing.
+
+    """
     import yaml
     mod = _drive_all()
     registry = yaml.safe_load((REPO / "registry" / "servers.yaml").read_text())
@@ -220,6 +229,8 @@ def test_the_driving_summary_reports_errors_by_wave_size(tmp_path):
 
 
 def test_a_run_directory_name_carries_its_pass():
-    """So a listing of docs/figures/ distinguishes two incomparable artifacts without opening them."""
+    """So a listing of docs/figures/ distinguishes two incomparable artifacts without opening them.
+
+    """
     run_sh = (REPO / "harness" / "run.sh").read_text()
     assert 'RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)-${LABEL}"' in run_sh

@@ -4,7 +4,8 @@ The acceptance criterion F1.3 was given is a number: re-measure the false-positi
 weighting on, and if it does not fall, revert the weighting and document why rather than keeping it
 because it is more sophisticated. So the tests here fall into two groups.
 
-**The mechanism is correct on its own terms.** Document frequency is counted per document and not per
+**The mechanism is correct on its own terms.** Document frequency is counted per document and not
+per
 occurrence, an unseen k-gram weighs 1.0, weights fall as frequency rises, a mass threshold of one
 unseen k-gram is met by exactly that, and an index built at one k refuses to be used at another. If
 any of that were wrong the verdict would be measuring a bug rather than the idea.
@@ -22,12 +23,25 @@ from pathlib import Path
 import pytest
 
 from mcpfanout import match as _match
-from mcpfanout.calibrate import CALIBRATION, HELD_OUT, PURPOSE_CALIBRATION, PURPOSE_PUBLICATION
-from mcpfanout.calibrate import HeldOutViolation, load_negative, load_positive
+from mcpfanout.calibrate import (
+    CALIBRATION,
+    HELD_OUT,
+    PURPOSE_CALIBRATION,
+    PURPOSE_PUBLICATION,
+    HeldOutViolation,
+    load_negative,
+    load_positive,
+)
 from mcpfanout.driver import args_bytes
-from mcpfanout.rarity import (BACKGROUND_SOURCES, MIN_RARITY_MASS, VERDICT_KEPT, VERDICT_REVERTED,
-                              BackgroundLeak, RarityIndex, claims_match_weighted,
-                              colliding_kgram_frequencies, sweep_mass)
+from mcpfanout.rarity import (
+    BACKGROUND_SOURCES,
+    VERDICT_KEPT,
+    VERDICT_REVERTED,
+    BackgroundLeak,
+    RarityIndex,
+    claims_match_weighted,
+    sweep_mass,
+)
 from mcpfanout.redact import Redactor
 from mcpfanout.shingle import DEFAULT_K
 
@@ -93,7 +107,9 @@ def test_an_index_built_at_another_k_is_refused():
 
 
 def test_the_weighted_decision_reuses_the_shipped_matchers_own_kgram_set():
-    """Two implementations of "which k-grams matched" would let the figure describe another matcher."""
+    """Two implementations of "which k-grams matched" would let the figure describe another matcher.
+
+    """
     r = Redactor()
     call = load_negative(CALIBRATION, purpose=PURPOSE_CALIBRATION, root=REPO).calls[0]
     digests = frozenset(r.kgram_digest_set(args_bytes(call.arguments)))
@@ -178,8 +194,9 @@ def test_the_mechanism_probe_explains_itself_rather_than_only_reporting_a_failur
     # The diagnosis rests on this: the colliding k-grams are not common in the background.
     frequencies = {int(k): v for k, v in cg["instances_by_document_frequency"].items()}
     assert max(frequencies) <= 1, (
-        "the diagnosis in docs/CALIBRATION.md says no colliding k-gram is common in the background; "
-        f"the figure now shows frequencies up to {max(frequencies)} and the prose must be rewritten")
+        "the diagnosis in docs/CALIBRATION.md says no colliding k-gram is common in the "
+        f"background; the figure now shows frequencies up to {max(frequencies)} and the prose "
+        "must be rewritten")
     assert probe["mass_ladder"], "no threshold sweep, so the verdict rests on one guessed threshold"
 
 
@@ -195,7 +212,8 @@ def test_the_threshold_that_works_is_dominated_by_the_chosen_k():
     thr = d["what_a_working_threshold_would_be_doing"]
     if thr["cheapest_mass_that_clears_all_false_positives"] is None:
         return  # no threshold clears them at all: an even stronger reason to revert
-    assert thr["self_match_recall_there"] <= thr["self_match_recall_at_the_shipped_k_without_weighting"], (
+    unweighted_at_k = thr["self_match_recall_at_the_shipped_k_without_weighting"]
+    assert thr["self_match_recall_there"] <= unweighted_at_k, (
         "a threshold now beats the chosen k on recall at the same false-positive rate; the revert "
         "decision in docs/CALIBRATION.md no longer follows from the numbers")
 

@@ -26,10 +26,16 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 from .aggregate import Run, compute_all, number_1, number_2, number_3, number_4, number_5, number_6
-from .classify import (CONSTANT_PATHS_PATH, PACKAGE_INFRASTRUCTURE_PATH,
-                       ConstantPathList, ExclusionList, Registry)
+from .classify import (
+    CONSTANT_PATHS_PATH,
+    PACKAGE_INFRASTRUCTURE_PATH,
+    ConstantPathList,
+    ExclusionList,
+    Registry,
+)
 
 
 def _resolve_run(run_arg: str, runs_root: Path = Path("runs")) -> Path:
@@ -69,7 +75,7 @@ def _resolve_run(run_arg: str, runs_root: Path = Path("runs")) -> Path:
     return max(candidates, key=lambda d: d.stat().st_mtime)
 
 
-def _refuse_a_control_run(run, what: str) -> None:
+def _refuse_a_control_run(run: Run, what: str) -> None:
     """Stop a control run being read as a measurement of a server.
 
     A control run drives a component with no MCP server in the process tree, so it has no tool
@@ -178,8 +184,13 @@ def _cmd_calibrate(args: argparse.Namespace) -> int:
     property: the held-out half is only ever loaded for publication, the calibration half only for
     calibration. A `--purpose` flag would put the choice in the hands of whoever is in a hurry.
     """
-    from .calibrate import (CALIBRATION, HELD_OUT, PURPOSE_CALIBRATION, PURPOSE_PUBLICATION,
-                            false_positive_rate, load_negative)
+    from .calibrate import (
+        HELD_OUT,
+        PURPOSE_CALIBRATION,
+        PURPOSE_PUBLICATION,
+        false_positive_rate,
+        load_negative,
+    )
     from .redact import Redactor
 
     purpose = PURPOSE_PUBLICATION if args.half == HELD_OUT else PURPOSE_CALIBRATION
@@ -200,7 +211,8 @@ def _cmd_calibrate(args: argparse.Namespace) -> int:
 
 
 def _cmd_prep_positive(args: argparse.Namespace) -> int:
-    """Distil the phase A positive control out of a bench run's own ledger. Run once per bench change.
+    """Distil the phase A positive control out of a bench run's own ledger. Run once per bench
+    change.
 
     Why the fixture is committed rather than read from the run. Gate rule 4 refuses to track runs,
     so a curve computed straight off runs/<id> would be re-derivable only by someone with Docker,
@@ -210,7 +222,6 @@ def _cmd_prep_positive(args: argparse.Namespace) -> int:
     anywhere, including CI. The alternative, re-running the bench once per value of k, is 57 Docker
     runs to answer a question the sender already knows the answer to.
     """
-    import base64
     run_dir = _resolve_run(args.run)
     truth_path = Path(args.truth) if args.truth else run_dir / "bench_truth.jsonl"
     if not truth_path.is_file():
@@ -245,12 +256,14 @@ def _cmd_prep_positive(args: argparse.Namespace) -> int:
                 else "re_encoded" if r["channel"].startswith("body:")
                 else "nothing_carried"),
         })
-    payload = {
+    payload: dict[str, Any] = {
         "_what_this_is": ("Phase A positive control: every transfer the bench actually made, with "
-                          "the bytes it sent and the arguments of the call that caused it. Distilled "
+                          "the bytes it sent and the arguments of the call that caused it. "
+                          "Distilled "
                           "from the bench's OWN ledger, which it writes from inside its handler. "
                           "Used by the k sweep as the truth pattern (docs/CALIBRATION.md)."),
-        "_why_committed": ("the bench's payloads are synthetic and keyed from a published constant, "
+        "_why_committed": ("the bench's payloads are synthetic and keyed from a published "
+                           "constant, "
                            "so this file carries no third-party content and makes the sweep "
                            "reproducible without Docker. It is not a run: gate rule 4 still holds"),
         "source_run": run_dir.name,
@@ -270,8 +283,7 @@ def _cmd_ksweep(args: argparse.Namespace) -> int:
     Runs on the calibration half only, and says so in two places: the loader is asked for that half
     by name, and sweep_k refuses any other. Choosing a parameter is calibration by definition.
     """
-    from .calibrate import (CALIBRATION, PURPOSE_CALIBRATION, load_negative, load_positive,
-                            sweep_k)
+    from .calibrate import CALIBRATION, PURPOSE_CALIBRATION, load_negative, load_positive, sweep_k
     corpus = load_negative(CALIBRATION, purpose=PURPOSE_CALIBRATION)
     transfers = load_positive(args.positive)
     out = sweep_k(corpus, transfers, k_min=args.k_min, k_max=args.k_max)
@@ -291,8 +303,13 @@ def _cmd_inventory(args: argparse.Namespace) -> int:
     Runs on the calibration half. It is a descriptive inventory rather than a tuning step, but it is
     read while working on the matcher, so it uses the half that is there to be read.
     """
-    from .calibrate import (CALIBRATION, PURPOSE_CALIBRATION, detectability_inventory,
-                            load_negative, load_positive)
+    from .calibrate import (
+        CALIBRATION,
+        PURPOSE_CALIBRATION,
+        detectability_inventory,
+        load_negative,
+        load_positive,
+    )
     from .redact import Redactor
     corpus = load_negative(CALIBRATION, purpose=PURPOSE_CALIBRATION)
     out = detectability_inventory(corpus, load_positive(args.positive), Redactor(k=args.k))
@@ -307,14 +324,14 @@ def _cmd_inventory(args: argparse.Namespace) -> int:
 
 
 def _cmd_rarity(args: argparse.Namespace) -> int:
-    """F1.3: measure whether rarity weighting lowers the false-positive rate, and say what it implies.
+    """F1.3: measure whether rarity weighting lowers the false-positive rate, and say what it
+    implies.
 
     Exit code carries the verdict: 0 if the rate fell (the weighting earns its place), 1 if it did
     not (revert it and document why). A measurement whose conclusion needs a human to read the prose
     is a measurement that gets quoted the other way round eventually.
     """
     from .rarity import VERDICT_KEPT, acceptance
-    from .shingle import DEFAULT_K
     out = acceptance(shipped_k=args.k, probe_k=args.probe_k)
     print(json.dumps(out, indent=2, sort_keys=True))
     if args.out:
@@ -336,7 +353,7 @@ def _cmd_disclosure_check(args: argparse.Namespace) -> int:
     The report is written into the RUN directory, which is gitignored, because it names servers and
     destination hosts (gate rule 3). Nothing here goes to docs/figures/.
     """
-    from .disclosure import DECLARED_DESTINATIONS_PATH, DeclaredDestinations, VERDICT_CLEAR, check
+    from .disclosure import DECLARED_DESTINATIONS_PATH, VERDICT_CLEAR, DeclaredDestinations, check
     run_dir = _resolve_run(args.run)
     run = Run.load(run_dir)
     carried = (run.manifest.redaction or {}).get("declared_destinations")
@@ -344,7 +361,7 @@ def _cmd_disclosure_check(args: argparse.Namespace) -> int:
         # A redacted run carries its own relabelled copy of the declaration, because its server
         # ids are indices and its destinations are class labels: the committed file cannot be
         # applied to it at all. See DeclaredDestinations.carried for why this is still a check.
-        declared = DeclaredDestinations.carried(carried)
+        declared: DeclaredDestinations | None = DeclaredDestinations.carried(carried)
     else:
         declared = DeclaredDestinations.load(args.declared or DECLARED_DESTINATIONS_PATH)
     # The package-infrastructure list is the declared, versioned, cited answer to "is this host a
@@ -482,7 +499,7 @@ def _cmd_figures(args: argparse.Namespace) -> int:
     run_dir = _resolve_run(args.run)
     run = Run.load(run_dir)
     _refuse_a_control_run(run, "a normalized six-number aggregate")
-    payload = {
+    payload: dict[str, Any] = {
         "normalized": True,
         "provenance": {
             "run_id": run.manifest.run_id,
@@ -507,7 +524,8 @@ def _cmd_figures(args: argparse.Namespace) -> int:
     # The pass sits in provenance because it is a property of how the run was driven, and it is
     # NOT optional: a grade distribution whose driving condition is unknown cannot be read at all
     # (docs/PROTOCOL.md, phase B: two passes, published separately and labelled by pass).
-    payload["provenance"]["pass"] = computed["pass"]
+    provenance: dict[str, Any] = payload["provenance"]
+    provenance["pass"] = computed["pass"]
     # Driving alongside the numbers, never inside them: it is the denominator (how many calls
     # errored, at which wave size), and a reader who has the six without it cannot tell a server
     # that egresses nothing from a server whose calls failed.
@@ -532,7 +550,7 @@ def _cmd_figures(args: argparse.Namespace) -> int:
     return 0
 
 
-def _instrument_artifact(run_dir: Path, run_id: str) -> dict:
+def _instrument_artifact(run_dir: Path, run_id: str) -> dict[str, Any]:
     """The publishable form of the phase A instrument block.
 
     One transformation, and it is a rule-3 requirement rather than tidiness:
@@ -647,7 +665,8 @@ def build_parser() -> argparse.ArgumentParser:
     ks.set_defaults(func=_cmd_ksweep)
 
     inv = sub.add_parser("inventory",
-                         help="the self-match ceiling: what the sensor can see of realistic material")
+                         help="the self-match ceiling: what the sensor can see of realistic "
+                              "material")
     inv.add_argument("--k", type=int, default=_shingle_default_k())
     inv.add_argument("--positive", default="corpus/positive/bench-transfers.json")
     inv.add_argument("--out", default=None)
@@ -729,7 +748,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return args.func(args)
+    code: int = args.func(args)
+    return code
 
 
 if __name__ == "__main__":

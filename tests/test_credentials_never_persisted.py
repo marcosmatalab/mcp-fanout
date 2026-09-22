@@ -87,7 +87,9 @@ def test_the_scanner_catches_a_planted_token_by_shape():
 
 
 def test_the_scanner_catches_a_planted_value_that_matches_no_shape():
-    """A credential with an unknown prefix must still be caught, or the list is the whole defence."""
+    """A credential with an unknown prefix must still be caught, or the list is the whole defence.
+
+    """
     secret = "an-opaque-lab-credential-with-no-recognisable-prefix"
     assert _scan(f"TOKEN={secret}", [secret]), "the value scanner is not scanning"
 
@@ -147,7 +149,8 @@ def test_the_credential_file_lives_outside_the_repository():
     """It is at ~/.mcp-fanout-lab.env on purpose, and not at the root, because
     corpus/context/.env already exists as synthetic bait and two files with that name in one
     project is a confusion waiting to happen."""
-    assert not (REPO / ".env").exists(), "a .env at the repository root is the confusion this avoids"
+    assert not (REPO / ".env").exists(), ("a .env at the repository root is the confusion this "
+                                          "avoids")
     if LAB_ENV.is_file():
         mode = LAB_ENV.stat().st_mode & 0o777
         assert mode == 0o600, f"{LAB_ENV} is mode {mode:o}, expected 600"

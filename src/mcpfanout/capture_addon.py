@@ -23,6 +23,7 @@ import sys
 import time
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 # Absolute imports, deliberately, even though this file lives inside the package. mitmproxy
 # loads an addon BY PATH under a synthetic package name ("__mitmproxy_script__.capture_addon")
@@ -71,13 +72,14 @@ class FanoutRecorder:
 
         self._buffer: list[Flow] = []
 
-    def _active_calls(self) -> dict:
+    def _active_calls(self) -> dict[str, Any]:
         """Read the in-flight calls published by the driver. Empty dict if none are active yet."""
         p = self.control / "active_calls.json"
         if not p.exists():
             return {}
         try:
-            return json.loads(p.read_text(encoding="utf-8"))
+            published: dict[str, Any] = json.loads(p.read_text(encoding="utf-8"))
+            return published
         except (json.JSONDecodeError, OSError):
             # A torn read is treated as "no active calls": attribute nothing rather than guess.
             return {}
@@ -166,7 +168,7 @@ class FanoutRecorder:
 
         try:
             dest_ip = flow.server_conn.peername[0] if flow.server_conn.peername else ""
-        except Exception:
+        except Exception:  # noqa: BLE001
             dest_ip = ""
 
         self._buffer.append(Flow(

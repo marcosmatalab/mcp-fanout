@@ -33,7 +33,8 @@ def _pyproject() -> str:
 
 
 def _package() -> str:
-    for line in (REPO / "src" / "mcpfanout" / "__init__.py").read_text(encoding="utf-8").splitlines():
+    init = (REPO / "src" / "mcpfanout" / "__init__.py").read_text(encoding="utf-8")
+    for line in init.splitlines():
         m = re.match(r'^__version__\s*=\s*"([^"]+)"\s*$', line.strip())
         if m:
             return m.group(1)

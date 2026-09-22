@@ -15,8 +15,6 @@ import ast
 import json
 from pathlib import Path
 
-import pytest
-
 from mcpfanout import match as m
 from mcpfanout.bench_metrics import MATCHED_CHANNELS, _host_for_slot, compute
 
@@ -282,7 +280,7 @@ def test_no_two_fragments_in_a_discriminating_wave_share_a_kgram():
     """
     import sys
     sys.path.insert(0, str(REPO / "bench"))
-    from drive_bench import _plan, _wave_specs  # noqa: E402
+    from drive_bench import _plan, _wave_specs
 
     from mcpfanout.shingle import DEFAULT_K, rolling_hashes
 
@@ -309,7 +307,7 @@ def test_fragments_are_long_enough_to_be_detectable():
     """Shorter than k and a match is undetectable; barely over and it is luck."""
     import sys
     sys.path.insert(0, str(REPO / "bench"))
-    from drive_bench import _fragment  # noqa: E402
+    from drive_bench import _fragment
 
     from mcpfanout.calibrate import K_MAX
     from mcpfanout.shingle import DEFAULT_K

@@ -54,13 +54,20 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from mcpfanout.control import CONTROL_SERVER_ID
 from mcpfanout.driver import CallSpec, args_digests_for, publish_active_calls
-from mcpfanout.record import (PASS_CONTROL, PHASE_DRAINED, PHASE_DRIVING, RunManifest, ToolCall,
-                              write_jsonl, write_manifest)
+from mcpfanout.record import (
+    PASS_CONTROL,
+    PHASE_DRAINED,
+    PHASE_DRIVING,
+    RunManifest,
+    ToolCall,
+    write_jsonl,
+    write_manifest,
+)
 from mcpfanout.redact import DEFAULT_SALT, Redactor
 from mcpfanout.shingle import DEFAULT_K, DEFAULT_W
 
@@ -144,7 +151,8 @@ def one_launch(browser: Path, url: str, *, proxy: str, dwell_s: float,
                 # It exited on its own before the dwell was up. Recorded, because a browser that
                 # exits early has a shorter observation window than one that does not, and the
                 # comparison is about what was OBSERVABLE, not about what we intended.
-                return True, f"exited on its own after {dwell_s - (deadline - time.monotonic()):.1f}s"
+                waited = dwell_s - (deadline - time.monotonic())
+                return True, f"exited on its own after {waited:.1f}s"
             time.sleep(0.25)
         proc.send_signal(signal.SIGTERM)
         try:
@@ -221,7 +229,7 @@ def main() -> int:
 
     write_jsonl(run_dir / "calls.jsonl", calls)
     write_manifest(run_dir / "manifest.json", RunManifest(
-        run_id=run_id, created=datetime.now(timezone.utc).isoformat(),
+        run_id=run_id, created=datetime.now(UTC).isoformat(),
         salt_fixed=(salt == DEFAULT_SALT), k=DEFAULT_K, w=DEFAULT_W,
         corpus_sha256=hashlib.sha256(corpus_path.read_bytes()).hexdigest(),
         server_ids=[CONTROL_SERVER_ID], pass_name=PASS_CONTROL,

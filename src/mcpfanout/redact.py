@@ -53,6 +53,7 @@ honestly be used for today.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable
 
 from . import shingle
 
@@ -128,7 +129,7 @@ class Redactor:
                             key=self.salt, digest_size=_DIGEST_BYTES)
         return h.hexdigest()
 
-    def token_digest_set(self, tokens) -> frozenset[str]:
+    def token_digest_set(self, tokens: Iterable[str]) -> frozenset[str]:
         """Membership set of salted token digests. The only form tokens are compared in."""
         return frozenset(self.token_digest(t) for t in tokens)
 

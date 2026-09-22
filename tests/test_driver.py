@@ -6,12 +6,19 @@ from pathlib import Path
 
 import pytest
 
-from mcpfanout.driver import (PROTOCOL_VERSION, CallSpec, DriveResult, ServerTimeout,
-                              StdioMCPClient, drive, new_traceparent)
+from mcpfanout.driver import (
+    PROTOCOL_VERSION,
+    CallSpec,
+    DriveResult,
+    ServerTimeout,
+    StdioMCPClient,
+    drive,
+    new_traceparent,
+)
 
 # harness/ is a directory of scripts, not a package, so it is not on the path by install.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "harness"))
-from probe import CANDIDATE_PROTOCOLS, probe  # noqa: E402
+from probe import CANDIDATE_PROTOCOLS, probe
 
 # Revisions that removed the initialize handshake, so neither driver.initialize() nor a
 # handshake probe can speak them. Listed explicitly rather than "anything after 2025-11-25":
@@ -116,9 +123,9 @@ def test_probe_candidate_list_excludes_post_handshake_revisions():
 def test_hung_server_times_out_and_is_recorded_as_a_failed_call():
     """The timeout must produce data, not a crash: a hung server is a finding about that server."""
     started = time.monotonic()
-    with StdioMCPClient(_mock_cmd(), {"MOCK_HANG": "1"}, read_timeout=2.0) as client:
-        with pytest.raises(ServerTimeout):
-            client.initialize()
+    with (StdioMCPClient(_mock_cmd(), {"MOCK_HANG": "1"}, read_timeout=2.0) as client,
+          pytest.raises(ServerTimeout)):
+        client.initialize()
     elapsed = time.monotonic() - started
     assert elapsed < 30, f"read was not bounded: waited {elapsed:.1f}s"
 
@@ -177,6 +184,7 @@ def test_drive_result_and_toolcall_do_not_drift():
     overlap instead of trusting two call sites to stay in step.
     """
     from dataclasses import fields
+
     from mcpfanout.record import ToolCall
     shared = {f.name for f in fields(DriveResult)} & {f.name for f in fields(ToolCall)}
     assert {"ok", "error", "stdout_noise_lines"} <= shared

@@ -21,8 +21,6 @@ import hashlib
 import re
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parent.parent
 # The sealed block moved into docs/PROTOCOL.md when the three governance documents were
 # merged. Moving it is safe exactly because of the digest below: the block travelled byte
@@ -61,7 +59,8 @@ def test_both_predictions_are_present_and_say_what_they_claim():
     """The digest proves nothing changed; this proves the block still contains predictions.
 
     A block replaced wholesale would fail the digest test, but an empty block with a matching digest
-    is impossible only as long as something checks that the content is a prediction at all. These are
+    is impossible only as long as something checks that the content is a prediction at all. These
+    are
     the load-bearing claims, not a spell check.
     """
     block = _normalised()
@@ -109,4 +108,5 @@ def test_the_prediction_block_quotes_no_result():
     allowed = {"1.0", "16", "2", "5", "10", "3"}
     found = set(re.findall(r"\b\d+(?:\.\d+)?\b", block))
     unexplained = found - allowed
-    assert not unexplained, f"numbers in the prediction block that are not the bench's or the ladder's: {sorted(unexplained)}"
+    assert not unexplained, ("numbers in the prediction block that are not the bench's or the "
+                             f"ladder's: {sorted(unexplained)}")

@@ -121,7 +121,8 @@ class MatchResult:
         # combined ratio: pooling a 40-byte target with a 40kB body produces a figure that
         # describes neither, and there is no question either channel's coverage cannot answer.
         # A zero-length channel has zero coverage by definition, not a division error.
-        self.target_coverage = (self.target_matched_bytes / self.target_bytes) if self.target_bytes else 0.0
+        self.target_coverage = ((self.target_matched_bytes / self.target_bytes)
+                                if self.target_bytes else 0.0)
         self.body_coverage = (self.body_matched_bytes / self.body_bytes) if self.body_bytes else 0.0
 
 
@@ -147,7 +148,8 @@ def _covered_bytes(positional_digests: list[str], member_set: frozenset[str], k:
     return matched
 
 
-def build_reference_index(references: dict[str, bytes], redactor: Redactor) -> dict[str, frozenset[str]]:
+def build_reference_index(references: dict[str, bytes], redactor: Redactor) -> dict[str,
+    frozenset[str]]:
     """Index each reference (a context file, or a call's arguments) to its k-gram digest set.
 
     Built once per run. The raw reference bytes are consumed here and not retained: only the

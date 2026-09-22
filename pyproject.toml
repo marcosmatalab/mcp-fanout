@@ -32,6 +32,11 @@ capture = [
 dev = [
     "pytest>=8",
     "PyYAML>=6",
+    # The gates. Declared here rather than left to each machine: a threshold that depends on
+    # which version of a linter somebody happens to have is not a gate.
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest-cov>=5",
 ]
 
 [project.scripts]
@@ -43,3 +48,35 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+
+# --- The gates, configured as data so CI and a developer run the same check -------------------
+
+[tool.ruff]
+# 100, because that is the width this repository was already written at. Reformatting 7,700 lines
+# to 88 would bury every real finding under a diff nobody can review, and the point of turning the
+# linter on is the 36 real findings, not the 3,156 line-length ones.
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "SIM", "BLE", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# A test that plants a defect sometimes needs the shape of the defect, and a test module's
+# imports are its fixtures. Narrow, and by rule rather than by silencing a whole check.
+"tests/*" = ["E741"]
+
+[tool.mypy]
+files = ["src/mcpfanout"]
+python_version = "3.11"
+strict = true
+
+[tool.coverage.report]
+fail_under = 85
+exclude_also = [
+    # A branch that only runs when the module is executed as a script is exercised by the
+    # Makefile, not by the suite, and a test that imported it would be testing argparse.
+    "if __name__ == .__main__.:",
+    "raise SystemExit",
+]

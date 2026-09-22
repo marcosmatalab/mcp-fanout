@@ -131,7 +131,10 @@ def test_the_document_carries_its_own_threats():
 
 
 def test_the_document_keeps_the_two_pending_pieces_marked_pending():
-    """F1.2 and F1.3 are unmeasured until they are measured; a doc that reads finished invites a quote."""
+    """F1.2 and F1.3 are unmeasured until they are measured; a doc that reads finished invites
+    a quote.
+
+    """
     text = DOC.read_text()
     for heading in ("## F1.2", "## F1.3"):
         block = text.split(heading)[1].split("\n## ")[0]
@@ -287,7 +290,7 @@ def test_the_document_quotes_the_inventory_per_family():
         row = (f"| `{family}` | {f['calls']} | {f['self_match_recall']} | "
                f"{lcr['min']} / {lcr['median']} / {lcr['max']} |")
         assert row in text, f"the document's row for {family} does not match the artifact: {row!r}"
-    assert f"it was already the level at k = 16" in text
+    assert "it was already the level at k = 16" in text
 
 
 def test_number_5_carries_the_lower_bound_caveat_in_its_own_output():
@@ -308,7 +311,9 @@ def test_number_5_carries_the_lower_bound_caveat_in_its_own_output():
 
 
 def test_every_document_that_publishes_number_5_states_the_lower_bound():
-    """Three documents quote number 5. All three have to carry the reason, or one of them is a trap."""
+    """Three documents quote number 5. All three have to carry the reason, or one of them is a trap.
+
+    """
     for name, marker in (("CALIBRATION.md", "published as a LOWER BOUND"),
                          ("THREATS.md", "published as a LOWER BOUND"),
                          # THE-SIX-NUMBERS.md was merged into METHOD.md; the number 5 section, and

@@ -41,7 +41,6 @@ import argparse
 import base64
 import json
 import os
-import socket
 import sys
 import threading
 import time
@@ -89,10 +88,9 @@ def _truth(row: dict) -> None:
     if not _truth_path:
         return
     line = json.dumps(row, sort_keys=True) + "\n"
-    with _truth_lock:
-        with open(_truth_path, "a", encoding="utf-8") as fh:
-            fh.write(line)
-            fh.flush()
+    with _truth_lock, open(_truth_path, "a", encoding="utf-8") as fh:
+        fh.write(line)
+        fh.flush()
 
 
 def _send(obj: dict) -> None:
@@ -139,7 +137,7 @@ def _egress(call_id: str, slot: int, fragment: str, channel: str,
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
             resp.read()
-    except (urllib.error.URLError, OSError, socket.timeout) as exc:
+    except (TimeoutError, urllib.error.URLError, OSError) as exc:
         error = f"{type(exc).__name__}: {exc}"
 
     row = {"call_id": call_id, "dest_host": host, "path": path, "method": method,
@@ -267,7 +265,7 @@ def _handle_call(mid, params: dict) -> None:
             try:
                 with urllib.request.urlopen(req, timeout=20) as resp:
                     resp.read()
-            except (urllib.error.URLError, OSError, socket.timeout) as exc:
+            except (TimeoutError, urllib.error.URLError, OSError) as exc:
                 error = f"{type(exc).__name__}: {exc}"
             _truth({"call_id": call_id, "dest_host": host, "path": "/bench/encoded",
                     "method": "POST", "channel": f"body:{encoding}", "fragment": fragment,
@@ -279,7 +277,7 @@ def _handle_call(mid, params: dict) -> None:
                    "error": {"code": -32602, "message": f"Unknown tool: {name}",
                              "data": {"available": sorted(TOOL_NAMES)}}})
             return
-    except Exception as exc:  # a bench failure is data: report it as a tool error, do not die
+    except Exception as exc:  # noqa: BLE001  # a bench failure is data: report it as a tool error, do not die
         _send({"jsonrpc": "2.0", "id": mid,
                "error": {"code": -32603, "message": f"{type(exc).__name__}: {exc}"}})
         return

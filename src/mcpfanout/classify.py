@@ -24,8 +24,10 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 LOCAL = "local"
 SELF_HOSTABLE = "self_hostable"
@@ -55,7 +57,7 @@ class Registry:
     self_hostable_suffixes: tuple[str, ...] = ()
 
     @classmethod
-    def from_dict(cls, data: dict | None) -> "Registry":
+    def from_dict(cls, data: dict[str, Any] | None) -> Registry:
         """Build from a parsed JSON dict, extending the embedded defaults (never shrinking them)."""
         if not data:
             return cls()
@@ -80,7 +82,7 @@ def _suffix_match(host: str, suffixes: tuple[str, ...]) -> bool:
     return any(host == s or host.endswith("." + s) for s in suffixes)
 
 
-def matches_suffix(host: str, suffixes) -> bool:
+def matches_suffix(host: str, suffixes: Iterable[str]) -> bool:
     """Public form of the host-suffix rule: exact match, or a dot-bounded suffix match.
 
     Exposed because gate rule 7's check (disclosure.py) asks the same question of a different
@@ -104,7 +106,8 @@ def classify_host(host: str, registry: Registry | None = None) -> str:
     return REMOTE_LEAF
 
 
-def selfhostable_fraction(hosts: set[str], registry: Registry | None = None) -> tuple[float, dict[str, int]]:
+def selfhostable_fraction(hosts: set[str], registry: Registry | None = None) -> tuple[float,
+    dict[str, int]]:
     """Number 6 over a set of distinct destination hosts.
 
     Returns the fraction that is recursable (local + self_hostable) and the per-category counts,
@@ -146,7 +149,7 @@ class ExclusionList:
     path: str
 
     @classmethod
-    def load(cls, path: str | Path) -> "ExclusionList | None":
+    def load(cls, path: str | Path) -> ExclusionList | None:
         """Load the list, or None if the file is absent. Absent is reported, never assumed empty."""
         p = Path(path)
         if not p.is_file():
@@ -164,7 +167,7 @@ class ExclusionList:
     def matches(self, host: str) -> bool:
         return _suffix_match(host or "", self.suffixes)
 
-    def citation(self) -> dict:
+    def citation(self) -> dict[str, Any]:
         """What goes into the aggregate output. Counts and identifiers only, never a hostname.
 
         The path is published as the canonical repository-relative one (parent directory plus
@@ -213,7 +216,7 @@ class ConstantPathList:
     path: str
 
     @classmethod
-    def load(cls, path: str | Path) -> "ConstantPathList | None":
+    def load(cls, path: str | Path) -> ConstantPathList | None:
         p = Path(path)
         if not p.is_file():
             return None
@@ -238,7 +241,7 @@ class ConstantPathList:
             return True
         return any(path.startswith(pre) for pre in self.path_prefixes)
 
-    def citation(self) -> dict:
+    def citation(self) -> dict[str, Any]:
         p = Path(self.path)
         return {"list_name": self.name, "version": self.version,
                 "path": f"{p.parent.name}/{p.name}" if p.parent.name else p.name,
