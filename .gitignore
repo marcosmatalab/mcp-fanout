@@ -45,6 +45,11 @@ htmlcov/
 *.crt
 *.key
 
+# The plan this repository was brought to its current state with. Untracked on purpose: it is a
+# working document in Spanish, and the repository is English (a decision with its reason in
+# CONTRIBUTING.md). What it asked for is in the commits, where it can be checked.
+PLAN-*.md
+
 # OS / editor
 .DS_Store
 .idea/

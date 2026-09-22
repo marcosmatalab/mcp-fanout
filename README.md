@@ -233,7 +233,8 @@ See [`docs/METHOD.md`](docs/METHOD.md) for the observation model and the capture
 conditions a run must pass before any number is reported. Rule 10 was added last and earned its
 place by being violated: **every instrument needs a test that fails when the instrument is ABSENT,
 not only when it is wrong.** A wrong number gets investigated; a green gets published. There are
-seven recorded instances, and three of them are in prose and figures rather than in code.
+eight recorded instances, and four of them are in prose, figures and this repository's own commit
+history rather than in code.
 
 ## Reproducibility, privacy, disclosure
 
@@ -314,8 +315,11 @@ published figure without a command that measures it.
 
 The sealed pre-registration, the CI gates and the honesty curve are not methodological decoration:
 they exist precisely because plausible text is cheaper to produce than evidence. Rule
-10 was added after one of those gates passed green with the instrument absent, and there are seven
-recorded instances. The commit history is signed with GPG.
+10 was added after one of those gates passed green with the instrument absent, and there are eight
+recorded instances. **Signing begins at `c4f28cb`**, and the commits before it are deliberately
+not re-signed: back-signing a history replaces real provenance with manufactured provenance, which
+is the one thing a repository arguing about provenance may not do.
+`tests/test_history_claims.py` checks that boundary against the history on every push.
 
 ## Citing this
 
