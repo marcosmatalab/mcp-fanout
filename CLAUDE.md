@@ -70,7 +70,7 @@ claim, add the command that measures it, or do not add the claim. This applies t
 
 ## Hard rules for any change
 
-- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 666
+- **Tests stay green.** `make verify` must pass before you consider a task done. Currently 668
   tests. If you add behaviour, add a test. Update this count when you change it: a hard rule
   quoting a stale figure is the same defect rule 6 exists to prevent, one file closer to home.
 - **The measurement core stays standard-library only**, and the list of what counts as the core is
@@ -171,7 +171,7 @@ README's argument and read as unfinished work inside the code.
 ```bash
 source .venv/bin/activate
 make gates       # EVERYTHING CI runs, in the order CI runs it. This is the one to use
-make verify      # 666 tests, no Docker, no network
+make verify      # 668 tests, no Docker, no network
 make selftest    # synthetic run, no Docker
 make reproduce   # the headline number end to end from the committed example runs
 make numbers     # the six numbers from a run (RUN defaults to the committed example-concurrent)

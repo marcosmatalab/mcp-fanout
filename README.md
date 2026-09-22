@@ -310,9 +310,10 @@ a DOI before that date would break a commitment made in writing
 ## How this was built
 
 This repository was written with the assistance of a coding agent, under a doctrine written before
-the work started. 48 of its first 50 commits declare it in their trailer, and the rules the agent
-worked under are in [`CLAUDE.md`](CLAUDE.md) and [`docs/DOCTRINE.md`](docs/DOCTRINE.md): four hard
-negatives, ten gate rules, and rule 6, no published figure without a command that measures it.
+the work started. **48 of the first 50 commits declare it in their trailer, and every commit since does**, which is checked against the history by `tests/test_history_claims.py` rather than asserted
+here. The rules the agent worked under are in [`CLAUDE.md`](CLAUDE.md) and
+[`docs/DOCTRINE.md`](docs/DOCTRINE.md): four hard negatives, ten gate rules, and rule 6, no
+published figure without a command that measures it.
 
 The sealed pre-registration, the CI gates and the honesty curve are not methodological decoration:
 they exist precisely because an agent produces plausible text faster than it produces evidence. Rule
