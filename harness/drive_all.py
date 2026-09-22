@@ -29,19 +29,26 @@ manifest.json. Flows are written by the addon.
 from __future__ import annotations
 
 import argparse
-import os
 import hashlib
 import json
-from datetime import datetime, timezone
+import os
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml  # from the 'capture' extra
 
-from mcpfanout.driver import (CallSpec, StdioMCPClient, drive, drive_wave,
-                              publish_active_calls)
-from mcpfanout.record import (PASS_CONCURRENT, PASS_SEQUENTIAL, PHASE_HANDSHAKE,
-                              PHASE_LAUNCHER, RunManifest, ToolCall, read_manifest, write_jsonl,
-                              write_manifest)
+from mcpfanout.driver import CallSpec, StdioMCPClient, drive, drive_wave, publish_active_calls
+from mcpfanout.record import (
+    PASS_CONCURRENT,
+    PASS_SEQUENTIAL,
+    PHASE_HANDSHAKE,
+    PHASE_LAUNCHER,
+    RunManifest,
+    ToolCall,
+    read_manifest,
+    write_jsonl,
+    write_manifest,
+)
 from mcpfanout.redact import DEFAULT_SALT, Redactor
 from mcpfanout.shingle import DEFAULT_K, DEFAULT_W
 
@@ -88,7 +95,7 @@ def warm(selected: list[dict]) -> int:
                 client.initialize(timeout=300.0)
                 n = len(client.list_tools())
             print(f"[warm] {sid}: cache populated, {n} tools")
-        except Exception as exc:  # a server that cannot start is reported, not fatal: the
+        except Exception as exc:  # noqa: BLE001  # a server that cannot start is reported, not fatal: the
             # capture pass records it as zero egress, which is the finding.
             print(f"[warm] {sid}: did not start ({type(exc).__name__}: {exc})")
     return 0
@@ -184,7 +191,7 @@ def drive_server_concurrent(srv: dict, *, run_id: str, control_dir: Path, redact
     try:
         _drive_ladder(srv, levels, corpus, run_id=run_id, control_dir=control_dir,
                       redactor=redactor, proxy_env=proxy_env, calls=calls, waves=waves)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         # Same rule as the sequential path (driver.drive): a server that cannot start is a data
         # point, not a stop. Every call the ladder still owed is recorded as not driven, with the
         # reason, so the run keeps the other nine servers.
@@ -375,7 +382,7 @@ def main() -> int:
         (run_dir / "waves.jsonl").write_text(
             "".join(json.dumps(w, sort_keys=True) + "\n" for w in all_waves), encoding="utf-8")
     write_manifest(run_dir / "manifest.json", RunManifest(
-        run_id=run_id, created=datetime.now(timezone.utc).isoformat(),
+        run_id=run_id, created=datetime.now(UTC).isoformat(),
         salt_fixed=(salt == DEFAULT_SALT), k=k, w=w,
         corpus_sha256=corpus_hash.hexdigest(), server_ids=server_ids,
         # Taken from the registry, where it was MEASURED by harness/probe.py, rather than

@@ -21,15 +21,22 @@ two halves stop being independent.
 """
 
 import json
-import re
 from pathlib import Path
 from urllib.parse import quote, quote_plus, urlparse
 
 import pytest
 
-from mcpfanout.calibrate import (CALIBRATION, HELD_OUT, PURPOSE_CALIBRATION, PURPOSE_PUBLICATION,
-                                 HeldOutViolation, claims_match, false_positive_rate,
-                                 load_negative, wilson_interval)
+from mcpfanout.calibrate import (
+    CALIBRATION,
+    HELD_OUT,
+    PURPOSE_CALIBRATION,
+    PURPOSE_PUBLICATION,
+    HeldOutViolation,
+    claims_match,
+    false_positive_rate,
+    load_negative,
+    wilson_interval,
+)
 from mcpfanout.driver import CallSpec, args_bytes, args_digests_for
 from mcpfanout.redact import Redactor
 
@@ -99,7 +106,9 @@ def test_the_corpus_plants_nothing(half):
 
 @pytest.mark.parametrize("half", [CALIBRATION, HELD_OUT])
 def test_no_two_calls_in_a_family_share_information(half):
-    """A shared value would make a match a TRUE positive, and counting it would understate the rate."""
+    """A shared value would make a match a TRUE positive, and counting it would understate the rate.
+
+    """
     corpus = _corpus(half)
     offenders = []
     for a, b in corpus.pairs():
@@ -177,6 +186,7 @@ def test_the_registry_and_the_shipped_constant_agree_on_k():
     calibration figure in docs/ was measured with.
     """
     import yaml
+
     from mcpfanout.shingle import DEFAULT_K, DEFAULT_W
     registry = yaml.safe_load((REPO / "registry" / "servers.yaml").read_text())
     assert registry["k"] == DEFAULT_K, (registry["k"], DEFAULT_K)
@@ -231,7 +241,9 @@ def test_the_declared_request_is_what_a_client_would_actually_send(half):
 # --- The matcher is asked the same question the addon asks.
 
 def test_the_measurement_uses_the_drivers_own_argument_serialisation():
-    """A second way of serialising arguments would make this figure describe a matcher nobody ships."""
+    """A second way of serialising arguments would make this figure describe a matcher nobody ships.
+
+    """
     call = _corpus(CALIBRATION).calls[0]
     r = Redactor()
     assert sorted(r.kgram_digest_set(args_bytes(call.arguments))) == \
@@ -317,7 +329,9 @@ def test_an_empty_sample_reports_total_ignorance_rather_than_zero():
 # --- The figure itself.
 
 def test_the_figure_reports_per_family_and_not_only_pooled():
-    """The families are deliberately unequal, so a pooled rate alone hides which shapes are unsafe."""
+    """The families are deliberately unequal, so a pooled rate alone hides which shapes are unsafe.
+
+    """
     out = false_positive_rate(_corpus(CALIBRATION), Redactor())
     assert set(out["by_family"]) == set(_corpus(CALIBRATION).families)
     assert out["pairs"] == sum(f["pairs"] for f in out["by_family"].values())
@@ -404,13 +418,17 @@ def test_the_choice_rule_prefers_the_smallest_k_among_equals():
     """
     from mcpfanout.calibrate import choose_k
     rows = [
-        {"k": 10, "false_positives": {"rate": 0.3}, "bench": {"recall": 1.0, "known_negatives_detected": 0},
+        {"k": 10, "false_positives": {"rate": 0.3}, "bench": {"recall": 1.0,
+            "known_negatives_detected": 0},
          "self_match": {"recall": 0.9}},
-        {"k": 20, "false_positives": {"rate": 0.0}, "bench": {"recall": 1.0, "known_negatives_detected": 0},
+        {"k": 20, "false_positives": {"rate": 0.0}, "bench": {"recall": 1.0,
+            "known_negatives_detected": 0},
          "self_match": {"recall": 0.6}},
-        {"k": 30, "false_positives": {"rate": 0.0}, "bench": {"recall": 1.0, "known_negatives_detected": 0},
+        {"k": 30, "false_positives": {"rate": 0.0}, "bench": {"recall": 1.0,
+            "known_negatives_detected": 0},
          "self_match": {"recall": 0.3}},
-        {"k": 40, "false_positives": {"rate": 0.0}, "bench": {"recall": 0.5, "known_negatives_detected": 0},
+        {"k": 40, "false_positives": {"rate": 0.0}, "bench": {"recall": 0.5,
+            "known_negatives_detected": 0},
          "self_match": {"recall": 0.2}},
     ]
     out = choose_k(rows)
@@ -422,9 +440,11 @@ def test_the_choice_rule_will_not_take_a_k_that_detects_a_known_negative():
     """A k that "detects" a gzipped payload is reporting a collision as a success."""
     from mcpfanout.calibrate import choose_k
     rows = [
-        {"k": 8, "false_positives": {"rate": 0.0}, "bench": {"recall": 1.0, "known_negatives_detected": 2},
+        {"k": 8, "false_positives": {"rate": 0.0}, "bench": {"recall": 1.0,
+            "known_negatives_detected": 2},
          "self_match": {"recall": 0.9}},
-        {"k": 22, "false_positives": {"rate": 0.1}, "bench": {"recall": 1.0, "known_negatives_detected": 0},
+        {"k": 22, "false_positives": {"rate": 0.1}, "bench": {"recall": 1.0,
+            "known_negatives_detected": 0},
          "self_match": {"recall": 0.5}},
     ]
     assert choose_k(rows)["chosen_k"] == 22
@@ -433,7 +453,8 @@ def test_the_choice_rule_will_not_take_a_k_that_detects_a_known_negative():
 def test_the_choice_rule_reports_failure_rather_than_picking_something():
     from mcpfanout.calibrate import choose_k
     rows = [{"k": 8, "false_positives": {"rate": 0.0},
-             "bench": {"recall": 1.0, "known_negatives_detected": 1}, "self_match": {"recall": 0.9}}]
+             "bench": {"recall": 1.0,
+                 "known_negatives_detected": 1}, "self_match": {"recall": 0.9}}]
     out = choose_k(rows)
     assert out["chosen_k"] is None and "broken" in out["reason"]
 

@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import json
 import urllib.parse
+from typing import Any
 
 # The shortest decoded token that may be evidence. It is a DETECTION parameter and, since F2, a
 # PRIVACY parameter too, and the second reading is the binding one.
@@ -119,7 +120,7 @@ def _string_leaves(obj: object, out: list[str]) -> list[str]:
     return out
 
 
-def tokens_of_arguments(arguments: dict) -> frozenset[str]:
+def tokens_of_arguments(arguments: dict[str, Any]) -> frozenset[str]:
     """The structural vocabulary of one tool call's arguments. The CAUSE side."""
     out: list[str] = []
     for leaf in _string_leaves(arguments, []):

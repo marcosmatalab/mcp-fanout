@@ -21,8 +21,6 @@ import os
 import sys
 from pathlib import Path
 
-import pytest
-
 ADDON = Path(__file__).resolve().parent.parent / "src" / "mcpfanout" / "capture_addon.py"
 TRACEPARENT = "00-0af7651916cd43dd8448eb211c80319c-00f067aa0ba902b7-01"
 
@@ -196,7 +194,7 @@ def test_the_request_target_is_matched_not_only_the_body(tmp_path):
     secret = "AKIA_EXAMPLE_SECRET_TOKEN_0123456789"
     from mcpfanout.redact import Redactor
     digests = sorted(Redactor(salt=b"test-salt").kgram_digest_set(
-        ('{"token": "%s"}' % secret).encode()))
+        (f'{{"token": "{secret}"}}').encode()))
 
     rec = _recorder(tmp_path, _active_call(digests))
     rec.request(_FakeFlow(_FakeRequest(path=f"/v1/lookup?token={secret}", body=b"")))

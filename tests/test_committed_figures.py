@@ -13,8 +13,12 @@ from pathlib import Path
 
 import pytest
 
-from mcpfanout.classify import (CONSTANT_PATHS_PATH, PACKAGE_INFRASTRUCTURE_PATH,
-                                ConstantPathList, ExclusionList)
+from mcpfanout.classify import (
+    CONSTANT_PATHS_PATH,
+    PACKAGE_INFRASTRUCTURE_PATH,
+    ConstantPathList,
+    ExclusionList,
+)
 
 REPO = Path(__file__).resolve().parent.parent
 FIGURES = REPO / "docs" / "figures"
@@ -35,8 +39,10 @@ def _instrument_artifacts() -> list[Path]:
     return sorted(FIGURES.glob("*-instrument.json"))
 
 
-# Runs driven BEFORE the two-pass split existed (docs/PROTOCOL.md, phase B). Their manifests carry no
-# pass, so their artifacts say "unlabelled", which is the honest value: the driving condition was not
+# Runs driven BEFORE the two-pass split existed (docs/PROTOCOL.md, phase B). Their manifests carry
+# no
+# pass, so their artifacts say "unlabelled", which is the honest value: the driving condition was
+# not
 # recorded and deriving it from the notes afterwards would be a guess dressed as provenance. Named
 # here explicitly so a NEW artifact cannot be unlabelled -- the list does not grow.
 LEGACY_UNLABELLED_RUNS = frozenset({"20260918T200935Z", "20260918T212417Z"})

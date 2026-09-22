@@ -17,8 +17,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parent.parent
 NEG = REPO / "corpus" / "negative"
 RESERVED = NEG / "reserved.json"

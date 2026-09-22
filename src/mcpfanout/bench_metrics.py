@@ -26,6 +26,7 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
 from . import match as _match
 
@@ -37,7 +38,7 @@ from . import match as _match
 MATCHED_CHANNELS = ("target", "body")
 
 
-def _read_jsonl(path: Path) -> list[dict]:
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
@@ -48,7 +49,7 @@ def _frac(num: int, den: int) -> float:
     return round(num / den, 4) if den else 0.0
 
 
-def compute(run_dir: str | Path, truth_path: str | Path | None = None) -> dict:
+def compute(run_dir: str | Path, truth_path: str | Path | None = None) -> dict[str, Any]:
     """Compare the bench's ledger against the sensor's flows. Returns the instrument block."""
     run_dir = Path(run_dir)
     truth = _read_jsonl(Path(truth_path) if truth_path else run_dir / "bench_truth.jsonl")
@@ -62,7 +63,7 @@ def compute(run_dir: str | Path, truth_path: str | Path | None = None) -> dict:
                 "command": "make bench"}
 
     slot_of_call = {r["call_id"]: r["slot"] for r in plan}
-    plan_of_host: dict[str, dict] = {}
+    plan_of_host: dict[str, dict[str, Any]] = {}
     for row in plan:
         plan_of_host[_host_for_slot(row["slot"])] = row
 
@@ -71,13 +72,13 @@ def compute(run_dir: str | Path, truth_path: str | Path | None = None) -> dict:
     sent = [r for r in truth if not r.get("error")]
     failed_to_send = len(truth) - len(sent)
 
-    truth_by_host: dict[str, list[dict]] = defaultdict(list)
+    truth_by_host: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in sent:
         truth_by_host[row["dest_host"]].append(row)
 
     bench_hosts = set(truth_by_host)
     bench_flows = [f for f in flows if f.get("dest_host") in bench_hosts]
-    flows_by_host: dict[str, list[dict]] = defaultdict(list)
+    flows_by_host: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for f in bench_flows:
         flows_by_host[f["dest_host"]].append(f)
 
@@ -95,7 +96,7 @@ def compute(run_dir: str | Path, truth_path: str | Path | None = None) -> dict:
     }
 
     # --- Attribution. Per flow, what the sensor claimed against what the ledger says.
-    graded: list[dict] = []
+    graded: list[dict[str, Any]] = []
     for host, fl in flows_by_host.items():
         expected_call = plan_of_host.get(host, {}).get("call_id")
         cell = plan_of_host.get(host, {}).get("cell", "unknown")
@@ -128,7 +129,7 @@ def compute(run_dir: str | Path, truth_path: str | Path | None = None) -> dict:
     }
 
     # --- Per cell, expected against observed. The mixture cell is why this is per flow.
-    cells: dict[str, dict] = {}
+    cells: dict[str, dict[str, Any]] = {}
     for g in graded:
         c = cells.setdefault(g["cell"], {"flows": 0, "grades": {}, "correct_call": 0,
                                          "wrong_call": 0, "no_call": 0})
@@ -185,7 +186,7 @@ def _host_for_slot(slot: int) -> str:
     return f"sink{slot % 128:03d}.bench.invalid"
 
 
-def _grade_of(flow: dict) -> tuple[str, str]:
+def _grade_of(flow: dict[str, Any]) -> tuple[str, str]:
     """Re-derive the attribution grade from a flow record, as the aggregate does."""
     return _match.grade_attribution(
         traceparent_present=bool(flow.get("our_traceparent_present")),

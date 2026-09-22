@@ -213,6 +213,7 @@ def test_every_planted_canary_is_comfortably_longer_than_k():
     context bait files carry their own, and one of those was 24 bytes for the same reason.
     """
     import re
+
     from mcpfanout.shingle import DEFAULT_K
 
     floor = DEFAULT_K + 8

@@ -14,12 +14,12 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
-from . import match as _match
 from . import classify as _classify
-from .classify import ConstantPathList, ExclusionList, Registry, selfhostable_fraction
+from . import match as _match
 from . import record as _record
-from .record import Flow
+from .classify import ConstantPathList, ExclusionList, Registry, selfhostable_fraction
 from .record import Flow, RunManifest, ToolCall, read_jsonl, read_manifest
 
 
@@ -32,7 +32,7 @@ class Run:
         self.flows = flows
 
     @classmethod
-    def load(cls, run_dir: str | Path) -> "Run":
+    def load(cls, run_dir: str | Path) -> Run:
         run_dir = Path(run_dir)
         manifest = read_manifest(run_dir / "manifest.json")
         calls = list(read_jsonl(run_dir / "calls.jsonl", ToolCall))
@@ -78,7 +78,7 @@ def _classification_is_carried(run: Run) -> bool:
     return any(f.dest_class for f in run.flows)
 
 
-def _carried_classification_note(run: Run, exclusions: ExclusionList | None) -> dict:
+def _carried_classification_note(run: Run, exclusions: ExclusionList | None) -> dict[str, Any]:
     """What a reader needs to check a carried classification, including when it has gone stale."""
     carried = (run.manifest.redaction or {}).get("package_infrastructure_sha256", "")
     out = {
@@ -125,7 +125,7 @@ def _percentile(sorted_values: list[int], p: float) -> int:
     return sorted_values[min(max(rank, 1), n) - 1]
 
 
-def _dist(values: list[int]) -> dict:
+def _dist(values: list[int]) -> dict[str, Any]:
     """A per-call distribution as n, p50, p95 and max. NO MEAN, deliberately.
 
     The mean is excluded because it misleads on exactly these distributions. The first real
@@ -146,7 +146,7 @@ def _dist(values: list[int]) -> dict:
     }
 
 
-def number_1(run: Run, exclusions: ExclusionList | None = None) -> dict:
+def number_1(run: Run, exclusions: ExclusionList | None = None) -> dict[str, Any]:
     """Outbound connections per tool call, in three figures that are published together.
 
     One figure here is misleading and the first real capture proved it. mcp-server-fetch opened
@@ -192,7 +192,8 @@ def number_1(run: Run, exclusions: ExclusionList | None = None) -> dict:
     out = {"number": 1, "name": "outbound_connections_per_tool_call",
            "connections_raw": _dist(raw),
            # Counts, apart from every distribution above. A launcher connection is a fact about the
-           # package manager, and pooling it with per-call fan-out is how a server gets credited with
+           # package manager, and pooling it with per-call fan-out is how a server gets credited
+           # with
            # traffic it never made.
            "launcher_connections": len(launcher),
            "launcher_connections_note": (
@@ -219,13 +220,14 @@ def number_1(run: Run, exclusions: ExclusionList | None = None) -> dict:
     excluded_total = sum(1 for f in run.flows if _on_package_infrastructure(f, exclusions))
     out["connections_excluding_package_infrastructure"] = _dist(kept + zeros)
     out["package_infrastructure_connections"] = excluded_total
-    out["exclusion_list"] = {"loaded": True, **exclusions.citation()}
+    citation: dict[str, Any] = {"loaded": True, **exclusions.citation()}
     if _classification_is_carried(run):
-        out["exclusion_list"].update(_carried_classification_note(run, exclusions))
+        citation.update(_carried_classification_note(run, exclusions))
+    out["exclusion_list"] = citation
     return out
 
 
-def number_2(run: Run) -> dict:
+def number_2(run: Run) -> dict[str, Any]:
     """Distinct domains per tool call. Sizes the publishable finding."""
     per_call = []
     for cid, fs in _flows_by_call(run).items():
@@ -243,7 +245,7 @@ def number_2(run: Run) -> dict:
             "distribution": _dist(per_call), "command": "make n2"}
 
 
-def observability_by_server(run: Run) -> dict:
+def observability_by_server(run: Run) -> dict[str, Any]:
     """How many servers the capture layer could SEE, which is not the same as how many were driven.
 
     THE DEFECT THIS FIXES, and it invalidated two published figures. The proxy is selected by
@@ -314,7 +316,7 @@ def observability_by_server(run: Run) -> dict:
     return out
 
 
-def number_3(run: Run) -> dict:
+def number_3(run: Run) -> dict[str, Any]:
     """Fraction of servers that propagate our traceparent, SEGMENTED by protocol revision.
 
     Why segmented. SEP-414, which documents trace context in `_meta`, is a minor change of the
@@ -338,7 +340,7 @@ def number_3(run: Run) -> dict:
     propagating = {f.server_id for f in run.flows if f.our_traceparent_present} - {""}
     revisions = dict(run.manifest.server_protocol_versions or {})
 
-    by_rev: dict[str, dict] = {}
+    by_rev: dict[str, dict[str, Any]] = {}
     for sid in sorted(servers):
         rev = revisions.get(sid) or "unknown"
         bucket = by_rev.setdefault(rev, {"servers_total": 0, "servers_propagating": 0})
@@ -380,7 +382,7 @@ def number_3(run: Run) -> dict:
             "command": "make n3"}
 
 
-def number_4(run: Run) -> dict:
+def number_4(run: Run) -> dict[str, Any]:
     """Outbound bytes that literally match context files. Decides whether Half B has signal.
 
     Reported per channel, always both. The request target (path + query) and the body are both
@@ -455,7 +457,7 @@ def _attributing_candidates(flow: Flow) -> int:
     return flow.matching_calls_in_window
 
 
-def structural_instrument_state(run: Run) -> dict:
+def structural_instrument_state(run: Run) -> dict[str, Any]:
     """Did the structural matcher actually run, or is number 5 quietly reading the old one.
 
     GATE RULE 10, applied to the instrument this function is part of. `_attributing_match` falls
@@ -504,8 +506,8 @@ def _content_eligible(flow: Flow) -> bool:
 
 
 
-def _denominators(run: Run, strong: int, total: int, constant_paths,
-                  exclusions: ExclusionList | None) -> dict:
+def _denominators(run: Run, strong: int, total: int, constant_paths: ConstantPathList | None,
+                  exclusions: ExclusionList | None) -> dict[str, Any]:
     """The three fractions, always together, with the raw one marked.
 
     THIS IS THE THIRD TIME A CONTAMINATED DENOMINATOR HAS BEEN CAUGHT IN THIS PROJECT, which is
@@ -532,7 +534,7 @@ def _denominators(run: Run, strong: int, total: int, constant_paths,
     attributable = [f for f in run.flows
                     if _call_caused_possible(f)
                     and not _on_package_infrastructure(f, exclusions)]
-    out = {
+    out: dict[str, Any] = {
         "attributable_denominator": len(attributable),
         "attributable_fraction": (round(strong / len(attributable), 4) if attributable else None),
         "raw_fraction_is_not_comparable": (
@@ -570,7 +572,7 @@ def _denominators(run: Run, strong: int, total: int, constant_paths,
     return out
 
 
-def _discrimination_summary(run: Run) -> dict:
+def _discrimination_summary(run: Run) -> dict[str, Any]:
     """How often an agent's own concurrent calls became mutually indistinguishable.
 
     A FINDING ABOUT THE PHENOMENON, NOT BOOKKEEPING, and that is why it is published rather than
@@ -583,7 +585,7 @@ def _discrimination_summary(run: Run) -> dict:
     `contained_but_not_candidate` is the same story per flow: calls whose whole token set was
     present in the request and which the discrimination rule still refused.
     """
-    by_window: dict[str, dict] = {}
+    by_window: dict[str, dict[str, Any]] = {}
     for f in run.flows:
         if not _call_caused_possible(f):
             continue
@@ -604,7 +606,7 @@ def _discrimination_summary(run: Run) -> dict:
         "command": "make n5"}}
 
 def number_5(run: Run, exclusions: ExclusionList | None = None,
-             constant_paths: ConstantPathList | None = None) -> dict:
+             constant_paths: ConstantPathList | None = None) -> dict[str, Any]:
     """Distribution of attribution grades. The decisive number, and the honest shape of it.
 
     The grade is DERIVED HERE, not read from the record, because it depends on the declared
@@ -745,7 +747,7 @@ def number_5(run: Run, exclusions: ExclusionList | None = None,
     return out
 
 
-def number_6(run: Run, registry: Registry | None = None) -> dict:
+def number_6(run: Run, registry: Registry | None = None) -> dict[str, Any]:
     """Fraction of touched third parties that are themselves self-hostable. Sizes the recursion."""
     hosts = {f.dest_host for f in run.flows if f.dest_host}
     if _classification_is_carried(run):
@@ -788,8 +790,9 @@ def number_6(run: Run, registry: Registry | None = None) -> dict:
     return out
 
 
-def driving_summary(run: Run) -> dict:
-    """What was driven, and what the servers did with it. NOT one of the six, and needed to read them.
+def driving_summary(run: Run) -> dict[str, Any]:
+    """What was driven, and what the servers did with it. NOT one of the six, and needed to
+    read them.
 
     Every one of the six is a ratio or a distribution over what the servers did in response to
     calls. A call that errored produced less egress, or none, so a figure read without knowing how
@@ -833,7 +836,7 @@ def driving_summary(run: Run) -> dict:
 
 def compute_all(run: Run, registry: Registry | None = None,
                 exclusions: ExclusionList | None = None,
-                constant_paths: ConstantPathList | None = None) -> dict:
+                constant_paths: ConstantPathList | None = None) -> dict[str, Any]:
     return {
         "run_id": run.manifest.run_id,
         "created": run.manifest.created,

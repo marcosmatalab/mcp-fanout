@@ -18,6 +18,7 @@ endpoints alone.
 
 from __future__ import annotations
 
+import itertools
 import json
 import re
 from pathlib import Path
@@ -108,7 +109,7 @@ def test_every_row_of_the_docstring_curve_matches_the_artifact(raw, groups):
         assert observed[-1] == float(self_last), (
             f"{raw!r}: self-match at k = {ks[-1]} is {observed[-1]}, the docstring says "
             f"{self_last}")
-        assert all(a >= b for a, b in zip(observed, observed[1:], strict=False)), (
+        assert all(a >= b for a, b in itertools.pairwise(observed)), (
             f"{raw!r}: 'down to' claims a fall, and the artifact does not fall: {observed}")
 
 

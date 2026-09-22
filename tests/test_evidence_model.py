@@ -10,8 +10,6 @@ pin the tautology that the strongest grade must not be reachable under sequentia
 import json
 from pathlib import Path
 
-import pytest
-
 from mcpfanout import match as m
 from mcpfanout.aggregate import Run, number_4, number_5
 from mcpfanout.classify import PACKAGE_INFRASTRUCTURE_PATH, ExclusionList
@@ -208,6 +206,8 @@ def test_the_weakest_evidence_may_not_claim_what_the_strongest_cannot():
     it, the weakest evidence would be claiming more than the strongest.
     """
     concurrent = dict(active_calls_in_window=4)
-    assert _grade(argument_match=True, matching_calls_in_window=1, **concurrent)[0] == m.CONTENT_UNIQUE
-    assert _grade(argument_match=True, matching_calls_in_window=4, **concurrent)[0] == m.CONTENT_AMBIGUOUS
+    assert _grade(argument_match=True, matching_calls_in_window=1,
+        **concurrent)[0] == m.CONTENT_UNIQUE
+    assert _grade(argument_match=True, matching_calls_in_window=4,
+        **concurrent)[0] == m.CONTENT_AMBIGUOUS
     assert _grade(**concurrent)[0] == m.UNATTRIBUTED

@@ -20,7 +20,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from mcpfanout.driver import CallSpec, StdioMCPClient, drive_wave
@@ -180,7 +180,7 @@ def main() -> int:
     (run_dir / "bench_plan.jsonl").write_text(
         "".join(json.dumps(r, sort_keys=True) + "\n" for r in plan_rows), encoding="utf-8")
     write_manifest(run_dir / "manifest.json", RunManifest(
-        run_id=run_id, created=datetime.now(timezone.utc).isoformat(),
+        run_id=run_id, created=datetime.now(UTC).isoformat(),
         salt_fixed=(salt == DEFAULT_SALT), k=redactor.k, w=redactor.w,
         corpus_sha256=hashlib.sha256(Path(args.waves).read_bytes()).hexdigest(),
         server_ids=[server_id], tool_versions={"bench": "phase-a"},

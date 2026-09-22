@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 from . import match as _match
 from .classify import classify_host
@@ -24,7 +25,8 @@ _SECRET = b"AKIA_EXAMPLE_SECRET_TOKEN_0123456789"
 # Synthetic session context (the "bait" the agent had in view). Content-free once indexed.
 DEMO_CONTEXT: dict[str, bytes] = {
     "context/.env": b"DB_PASSWORD=hunter2\nAWS_ACCESS_KEY_ID=" + _SECRET + b"\nREGION=eu-west-1\n",
-    "context/config.py": b"SETTINGS = {\n  'endpoint': 'https://internal.example',\n  'retries': 3,\n}\n",
+    "context/config.py": (b"SETTINGS = {\n  'endpoint': 'https://internal.example',\n"
+                          b"  'retries': 3,\n}\n"),
 }
 
 
@@ -52,21 +54,26 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
     }
 
     # Hand-built outbound bodies, one per intended state.
-    body_efectivo = b"POST /ingest {\"payload\":\"" + _SECRET + b"\",\"note\":\"DB_PASSWORD=hunter2\"}"
+    body_efectivo = (b"POST /ingest {\"payload\":\"" + _SECRET
+                     + b"\",\"note\":\"DB_PASSWORD=hunter2\"}")
     body_declarado = b"GET /health?ts=now (no session content here, only a timing correlation)"
 
-    raw_flows = [
+    raw_flows: list[dict[str, Any]] = [
         # Content match via the BODY: the secret (in call A args) and an .env fragment both appear
         # literally in the payload.
-        dict(server_id="s1", call_id="cA", dest_host="api.unknown-vendor.com", dest_ip="203.0.113.7",
+        dict(server_id="s1", call_id="cA", dest_host="api.unknown-vendor.com",
+            dest_ip="203.0.113.7",
              scheme="https", method="POST", target=b"/ingest", body=body_efectivo,
              body_observed=True, our_traceparent_present=True, has_time_and_pid=True,
              active_calls_in_window=1),
-        # Content match via the TARGET: a GET with an empty body carrying the same secret in its query
+        # Content match via the TARGET: a GET with an empty body carrying the same secret in its
+        # query
         # string. This flow exists because the matcher used to see only bodies, so this exact
-        # shape recorded no provenance at all and number 5 was structurally zero for every GET server.
+        # shape recorded no provenance at all and number 5 was structurally zero for every GET
+        # server.
         # The selftest now fails if that regresses.
-        dict(server_id="s1", call_id="cA", dest_host="api.unknown-vendor.com", dest_ip="203.0.113.7",
+        dict(server_id="s1", call_id="cA", dest_host="api.unknown-vendor.com",
+            dest_ip="203.0.113.7",
              scheme="https", method="GET", target=b"/v1/lookup?token=" + _SECRET, body=b"",
              body_observed=True, our_traceparent_present=False, has_time_and_pid=True,
              active_calls_in_window=1),
@@ -87,7 +94,7 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
         target, body = rf["target"], rf["body"]
         if rf["body_observed"]:
             result = _match.match_request(target, body, context_index,
-                                          args_digests[rf["call_id"]], redactor)
+                                          args_digests[str(rf["call_id"])], redactor)
         else:
             # Unreadable request: no channel was seen, so nothing is claimed about either.
             result = _match.MatchResult(
@@ -102,7 +109,8 @@ def build_demo_run(out_dir: str | Path, salt: bytes = DEFAULT_SALT) -> Path:
         )
         flows.append(Flow(
             run_id=run_id, server_id=rf["server_id"], call_id=rf["call_id"], ts=float(1000 + i),
-            dest_host=rf["dest_host"], dest_ip=rf["dest_ip"], scheme=rf["scheme"], method=rf["method"],
+            dest_host=rf["dest_host"], dest_ip=rf["dest_ip"], scheme=rf["scheme"],
+            method=rf["method"],
             body_observed=rf["body_observed"],
             our_traceparent_present=rf["our_traceparent_present"],
             target_bytes=result.target_bytes, target_matched_bytes=result.target_matched_bytes,

@@ -89,7 +89,8 @@ def test_aggregate_output_leaks_no_server_names(tmp_path):
     build_demo_run(tmp_path)
     out = str(compute_all(Run.load(tmp_path)))
     # Gate rule 3: aggregate output names no server, host, or tool.
-    for forbidden in ("s1", "s2", "api.stripe.com", "api.unknown-vendor.com", "search", "list_files"):
+    for forbidden in ("s1", "s2", "api.stripe.com", "api.unknown-vendor.com", "search",
+        "list_files"):
         assert forbidden not in out
 
 

@@ -13,6 +13,7 @@ reproduces, so nothing here is transcribed by hand from a previous session.
 
 from __future__ import annotations
 
+import itertools
 import json
 import subprocess
 import sys
@@ -67,7 +68,7 @@ def main() -> int:
         if i == 0:
             got = _derived()
             if not got:
-                print(f"could not re-derive the first point; `make f2` failed", file=sys.stderr)
+                print("could not re-derive the first point; `make f2` failed", file=sys.stderr)
                 return 1
         elif fig is None:
             print(f"missing committed figure for {step['run']}", file=sys.stderr)
@@ -86,7 +87,7 @@ def main() -> int:
                        "instrument_was_blind_to": step["blind_to"]})
 
     fractions = [p["fraction"] for p in points]
-    monotone_down = all(a > b for a, b in zip(fractions, fractions[1:]))
+    monotone_down = all(a > b for a, b in itertools.pairwise(fractions))
     print(json.dumps({
         "name": "honesty_curve",
         "threshold_preregistered": 0.80,
@@ -96,7 +97,8 @@ def main() -> int:
             "Three measurements of ONE quantity, in the order taken, each after an observability "
             "defect was fixed. The figure fell every time. A measurement whose headline improves "
             "as its instrument improves is measuring the instrument; this one did the opposite, "
-            "which is the only direction consistent with the earlier numbers having been optimistic "
+            "which is the only direction consistent with the earlier numbers having been "
+            "optimistic "
             "for reasons that had nothing to do with the matcher. The final point is the one that "
             "counts, it is below the pre-registered threshold of 0.80, and the two above it are "
             "superseded rather than retracted: each remains a correct statement about the flows "

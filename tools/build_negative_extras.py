@@ -198,7 +198,8 @@ def reserved_families() -> list[dict]:
     }
     rest = {
         "family": "rest_path",
-        "api": "a repository contents API: JSON {owner, repo, path} in, GET /repos/.../contents/... out",
+        "api": ("a repository contents API: JSON {owner, repo, path} in, "
+                "GET /repos/.../contents/... out"),
         "shared_structure_note": "the JSON envelope, the path prefix, the docs/ directory and the "
                                  ".md extension",
         "shared_literals": ['{"owner": "', '"path": "docs/', "/repos/", "/contents/docs/", ".md"],
@@ -268,7 +269,8 @@ RESERVED_DOC = {
         "positive, because neither call's arguments caused the other's request. This half is "
         "measured ONCE, at the end, and is what a published false-positive figure comes from."),
     "_why_this_file_exists": (
-        "It replaces corpus/negative/held-out.json as the reserve. That file was loaded with a bare "
+        "It replaces corpus/negative/held-out.json as the reserve. That file was loaded with a "
+        "bare "
         "json.load by an external review's scripts, bypassing calibrate.load_negative, and "
         "measured. Its figure is therefore a calibration figure. The material is still a valid "
         "negative control; it is simply no longer unseen, and docs/CALIBRATION.md and "

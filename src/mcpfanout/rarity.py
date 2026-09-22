@@ -6,7 +6,8 @@ weighs them the same, so a match is affirmed on shared boilerplate exactly as re
 payload, and the F1.1 measurement at k = 16 priced that: one family of the negative corpus failed 56
 of 56 pairs on nothing but its envelope.
 
-THIS DOES NOT BREAK NEGATIVE 3. Counting how many documents a byte sequence occurs in is a fact about
+THIS DOES NOT BREAK NEGATIVE 3. Counting how many documents a byte sequence occurs in is a fact
+about
 occurrence, not an inference about meaning. Nothing here paraphrases, embeds, classifies or asks a
 model what a fragment is; a k-gram's weight is 1/(1 + df), an arithmetic function of a count. It is
 the suppression of common substrings that commercial IDM has done for fifteen years, and it is the
@@ -16,15 +17,18 @@ statement that some observations carry no information, applied the same way to e
 WHERE THIS CODE IS NOT. It is deliberately NOT in the matching path. `match.py` has no rarity
 parameter and the capture addon does not know this module exists. The acceptance criterion F1.3 was
 given is a number, not a story: the false-positive rate is re-measured with weighting on and must
-fall, and if it does not the weighting is reverted rather than kept because it is more sophisticated.
-It did not fall, for the reasons written in docs/CALIBRATION.md, so what survives is this module, the
+fall, and if it does not the weighting is reverted rather than kept because it is more
+sophisticated.
+It did not fall, for the reasons written in docs/CALIBRATION.md, so what survives is this module,
+the
 command that re-derives the comparison, and the written verdict. A reader who wants to switch it on
 has the mechanism and the evidence; nobody gets it switched on by default on the strength of it
 sounding advanced.
 
 THE DECISION IT IMPLEMENTS. A match is affirmed only when the matched k-grams carry at least
 MIN_RARITY_MASS between them, where each contributes 1/(1 + df) and df is the number of background
-documents it appears in. A k-gram absent from the background contributes a full 1.0; one appearing in
+documents it appears in. A k-gram absent from the background contributes a full 1.0; one appearing
+in
 half the documents of a 32-document corpus contributes 0.06. The default threshold of 1.0 therefore
 reads as "the evidence must amount to at least one run of bytes this background has never seen".
 """
@@ -33,8 +37,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from . import match as _match
 from .calibrate import HELD_OUT_FILENAME as _HELD_OUT_FILENAME
@@ -42,7 +48,8 @@ from .redact import Redactor
 
 BACKGROUND_SOURCES = "corpus/background/sources.json"
 
-# The threshold, in units of "one k-gram never seen in the background". Calibrated on the calibration
+# The threshold, in units of "one k-gram never seen in the background". Calibrated on the
+# calibration
 # half only (docs/CALIBRATION.md, F1.3); a threshold chosen against the reserved half would be the
 # holdout being used to tune, which is what calibrate.load_negative exists to refuse.
 MIN_RARITY_MASS = 1.0
@@ -68,12 +75,14 @@ class RarityIndex:
 
     @classmethod
     def build(cls, redactor: Redactor, sources: str | Path = BACKGROUND_SOURCES,
-              root: str | Path = ".") -> "RarityIndex":
+              root: str | Path = ".") -> RarityIndex:
         """Build the index from the declared sources. Refuses to include the evaluation half.
 
         One document per FILE, and document frequency rather than raw occurrence count: a run of
-        bytes repeated four hundred times inside one file is one document's worth of evidence that it
-        is common, not four hundred. That is the standard choice and it is the conservative one here.
+        bytes repeated four hundred times inside one file is one document's worth of evidence that
+        it
+        is common, not four hundred. That is the standard choice and it is the conservative one
+        here.
         """
         root = Path(root)
         spec = json.loads((root / sources).read_text(encoding="utf-8"))
@@ -86,7 +95,8 @@ class RarityIndex:
         for p in paths:
             if p.name == FORBIDDEN_BACKGROUND:
                 raise BackgroundLeak(
-                    f"{p} is the evaluation half of the negative corpus and may not be a background "
+                    f"{p} is the evaluation half of the negative corpus and may not be a "
+                    "background "
                     f"document: weighting learned from it would be scored against itself")
 
         df: dict[str, int] = {}
@@ -104,10 +114,10 @@ class RarityIndex:
         """1 / (1 + document frequency). Unseen means 1.0; ubiquitous approaches zero."""
         return 1.0 / (1.0 + self.df.get(digest, 0))
 
-    def mass(self, digests) -> float:
+    def mass(self, digests: Iterable[str]) -> float:
         return sum(self.weight(g) for g in digests)
 
-    def citation(self) -> dict:
+    def citation(self) -> dict[str, Any]:
         """What goes into a published figure: counts and a digest, never a document's content."""
         return {"documents": self.documents, "k": self.k, "distinct_kgrams": len(self.df),
                 "sources_sha256": self.sha256, "sources": list(self.sources)}
@@ -159,13 +169,16 @@ VERDICT_REVERTED = "reverted"
 MASS_LADDER = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 16.0)
 
 
-def _decider(index: "RarityIndex", min_mass: float):
-    def decide(target, body, args_digests, redactor):
-        return claims_match_weighted(target, body, args_digests, redactor, index, min_mass)
+def _decider(index: RarityIndex, min_mass: float) -> Callable[..., bool]:
+    def decide(target: bytes, body: bytes, args_digests: Iterable[str],
+               redactor: Redactor) -> bool:
+        return claims_match_weighted(target, body, frozenset(args_digests), redactor, index,
+                                     min_mass)
     return decide
 
 
-def colliding_kgram_frequencies(corpus, redactor: Redactor, index: "RarityIndex") -> dict:
+def colliding_kgram_frequencies(corpus: Any, redactor: Redactor,
+                                index: RarityIndex) -> dict[str, Any]:
     """How common, in the background, are the k-grams that actually cause false positives.
 
     This is the measurement that separates two very different failures. If the colliding k-grams are
@@ -189,7 +202,8 @@ def colliding_kgram_frequencies(corpus, redactor: Redactor, index: "RarityIndex"
     ordered = sorted(per_pair)
     return {
         "colliding_kgram_instances": sum(by_df.values()),
-        "instances_by_document_frequency": dict(sorted(by_df.items(), key=lambda kv: int(kv[0]))),
+        "instances_by_document_frequency": dict(sorted(by_df.items(),
+                                                    key=lambda kv: int(kv[0]))),
         "matched_kgrams_per_colliding_pair": {
             "pairs": len(ordered),
             "min": ordered[0] if ordered else 0,
@@ -200,7 +214,7 @@ def colliding_kgram_frequencies(corpus, redactor: Redactor, index: "RarityIndex"
     }
 
 
-def true_match_kgram_counts(transfers, redactor: Redactor) -> dict:
+def true_match_kgram_counts(transfers: Iterable[Any], redactor: Redactor) -> dict[str, Any]:
     """The same count for matches that ARE real, so the two distributions can be compared.
 
     A threshold can only separate false from true matches if the two differ on the quantity it
@@ -222,14 +236,14 @@ def true_match_kgram_counts(transfers, redactor: Redactor) -> dict:
             "max": ordered[-1] if ordered else 0}
 
 
-def sweep_mass(corpus, transfers, redactor: Redactor, index: "RarityIndex",
-               masses=MASS_LADDER) -> list[dict]:
+def sweep_mass(corpus: Any, transfers: Iterable[Any], redactor: Redactor, index: RarityIndex,
+               masses: Iterable[float] = MASS_LADDER) -> list[dict[str, Any]]:
     """False positives and both recalls against the mass threshold. Calibration half only.
 
     Guarded like calibrate.sweep_k and for the same reason: choosing a threshold is calibration, and
     the reserved half is measured once with whatever the calibration half chose.
     """
-    from .calibrate import CALIBRATION, HeldOutViolation, false_positive_rate, self_match_recall
+    from .calibrate import CALIBRATION, HeldOutViolation, false_positive_rate
     if corpus.half != CALIBRATION:
         raise HeldOutViolation(
             f"sweep_mass is calibration: choosing a threshold against the {corpus.half} half would "
@@ -260,7 +274,7 @@ def sweep_mass(corpus, transfers, redactor: Redactor, index: "RarityIndex",
     return rows
 
 
-def acceptance(shipped_k: int, probe_k: int, *, root: str | Path = ".") -> dict:
+def acceptance(shipped_k: int, probe_k: int, *, root: str | Path = ".") -> dict[str, Any]:
     """The whole F1.3 measurement, and the verdict its own numbers imply.
 
     ``shipped_k`` is where the published comparison is made, because that is the matcher that
@@ -268,8 +282,16 @@ def acceptance(shipped_k: int, probe_k: int, *, root: str | Path = ".") -> dict:
     shown to work against a rate that is already zero, and reporting only the shipped k would let
     "it did not help" hide "there was nothing left to help with".
     """
-    from .calibrate import (CALIBRATION, HELD_OUT, PURPOSE_CALIBRATION, PURPOSE_PUBLICATION,
-                            false_positive_rate, load_negative, load_positive, self_match_recall)
+    from .calibrate import (
+        CALIBRATION,
+        HELD_OUT,
+        PURPOSE_CALIBRATION,
+        PURPOSE_PUBLICATION,
+        false_positive_rate,
+        load_negative,
+        load_positive,
+        self_match_recall,
+    )
 
     held = load_negative(HELD_OUT, purpose=PURPOSE_PUBLICATION, root=root)
     cal = load_negative(CALIBRATION, purpose=PURPOSE_CALIBRATION, root=root)

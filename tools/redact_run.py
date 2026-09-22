@@ -62,9 +62,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from mcpfanout import record as _record                                    # noqa: E402
-from mcpfanout.classify import PACKAGE_INFRASTRUCTURE_PATH, ExclusionList  # noqa: E402
-from mcpfanout.disclosure import DECLARED_DESTINATIONS_PATH                # noqa: E402
+from mcpfanout import record as _record
+from mcpfanout.classify import PACKAGE_INFRASTRUCTURE_PATH, ExclusionList
+from mcpfanout.disclosure import DECLARED_DESTINATIONS_PATH
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -192,7 +192,8 @@ def _scrub_error(text: str) -> str:
 def _read_jsonl(path: Path) -> list[dict]:
     if not path.is_file():
         return []
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    text = path.read_text(encoding="utf-8")
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
 
 
 def _write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -302,7 +303,7 @@ def redact_manifest(manifest: dict, red: Redactor, source_run: str) -> dict:
 def _checksum(data: bytes) -> int:
     if len(data) % 2:
         data += b"\x00"
-    total = sum(struct.unpack("!%dH" % (len(data) // 2), data))
+    total = sum(struct.unpack(f"!{len(data) // 2}H", data))
     while total >> 16:
         total = (total & 0xFFFF) + (total >> 16)
     return (~total) & 0xFFFF
@@ -322,7 +323,7 @@ def _syn_packet(src: str, dst: str, sport: int, dport: int) -> bytes:
 
 def rewrite_pcap(source: Path, out: Path, red: Redactor) -> dict:
     """Rebuild the backstop as SYNs only, with documentation addresses. Counts are preserved."""
-    from pcap_syns import L2_LEN                                          # noqa: PLC0415
+    from pcap_syns import L2_LEN
 
     data = source.read_bytes()
     magic = data[:4]

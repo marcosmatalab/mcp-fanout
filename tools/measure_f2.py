@@ -19,10 +19,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
-from mcpfanout import match as _match           # noqa: E402
-from mcpfanout import structure as S            # noqa: E402
-from mcpfanout.driver import args_bytes         # noqa: E402
-from mcpfanout.redact import Redactor           # noqa: E402
+from mcpfanout import match as _match  # noqa: E402
+from mcpfanout import structure as S  # noqa: E402
+from mcpfanout.redact import Redactor  # noqa: E402
 
 R = Redactor()
 
@@ -151,7 +150,9 @@ def crosscheck(run_dir: Path) -> dict:
     """The composition of the real run, so the derivation above is checkable and not trusted."""
     if not (run_dir / "flows.jsonl").is_file():
         return {"checked": False, "why": f"{run_dir} has no flows.jsonl"}
-    rows = [json.loads(l) for l in (run_dir / "flows.jsonl").open()]
+    rows = [json.loads(line)
+            for line in (run_dir / "flows.jsonl").read_text(encoding="utf-8").splitlines()
+            if line.strip()]
     call_caused = [r for r in rows
                    if r["phase"] not in ("launcher", "handshake")
                    and r["dest_host"] != "registry.npmjs.org"]

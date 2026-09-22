@@ -45,8 +45,10 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from . import match as _match
 from .driver import args_bytes
@@ -84,7 +86,7 @@ class HeldOutViolation(Exception):
 class NegativeCall:
     call_id: str
     family: str
-    arguments: dict
+    arguments: dict[str, Any]
     target: bytes
     body: bytes
     information: tuple[str, ...]
@@ -178,7 +180,14 @@ def wilson_interval(successes: int, n: int, z: float = 1.959963984540054) -> tup
     return (max(0.0, lo), min(1.0, hi))
 
 
-def claims_match(a: NegativeCall, b: NegativeCall, redactor: Redactor, decide=None) -> bool:
+# The signature of an alternative match decision, which is what lets a sweep run the same
+# false-positive measurement against a weighted matcher without either module importing
+# the other (rarity.py builds one of these).
+Decider = Callable[[bytes, bytes, Iterable[str], Redactor], bool]
+
+
+def claims_match(a: NegativeCall, b: NegativeCall, redactor: Redactor,
+                 decide: Decider | None = None) -> bool:
     """Does the matcher affirm that B's arguments appear in A's request?
 
     This is the addon's own per-call question (capture_addon.request), run directly, so the figure
@@ -194,8 +203,9 @@ def claims_match(a: NegativeCall, b: NegativeCall, redactor: Redactor, decide=No
     return _match.match_request(a.target, a.body, {}, digests, redactor).causal
 
 
-def false_positive_rate(corpus: NegativeCorpus, redactor: Redactor, decide=None,
-                        weighting: str = "") -> dict:
+def false_positive_rate(corpus: NegativeCorpus, redactor: Redactor,
+                        decide: Decider | None = None,
+                        weighting: str = "") -> dict[str, Any]:
     """The F1.1 figure: how often the matcher claims a coincidence that does not exist.
 
     Reported per family as well as pooled, because the families are deliberately not equivalent:
@@ -204,7 +214,7 @@ def false_positive_rate(corpus: NegativeCorpus, redactor: Redactor, decide=None,
     attribution needs the shape, not the average over our choice of shapes.
     """
     pairs = corpus.pairs()
-    by_family: dict[str, dict] = {}
+    by_family: dict[str, dict[str, Any]] = {}
     total_fp = 0
     for a, b in pairs:
         fam = by_family.setdefault(a.family, {"pairs": 0, "false_positives": 0})
@@ -285,14 +295,15 @@ class PositiveTransfer:
     """One transfer the phase A bench actually made, with the bytes it sent."""
     transfer_id: str
     channel: str
-    arguments: dict
+    arguments: dict[str, Any]
     target: bytes
     body: bytes
     detectable_by_design: bool
     not_detectable_reason: str
 
 
-def load_positive(path: str | Path = POSITIVE_PATH, root: str | Path = ".") -> list[PositiveTransfer]:
+def load_positive(path: str | Path = POSITIVE_PATH,
+    root: str | Path = ".") -> list[PositiveTransfer]:
     """Load the phase A positive control: what the bench sent, distilled from its own ledger."""
     data = json.loads((Path(root) / path).read_text(encoding="utf-8"))
     import base64
@@ -304,7 +315,7 @@ def load_positive(path: str | Path = POSITIVE_PATH, root: str | Path = ".") -> l
     ) for t in data["transfers"]]
 
 
-def detection_recall(transfers: list[PositiveTransfer], redactor: Redactor) -> dict:
+def detection_recall(transfers: list[PositiveTransfer], redactor: Redactor) -> dict[str, Any]:
     """Of the transfers the bench MEANT to be detectable, how many does the matcher find at this k.
 
     Reported with the mirror figure, how many known negatives it found, which must stay zero: a
@@ -341,14 +352,15 @@ def detection_recall(transfers: list[PositiveTransfer], redactor: Redactor) -> d
     }
 
 
-def self_match_recall(corpus: NegativeCorpus, redactor: Redactor) -> dict:
-    """Can the matcher find a call's own arguments in that call's own request, on realistic material.
+def self_match_recall(corpus: NegativeCorpus, redactor: Redactor) -> dict[str, Any]:
+    """Can the matcher find a call's own arguments in that call's own request, on realistic
+    material.
 
     The true-positive question asked of the same corpus the false-positive rate comes from, so the
     two curves are over identical material and the trade-off between them is real rather than an
     artefact of two different fixtures.
     """
-    per_family: dict[str, dict] = {}
+    per_family: dict[str, dict[str, Any]] = {}
     for call in corpus.calls:
         fam = per_family.setdefault(call.family, {"calls": 0, "matched": 0})
         fam["calls"] += 1
@@ -363,7 +375,7 @@ def self_match_recall(corpus: NegativeCorpus, redactor: Redactor) -> dict:
             "by_family": per_family}
 
 
-def choose_k(rows: list[dict]) -> dict:
+def choose_k(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """The rule, written before the numbers were looked at. Returns the chosen k and the reasoning.
 
     1. Keep only the k values whose bench detection recall equals the best recall observed anywhere
@@ -371,7 +383,8 @@ def choose_k(rows: list[dict]) -> dict:
        equal to the best the truth pattern allows.
     2. Among those, keep the lowest false-positive rate.
     3. Break the remaining tie toward the SMALLEST k. Every additional byte of k is a false negative
-       on some real fragment shorter than it, and a false negative is the safe direction only as long
+       on some real fragment shorter than it, and a false negative is the safe direction only as
+       long
        as it is not bought for nothing.
 
     A k that lets a known negative be "detected" is disqualified outright, whatever its rate: that
@@ -379,7 +392,8 @@ def choose_k(rows: list[dict]) -> dict:
     """
     eligible = [r for r in rows if r["bench"]["known_negatives_detected"] == 0]
     if not eligible:
-        return {"chosen_k": None, "reason": "every k detected a known negative; the sweep is broken"}
+        return {"chosen_k": None,
+            "reason": "every k detected a known negative; the sweep is broken"}
     best_recall = max(r["bench"]["recall"] for r in eligible)
     keep = [r for r in eligible if r["bench"]["recall"] == best_recall]
     best_fp = min(r["false_positives"]["rate"] for r in keep)
@@ -397,7 +411,7 @@ def choose_k(rows: list[dict]) -> dict:
 
 
 def sweep_k(corpus: NegativeCorpus, transfers: list[PositiveTransfer],
-            k_min: int = K_MIN, k_max: int = K_MAX, salt: bytes | None = None) -> dict:
+            k_min: int = K_MIN, k_max: int = K_MAX, salt: bytes | None = None) -> dict[str, Any]:
     """The F1.2 curve. Refuses the held-out half: choosing k is calibration.
 
     The guard is here as well as in the loader, deliberately. A caller could load the held-out half
@@ -446,14 +460,17 @@ def sweep_k(corpus: NegativeCorpus, transfers: list[PositiveTransfer],
 #
 # The self-match figure is the number that bounds everything phase B publishes, and it was buried in
 # a column of the k sweep. It deserves its own definition and its own decomposition, because a
-# reader who sees 0.5 needs to know three things that the number alone does not say: what exactly was
+# reader who sees 0.5 needs to know three things that the number alone does not say: what exactly
+# was
 # measured, over which corpus, and WHY the other half fails. Without the third, "half the material
 # does not self-match" reads as a defect to fix rather than as the limit it is.
 #
-# WHAT SELF-MATCH IS, exactly. For one call, take the bytes the matcher would index on the cause side
+# WHAT SELF-MATCH IS, exactly. For one call, take the bytes the matcher would index on the cause
+# side
 # (driver.args_bytes of its arguments, which is what the driver publishes) and the bytes of the
 # request that same call caused (its declared target and body). Ask the shipped matcher whether any
-# k-gram of the first appears in the second. It is the true-positive question in its easiest possible
+# k-gram of the first appears in the second. It is the true-positive question in its easiest
+# possible
 # form: the call is its own cause, there are no competing candidates, and nothing is concurrent. A
 # call that fails HERE can never be attributed by content anywhere.
 #
@@ -490,7 +507,7 @@ def longest_common_run(a: bytes, b: bytes) -> int:
 
 def detectability_inventory(corpus: NegativeCorpus, transfers: list[PositiveTransfer],
                             redactor: Redactor, bait_dir: str | Path = "corpus/context",
-                            root: str | Path = ".") -> dict:
+                            root: str | Path = ".") -> dict[str, Any]:
     """Why the self-match figure is what it is, over three populations and two thresholds.
 
     The two thresholds are different guarantees and conflating them would overstate what is safe:
@@ -501,7 +518,8 @@ def detectability_inventory(corpus: NegativeCorpus, transfers: list[PositiveTran
                         match enters the numbers but may not be reconstructible later from what was
                         kept on disk.
 
-    The three populations are not interchangeable either. The planted bait is material we control and
+    The three populations are not interchangeable either. The planted bait is material we control
+    and
     sized on purpose; the realistic arguments are the population the self-match figure is measured
     over; the phase A transfers are the keyed digests, present as the contrast that shows how far
     from realistic the bench's own material is.
@@ -531,7 +549,7 @@ def detectability_inventory(corpus: NegativeCorpus, transfers: list[PositiveTran
     # 2. The realistic arguments: the longest run each call shares with its OWN request, which is
     #    the quantity self-match thresholds. Per family, because the families fail for different
     #    reasons and a pooled figure hides which.
-    families: dict[str, dict] = {}
+    families: dict[str, dict[str, Any]] = {}
     for call in corpus.calls:
         run = longest_common_run(args_bytes(call.arguments), call.target + b"\x00" + call.body)
         fam = families.setdefault(call.family, {"calls": 0, "self_matched": 0, "runs": [],
@@ -577,7 +595,8 @@ def detectability_inventory(corpus: NegativeCorpus, transfers: list[PositiveTran
         "phase_a_transfers_for_contrast": {
             "transfers": len(bench_runs),
             "by_bucket": bench_buckets,
-            "longest_common_run": ({"min": bench_runs[0], "median": bench_runs[len(bench_runs) // 2],
+            "longest_common_run": ({"min": bench_runs[0],
+                "median": bench_runs[len(bench_runs) // 2],
                                     "max": bench_runs[-1]} if bench_runs else {}),
         },
         "why_this_is_a_ceiling": (

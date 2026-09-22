@@ -40,8 +40,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .classify import matches_suffix
 from .record import DEST_PACKAGE_INFRASTRUCTURE
@@ -79,7 +81,7 @@ class ServerDeclaration:
     server_id: str
     call_supplied: bool
     hosts: tuple[str, ...]
-    known_undeclared: dict          # host -> the document that carries the finding
+    known_undeclared: dict[str, Any]          # host -> the document that carries the finding
     basis: str
     launch_tool: str = ""           # argv[0] of the launch command; see PACKAGE_LAUNCHERS
 
@@ -101,7 +103,7 @@ class DeclaredDestinations:
     servers: dict[str, ServerDeclaration]
 
     @classmethod
-    def load(cls, path: str | Path = DECLARED_DESTINATIONS_PATH) -> "DeclaredDestinations | None":
+    def load(cls, path: str | Path = DECLARED_DESTINATIONS_PATH) -> DeclaredDestinations | None:
         """Load the declaration, or None if the file is absent. Absent is reported, not assumed."""
         p = Path(path)
         if not p.is_file():
@@ -123,7 +125,7 @@ class DeclaredDestinations:
                    sha256=hashlib.sha256(raw).hexdigest(), path=str(path), servers=servers)
 
     @classmethod
-    def carried(cls, block: dict) -> "DeclaredDestinations":
+    def carried(cls, block: dict[str, Any]) -> DeclaredDestinations:
         """The declaration a REDACTED run carries, relabelled through the run's own map.
 
         A redacted run's servers are indices and its destinations are class labels, so the
@@ -153,7 +155,7 @@ class DeclaredDestinations:
                    path=f"carried by the run, relabelled from {block.get('path', '')}",
                    servers=servers)
 
-    def citation(self) -> dict:
+    def citation(self) -> dict[str, Any]:
         """Identifiers only, so the citation can travel even where hostnames may not."""
         p = Path(self.path)
         return {"list_name": self.name, "version": self.version,
@@ -161,7 +163,8 @@ class DeclaredDestinations:
                 "sha256": self.sha256, "server_count": len(self.servers)}
 
 
-def check(flows, declared: DeclaredDestinations | None, package_infrastructure=None) -> dict:
+def check(flows: Iterable[Any], declared: DeclaredDestinations | None,
+          package_infrastructure: Any = None) -> dict[str, Any]:
     """Compare a run's observed destinations against the declaration. Operator-only output.
 
     ``flows`` is any iterable of records with ``server_id`` and ``dest_host`` (a run's
@@ -219,13 +222,14 @@ def check(flows, declared: DeclaredDestinations | None, package_infrastructure=N
                        f"declared or undeclared. Gate rule 7 is unevaluated, which is not the "
                        f"same as satisfied"),
             "declaration": None,
-            "servers": {sid: {"observed_hosts": sorted(hosts)} for sid, hosts in sorted(by_server.items())},
+            "servers": {sid: {"observed_hosts": sorted(hosts)} for sid,
+                hosts in sorted(by_server.items())},
             "launcher_destinations": {sid: sorted(hosts)
                                       for sid, hosts in sorted(launcher_by_server.items())},
             "connections_without_a_host": hostless,
         }
 
-    servers: dict[str, dict] = {}
+    servers: dict[str, dict[str, Any]] = {}
     review: list[str] = []
     for sid, hosts in sorted(by_server.items()):
         decl = declared.servers.get(sid)
@@ -280,7 +284,8 @@ def check(flows, declared: DeclaredDestinations | None, package_infrastructure=N
         # not the document that would declare them.
         "launcher_destinations": {sid: sorted(hosts)
                                   for sid, hosts in sorted(launcher_by_server.items())},
-        "launcher_note": ("contacted before the first tool call, by a launch command that resolves a "
+        "launcher_note": ("contacted before the first tool call, by a launch command that "
+                          "resolves a "
                           "package (npx, uvx), to a host on the declared package-infrastructure "
                           "list: the launcher's traffic and not the server's, recorded apart and "
                           "triggering no disclosure. Both conditions are required and both come "

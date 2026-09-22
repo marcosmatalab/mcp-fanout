@@ -17,9 +17,10 @@ layer; redact.py enforces it upstream.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Iterator
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Iterable, Iterator, Type, TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -47,7 +48,8 @@ T = TypeVar("T")
 #               been sent, or the corpus is finished. Egress here is the server's, and it is outside
 #               every call window.
 #
-# Why "drained" exists at all, and it is the fix for a measured defect: the sequential driver used to
+# Why "drained" exists at all, and it is the fix for a measured defect: the sequential driver used
+# to
 # leave the last call published after finishing a server, so the NEXT server's launcher traffic was
 # attributed to the PREVIOUS server's last call. Four of the ten servers in the first ten-server
 # capture showed exactly one package-registry connection each, every one of them pinned to that
@@ -68,8 +70,10 @@ PHASES_LIFECYCLE = (PHASE_LAUNCHER, PHASE_HANDSHAKE, PHASE_DRIVING, PHASE_DRAINE
 # ten-server capture with phases recorded put all seven npx servers' package-registry connections in
 # `handshake`, not in `launcher`, and every one of them was npm's traffic.
 #
-# So the line that matters is not "did a process exist" but "had a call been sent". Nothing in either
-# phase can have been caused by a call, because there was none. What the two phases still separate is
+# So the line that matters is not "did a process exist" but "had a call been sent". Nothing in
+# either
+# phase can have been caused by a call, because there was none. What the two phases still separate
+# is
 # WHOSE traffic it is, which is a different question and is answered in disclosure.py against the
 # declared package-infrastructure list rather than by guessing from the phase.
 PHASES_NOT_CALL_CAUSED = (PHASE_LAUNCHER, PHASE_HANDSHAKE)
@@ -95,7 +99,8 @@ PASS_BENCH = "bench"
 PASS_SELFTEST = "selftest"
 # A control run: a component driven WITHOUT the server under measurement, to find out whether the
 # server is a necessary condition for an egress attributed to it. It drives no tool call, so the
-# six numbers have no denominator in it and the aggregate refuses to compute them (cli._cmd_aggregate
+# six numbers have no denominator in it and the aggregate refuses to compute them
+# (cli._cmd_aggregate
 # and _cmd_figures). Labelled as a pass rather than kept outside the vocabulary because the label is
 # what stops a control run being read as a measurement: the run id carries it, the manifest carries
 # it, and both commands that could publish from it check it.
@@ -247,23 +252,23 @@ class RunManifest:
     # token. It exists because an uncredentialed run is silent by nature (a server missing its
     # token still starts, still handshakes, still produces flows), which is gate rule 10 applied
     # to a credential. Empty dict means no server declared a secret.
-    credential_presence: dict = field(default_factory=dict)
+    credential_presence: dict[str, Any] = field(default_factory=dict)
     # Which servers the REGISTRY says reach a third party at all, copied from registry/servers.yaml
     # at capture time. The aggregate is standard-library only and cannot read YAML, and it needs
     # this to tell "egressed nothing" from "we could not see it egress": a local server producing
     # no flow is the right answer, and a server with expects_egress that produces no flow is a
     # blind spot (docs/THREATS.md threat 19). Empty list means the run predates this field, and
     # aggregate.observability_by_server says so rather than guessing.
-    servers_expecting_egress: list = field(default_factory=list)
+    servers_expecting_egress: list[Any] = field(default_factory=list)
     # Present only on a run produced by tools/redact_run.py, and empty on a captured one. It
     # records what the redaction replaced, what it kept, and the digest of every registry list
     # whose answer had to be computed before the hostnames were destroyed. A redacted run is a
     # derived artifact and says so in its own manifest, so no reader has to infer it from the
     # absence of hostnames.
-    redaction: dict = field(default_factory=dict)
+    redaction: dict[str, Any] = field(default_factory=dict)
 
 
-def write_jsonl(path: str | Path, rows: Iterable) -> None:
+def write_jsonl(path: str | Path, rows: Iterable[Any]) -> None:
     """Write dataclass rows as JSON Lines, one compact object per line, sorted keys.
 
     Sorted keys and compact separators make two runs diff to an empty diff when nothing changed,
@@ -277,7 +282,7 @@ def write_jsonl(path: str | Path, rows: Iterable) -> None:
             fh.write(json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n")
 
 
-def read_jsonl(path: str | Path, cls: Type[T]) -> Iterator[T]:
+def read_jsonl(path: str | Path, cls: type[T]) -> Iterator[T]:
     """Read JSON Lines back into dataclass instances of ``cls``."""
     with Path(path).open("r", encoding="utf-8") as fh:
         for line in fh:

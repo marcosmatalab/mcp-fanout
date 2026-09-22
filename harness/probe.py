@@ -78,7 +78,7 @@ def probe(command: list[str], env: dict | None = None, *,
                         for t in tools
                     ],
                 }
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             # Every rejection is kept, not just the last one: "rejected 2025-11-25 and then timed
             # out on 2024-11-05" and "timed out on all four" are different facts about a server.
             attempts.append({"protocol_version_tried": version,

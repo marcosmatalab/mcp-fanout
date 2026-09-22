@@ -13,8 +13,6 @@ not try to validate URLs, anchors, or prose. A link checker that needs the netwo
 import re
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parent.parent
 SEARCHED = ("src", "docs", "harness", "tests", "registry")
 # Repository-relative paths under a known top-level directory with a known extension. The
@@ -128,7 +126,8 @@ def test_false_strong_attribution_tolerance_stays_at_zero():
     cell = next(v for k, v in rows.items() if "strong attribution" in k)
     assert "zero" in cell.lower(), cell
     assert "not negotiable" in cell.lower(), cell
-    assert not re.search(r"\d", cell), f"a numeric tolerance appeared where zero is required: {cell}"
+    assert not re.search(r"\d",
+        cell), f"a numeric tolerance appeared where zero is required: {cell}"
 
 
 def test_the_product_gate_has_no_invented_threshold():

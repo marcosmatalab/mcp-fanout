@@ -12,7 +12,6 @@ import pytest
 from mcpfanout import structure as S
 from mcpfanout.redact import Redactor
 
-
 # --- One rule, both sides.
 
 @pytest.mark.parametrize("value", [
@@ -80,7 +79,8 @@ def test_plus_and_percent_encoding_are_both_decoded():
 
 def test_a_query_value_that_is_itself_a_url_is_decomposed_again():
     """The redirector case: ?url=https://host/a/b must expose host, a and b."""
-    toks = S.tokens_of_request("proxy.example.net", "/go?url=https%3A%2F%2Finner.example.net%2Fa%2Fbbb")
+    toks = S.tokens_of_request("proxy.example.net",
+        "/go?url=https%3A%2F%2Finner.example.net%2Fa%2Fbbb")
     assert {"inner.example.net", "bbb"} <= toks
 
 

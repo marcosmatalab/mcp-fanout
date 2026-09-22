@@ -1,8 +1,10 @@
-"""Gate rule 7 as a checked rule: the declaration is complete, and the check never reads clean by accident.
+"""Gate rule 7 as a checked rule: the declaration is complete, and the check never reads clean by
+accident.
 
 Gate rule 7 says that if a server egresses to a destination its documentation does not declare, we
 stop and flag it before publishing. The rule used to live only in prose, which means it was honoured
-by reading a hostname list after a run and remembering what belongs there. That works for one server.
+by reading a hostname list after a run and remembering what belongs there. That works for one
+server.
 
 What these tests protect, in order of how badly each would fail:
 
@@ -24,12 +26,17 @@ import re
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
 import yaml
 
-from mcpfanout.disclosure import (DECLARED_DESTINATIONS_PATH, UNKNOWN_SERVER, VERDICT_CLEAR,
-                                  VERDICT_REVIEW, VERDICT_UNDETERMINABLE, DeclaredDestinations,
-                                  check)
+from mcpfanout.disclosure import (
+    DECLARED_DESTINATIONS_PATH,
+    UNKNOWN_SERVER,
+    VERDICT_CLEAR,
+    VERDICT_REVIEW,
+    VERDICT_UNDETERMINABLE,
+    DeclaredDestinations,
+    check,
+)
 
 REPO = Path(__file__).resolve().parent.parent
 DECLARED = REPO / DECLARED_DESTINATIONS_PATH
@@ -138,7 +145,9 @@ def test_a_server_with_no_declaration_requires_review_rather_than_passing():
 
 
 def test_egress_with_no_call_in_flight_is_still_attributed_to_a_bucket():
-    """Unattributed egress to an undeclared host is the most interesting kind; it must not vanish."""
+    """Unattributed egress to an undeclared host is the most interesting kind; it must not vanish.
+
+    """
     report = check([_flow("", "api.example.org")], _declared())
     assert report["verdict"] == VERDICT_REVIEW
     assert UNKNOWN_SERVER in report["servers"]
@@ -187,8 +196,10 @@ def _package_list():
 def test_a_launcher_destination_is_recorded_apart_and_triggers_no_disclosure():
     """Gate rule 7's first branch, mechanically, and it needs BOTH of its conditions.
 
-    A package registry reached before the first call, by a launch command that resolves a package, is
-    npm's traffic: asking whether the SERVER's documentation declares it is asking the wrong party. It
+    A package registry reached before the first call, by a launch command that resolves a package,
+    is
+    npm's traffic: asking whether the SERVER's documentation declares it is asking the wrong party.
+    It
     is reported, because an operator must see it, and it does not put the server into
     servers_to_review. Both conditions come from declared data: the phase from the driver, the
     destination from registry/package-infrastructure.json, the launch tool from the declaration.
@@ -206,7 +217,8 @@ def test_a_launcher_destination_is_recorded_apart_and_triggers_no_disclosure():
 def test_pre_call_egress_that_is_not_a_package_registry_is_reviewed():
     """A server phoning home at startup is exactly what gate rule 7 exists to surface.
 
-    Branch one requires the destination to be declared package infrastructure. Without that condition
+    Branch one requires the destination to be declared package infrastructure. Without that
+    condition
     the exclusion would launder any pre-call connection at all, which is the opposite of the rule.
     """
     report = check([_launcher_flow("everything", "telemetry.example.org")], _declared(),
@@ -221,7 +233,8 @@ def test_pre_call_egress_that_is_not_a_package_registry_is_reviewed():
 def test_a_package_registry_before_the_first_call_is_still_reviewed_for_a_direct_launch():
     """The other half of branch one: the launch command has to BE a package launcher.
 
-    A server started directly (python, node) has no resolution step, so a package registry before its
+    A server started directly (python, node) has no resolution step, so a package registry before
+    its
     first call is the server itself reaching for something, not a launcher doing its job.
     """
     report = check([_launcher_flow("bench", "registry.npmjs.org")], _declared(), _package_list())
@@ -237,7 +250,7 @@ def test_the_declared_launch_tool_matches_the_registry():
         assert decl is not None and decl.launch_tool == server["launch"][0], server["id"]
 
 
-def test_the_same_host_reached_during_a_call_still_triggers_review():  # noqa: D401
+def test_the_same_host_reached_during_a_call_still_triggers_review():
     """The separation is by phase, not by hostname: the exclusion must not launder a real finding.
 
     A package registry reached while a call is in flight is the threat-10 shape, and that IS the
@@ -252,7 +265,9 @@ def test_the_same_host_reached_during_a_call_still_triggers_review():  # noqa: D
 
 
 def test_a_flow_with_no_recorded_phase_is_still_classified_rather_than_excused():
-    """An old run has no phase field, and "we did not record it" may not mean "it was the launcher"."""
+    """An old run has no phase field, and "we did not record it" may not mean "it was the launcher".
+
+    """
     old = SimpleNamespace(server_id="time", dest_host="telemetry.example.org")
     report = check([old], _declared())
     assert report["verdict"] == VERDICT_REVIEW

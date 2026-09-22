@@ -10,7 +10,6 @@ import re
 from pathlib import Path
 
 import pytest
-
 from conftest import collected
 
 REPO = Path(__file__).resolve().parent.parent

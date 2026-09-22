@@ -25,13 +25,20 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
-
 from mcpfanout.aggregate import Run, driving_summary, number_1, number_2, number_5
-from mcpfanout.driver import CallSpec, StdioMCPClient, drive, publish_active_calls
+from mcpfanout.driver import CallSpec, StdioMCPClient, drive
 from mcpfanout.match import REASON_PRE_LAUNCH, UNATTRIBUTED
-from mcpfanout.record import (PHASE_DRAINED, PHASE_DRIVING, PHASE_HANDSHAKE, PHASE_LAUNCHER,
-                              PHASES_LIFECYCLE, PHASES_NOT_CALL_CAUSED, Flow, RunManifest, ToolCall)
+from mcpfanout.record import (
+    PHASE_DRAINED,
+    PHASE_DRIVING,
+    PHASE_HANDSHAKE,
+    PHASE_LAUNCHER,
+    PHASES_LIFECYCLE,
+    PHASES_NOT_CALL_CAUSED,
+    Flow,
+    RunManifest,
+    ToolCall,
+)
 from mcpfanout.redact import Redactor
 
 REPO = Path(__file__).resolve().parent.parent

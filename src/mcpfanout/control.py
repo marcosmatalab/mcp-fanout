@@ -37,6 +37,9 @@ Standard library only, like the rest of the measurement core.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import Any
+
 from .record import PHASES_NOT_CALL_CAUSED
 
 # The server id the control driver publishes for its navigations. It is not an MCP server and the
@@ -63,7 +66,7 @@ _VERDICT_MEANING = {
 }
 
 
-def _hosts_with_counts(flows, *, server_id: str | None = None,
+def _hosts_with_counts(flows: Iterable[Any], *, server_id: str | None = None,
                        call_caused_only: bool = True) -> dict[str, int]:
     """Destination hosts and how many flows reached each, for one server or for all of them.
 
@@ -85,7 +88,8 @@ def _hosts_with_counts(flows, *, server_id: str | None = None,
     return dict(sorted(out.items()))
 
 
-def _match_summary(flows, *, server_id: str | None = None, run_wide: bool = True) -> dict:
+def _match_summary(flows: Iterable[Any], *, server_id: str | None = None,
+                   run_wide: bool = True) -> dict[str, Any]:
     """What our own material did on the wire, reported as TWO channels because they are two.
 
     They are not the same quantity and conflating them is how a comparison comes to claim more
@@ -118,7 +122,7 @@ def _match_summary(flows, *, server_id: str | None = None, run_wide: bool = True
             flows_with_context += 1
         if bool(getattr(f, "causal", False)):
             causal += 1
-    argument: dict = {"causal_flows": causal,
+    argument: dict[str, Any] = {"causal_flows": causal,
                       "means": ("flows carrying a k-gram of the driving call's own arguments")}
     if run_wide:
         # Only over a WHOLE run. Sliced to one host, "no flow carried our material" is the answer
@@ -133,8 +137,8 @@ def _match_summary(flows, *, server_id: str | None = None, run_wide: bool = True
             "argument_channel": argument}
 
 
-def compare(control_flows, subject_flows, subject_server_id: str,
-            under_review: list[str] | tuple[str, ...]) -> dict:
+def compare(control_flows: Iterable[Any], subject_flows: Iterable[Any], subject_server_id: str,
+            under_review: list[str] | tuple[str, ...]) -> dict[str, Any]:
     """Compare a control run's destinations against one server's, for the hosts under review.
 
     ``under_review`` is the list of hosts gate rule 7 flagged for that server, which comes from
@@ -155,7 +159,7 @@ def compare(control_flows, subject_flows, subject_server_id: str,
     # call's arguments is the phenomenon the six numbers exist to measure. Answering it per host,
     # in the artifact, means the answer has a command behind it instead of being a sentence
     # somebody read off a flows file once.
-    carried: dict[str, dict] = {}
+    carried: dict[str, dict[str, Any]] = {}
     for host in review:
         carried[host] = {
             "under_the_server": _match_summary(
@@ -204,9 +208,9 @@ def compare(control_flows, subject_flows, subject_server_id: str,
     }
 
 
-def publishable(report: dict, *, control_run_id: str, subject_run_id: str,
+def publishable(report: dict[str, Any], *, control_run_id: str, subject_run_id: str,
                 repetitions: int, dwell_seconds: float, url_source: str,
-                authorisation: str) -> dict:
+                authorisation: str) -> dict[str, Any]:
     """The committed form of a comparison, for a finding whose instance an operator authorised.
 
     Gate rule 3 says aggregate output names nothing, and this file names a server and two hosts.

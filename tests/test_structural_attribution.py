@@ -123,7 +123,7 @@ def test_the_matcher_is_given_digests_and_never_tokens():
     """Piece 2. Every value crossing discriminating_candidates is a 32-char hex digest."""
     calls = _sets(RUNBOOK, DEEPER, ROOT)
     wire = _wire("example.net", "/docs/deploy/runbook")
-    for s in calls + [wire]:
+    for s in [*calls, wire]:
         for value in s:
             assert len(value) == 32 and all(c in "0123456789abcdef" for c in value)
             assert "runbook" not in value and "example" not in value
