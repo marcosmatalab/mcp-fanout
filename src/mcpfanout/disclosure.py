@@ -163,22 +163,15 @@ class DeclaredDestinations:
                 "sha256": self.sha256, "server_count": len(self.servers)}
 
 
-def check(flows: Iterable[Any], declared: DeclaredDestinations | None,
-          package_infrastructure: Any = None) -> dict[str, Any]:
-    """Compare a run's observed destinations against the declaration. Operator-only output.
+def _sort_destinations(
+    flows: Iterable[Any], declared: DeclaredDestinations | None, package_infrastructure: Any,
+) -> tuple[dict[str, set[str]], dict[str, set[str]], dict[str, set[str]], int]:
+    """Put every observed destination into one of three piles, before anything is judged.
 
-    ``flows`` is any iterable of records with ``server_id`` and ``dest_host`` (a run's
-    ``flows.jsonl`` read back as ``Flow``). Connections with no host, which is what a
-    non-HTTP flow looks like, are counted separately rather than treated as a destination:
-    "we could not see where it went" is not "it went nowhere".
-
-    THE LAUNCHER'S DESTINATIONS ARE SEPARATED BEFORE ANYTHING IS CLASSIFIED, which is the first
-    branch of gate rule 7's decision procedure: a destination contacted by the launcher before the
-    server process exists is not the server's egress, so it is recorded apart and triggers no
-    disclosure. `npx -y pkg@ver` resolving a package is npm's traffic, and asking whether the
-    SERVER's documentation declares it is asking the wrong party. They are still reported, by host,
-    because an operator has to be able to see them; what they do not do is put a server into
-    servers_to_review.
+    The piles are the first branch of gate rule 7's decision procedure, and they are separated
+    here rather than inside the judgement so that "whose traffic is this" and "is it declared"
+    stay two questions. Returns (launcher destinations, pre-call destinations that are not the
+    launcher's, per-server call-caused destinations, connections with no host at all).
     """
     launcher_by_server: dict[str, set[str]] = {}
     pre_call_other: dict[str, set[str]] = {}
@@ -213,22 +206,20 @@ def check(flows: Iterable[Any], declared: DeclaredDestinations | None,
             continue
         by_server.setdefault(sid, set()).add(host)
 
-    if declared is None:
-        return {
-            "_operator_only": ("names servers and hostnames; gate rule 3 forbids publishing this "
-                               "file or quoting a hostname from it"),
-            "verdict": VERDICT_UNDETERMINABLE,
-            "reason": (f"{DECLARED_DESTINATIONS_PATH} is missing, so no destination can be called "
-                       f"declared or undeclared. Gate rule 7 is unevaluated, which is not the "
-                       f"same as satisfied"),
-            "declaration": None,
-            "servers": {sid: {"observed_hosts": sorted(hosts)} for sid,
-                hosts in sorted(by_server.items())},
-            "launcher_destinations": {sid: sorted(hosts)
-                                      for sid, hosts in sorted(launcher_by_server.items())},
-            "connections_without_a_host": hostless,
-        }
+    return launcher_by_server, pre_call_other, by_server, hostless
 
+
+def _judge_servers(
+    by_server: dict[str, set[str]], pre_call_other: dict[str, set[str]],
+    declared: DeclaredDestinations,
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    """Per server: declared, known, or new, and which servers that puts under review.
+
+    A server with no declaration at all goes under review rather than passing: the
+    absence of an expectation is not the satisfaction of one. Pre-first-call egress that
+    is not the package manager's is added afterwards, because it is a finding about the
+    same server arriving from a different branch of the procedure.
+    """
     servers: dict[str, dict[str, Any]] = {}
     review: list[str] = []
     for sid, hosts in sorted(by_server.items()):
@@ -260,7 +251,45 @@ def check(flows: Iterable[Any], declared: DeclaredDestinations | None,
         entry["pre_first_call_undeclared"] = sorted(hosts)
         entry["reason"] = REASON_PRE_CALL_UNDECLARED
         review.append(sid)
+    return servers, review
 
+
+def check(flows: Iterable[Any], declared: DeclaredDestinations | None,
+          package_infrastructure: Any = None) -> dict[str, Any]:
+    """Compare a run's observed destinations against the declaration. Operator-only output.
+
+    ``flows`` is any iterable of records with ``server_id`` and ``dest_host`` (a run's
+    ``flows.jsonl`` read back as ``Flow``). Connections with no host, which is what a
+    non-HTTP flow looks like, are counted separately rather than treated as a destination:
+    "we could not see where it went" is not "it went nowhere".
+
+    THE LAUNCHER'S DESTINATIONS ARE SEPARATED BEFORE ANYTHING IS CLASSIFIED, which is the first
+    branch of gate rule 7's decision procedure: a destination contacted by the launcher before the
+    server process exists is not the server's egress, so it is recorded apart and triggers no
+    disclosure. `npx -y pkg@ver` resolving a package is npm's traffic, and asking whether the
+    SERVER's documentation declares it is asking the wrong party. They are still reported, by host,
+    because an operator has to be able to see them; what they do not do is put a server into
+    servers_to_review.
+    """
+    launcher_by_server, pre_call_other, by_server, hostless = _sort_destinations(
+        flows, declared, package_infrastructure)
+    if declared is None:
+        return {
+            "_operator_only": ("names servers and hostnames; gate rule 3 forbids publishing this "
+                               "file or quoting a hostname from it"),
+            "verdict": VERDICT_UNDETERMINABLE,
+            "reason": (f"{DECLARED_DESTINATIONS_PATH} is missing, so no destination can be called "
+                       f"declared or undeclared. Gate rule 7 is unevaluated, which is not the "
+                       f"same as satisfied"),
+            "declaration": None,
+            "servers": {sid: {"observed_hosts": sorted(hosts)} for sid,
+                hosts in sorted(by_server.items())},
+            "launcher_destinations": {sid: sorted(hosts)
+                                      for sid, hosts in sorted(launcher_by_server.items())},
+            "connections_without_a_host": hostless,
+        }
+
+    servers, review = _judge_servers(by_server, pre_call_other, declared)
     verdict = VERDICT_REVIEW if review else VERDICT_CLEAR
     return {
         "_operator_only": ("names servers and hostnames; gate rule 3 forbids publishing this file "

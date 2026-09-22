@@ -274,6 +274,39 @@ def sweep_mass(corpus: Any, transfers: Iterable[Any], redactor: Redactor, index:
     return rows
 
 
+def _mechanism_probe(held: Any, cal: Any, transfers: Any, probe_k: int,
+                     root: str | Path) -> dict[str, Any]:
+    """The same weighting, measured at a k where false positives still exist.
+
+    At the shipped k the unweighted rate on this corpus is already zero, so no mechanism can
+    lower it, and reporting only the shipped k would let "it did not help" hide "there was
+    nothing left to help with". This is the only place the mechanism itself can be observed
+    working or failing.
+    """
+    from .calibrate import false_positive_rate
+
+    r_probe = Redactor(k=probe_k)
+    idx_probe = RarityIndex.build(r_probe, root=root)
+    weighting = f"rarity_mass_{MIN_RARITY_MASS}"
+    un_held = false_positive_rate(held, r_probe)
+    we_held = false_positive_rate(held, r_probe, decide=_decider(idx_probe, MIN_RARITY_MASS),
+                                  weighting=weighting)
+    un_cal = false_positive_rate(cal, r_probe)
+    we_cal = false_positive_rate(cal, r_probe, decide=_decider(idx_probe, MIN_RARITY_MASS),
+                                 weighting=weighting)
+    return {
+        "k": probe_k,
+        "why": ("at the shipped k the unweighted rate is already zero on this corpus, so no "
+                "mechanism can lower it. This k is where false positives still exist, which is "
+                "the only place the mechanism itself can be observed working or failing"),
+        "held_out": {"unweighted_rate": un_held["rate"], "weighted_rate": we_held["rate"]},
+        "calibration": {"unweighted_rate": un_cal["rate"], "weighted_rate": we_cal["rate"]},
+        "colliding_kgrams": colliding_kgram_frequencies(cal, r_probe, idx_probe),
+        "true_match_kgrams": true_match_kgram_counts(transfers, r_probe),
+        "mass_ladder": sweep_mass(cal, transfers, r_probe, idx_probe),
+    }
+
+
 def acceptance(shipped_k: int, probe_k: int, *, root: str | Path = ".") -> dict[str, Any]:
     """The whole F1.3 measurement, and the verdict its own numbers imply.
 
@@ -303,17 +336,8 @@ def acceptance(shipped_k: int, probe_k: int, *, root: str | Path = ".") -> dict[
     we_ship = false_positive_rate(held, r_ship, decide=_decider(idx_ship, MIN_RARITY_MASS),
                                   weighting=f"rarity_mass_{MIN_RARITY_MASS}")
 
-    r_probe = Redactor(k=probe_k)
-    idx_probe = RarityIndex.build(r_probe, root=root)
-    un_probe_held = false_positive_rate(held, r_probe)
-    we_probe_held = false_positive_rate(held, r_probe,
-                                        decide=_decider(idx_probe, MIN_RARITY_MASS),
-                                        weighting=f"rarity_mass_{MIN_RARITY_MASS}")
-    un_probe_cal = false_positive_rate(cal, r_probe)
-    we_probe_cal = false_positive_rate(cal, r_probe, decide=_decider(idx_probe, MIN_RARITY_MASS),
-                                       weighting=f"rarity_mass_{MIN_RARITY_MASS}")
-
-    ladder = sweep_mass(cal, transfers, r_probe, idx_probe)
+    probe = _mechanism_probe(held, cal, transfers, probe_k, root)
+    ladder = probe["mass_ladder"]
     # The cheapest threshold that removes every false positive at the probe k, and what it costs.
     clean = [row for row in ladder if row["false_positive_rate"] == 0.0]
     cheapest = min(clean, key=lambda row: row["min_rarity_mass"]) if clean else None
@@ -334,19 +358,7 @@ def acceptance(shipped_k: int, probe_k: int, *, root: str | Path = ".") -> dict[
             "pairs": un_ship["pairs"],
             "fell": we_ship["rate"] < un_ship["rate"],
         },
-        "mechanism_probe": {
-            "k": probe_k,
-            "why": ("at the shipped k the unweighted rate is already zero on this corpus, so no "
-                    "mechanism can lower it. This k is where false positives still exist, which is "
-                    "the only place the mechanism itself can be observed working or failing"),
-            "held_out": {"unweighted_rate": un_probe_held["rate"],
-                         "weighted_rate": we_probe_held["rate"]},
-            "calibration": {"unweighted_rate": un_probe_cal["rate"],
-                            "weighted_rate": we_probe_cal["rate"]},
-            "colliding_kgrams": colliding_kgram_frequencies(cal, r_probe, idx_probe),
-            "true_match_kgrams": true_match_kgram_counts(transfers, r_probe),
-            "mass_ladder": ladder,
-        },
+        "mechanism_probe": probe,
         "what_a_working_threshold_would_be_doing": {
             "cheapest_mass_that_clears_all_false_positives": (
                 cheapest["min_rarity_mass"] if cheapest else None),

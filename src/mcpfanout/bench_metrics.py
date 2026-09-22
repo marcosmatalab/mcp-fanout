@@ -49,6 +49,74 @@ def _frac(num: int, den: int) -> float:
     return round(num / den, 4) if den else 0.0
 
 
+def _attribution_block(graded: list[dict[str, Any]]) -> dict[str, Any]:
+    """Precision against the ledger: the sensor-gate criterion whose tolerance is zero."""
+    strong = [g for g in graded if g["grade"] in _match.STRONG_ATTRIBUTION]
+    strong_claimed = [g for g in strong if g["claimed_call"]]
+    strong_correct = [g for g in strong_claimed if g["claimed_call"] == g["expected_call"]]
+    false_strong = [g for g in strong_claimed if g["claimed_call"] != g["expected_call"]]
+    return {
+        "flows_graded": len(graded),
+        "strong_attributions": len(strong),
+        "strong_attributions_with_a_named_call": len(strong_claimed),
+        "strong_attributions_correct": len(strong_correct),
+        "false_strong_attributions": len(false_strong),
+        # Reported as a count, never as a rate: a rate invites "only 2%", and one false strong
+        # attribution destroys the evidentiary claim the product rests on.
+        "attribution_precision": _frac(len(strong_correct), len(strong_claimed)),
+    }
+
+
+def _per_cell_block(graded: list[dict[str, Any]],
+                    plan: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Expected against observed, per discrimination cell. Per flow, which is why the mixture
+    cell is readable at all: pooling it would hide the two ambiguous flows among the eleven
+    unique ones."""
+    cells: dict[str, dict[str, Any]] = {}
+    for g in graded:
+        c = cells.setdefault(g["cell"], {"flows": 0, "grades": {}, "correct_call": 0,
+                                         "wrong_call": 0, "no_call": 0})
+        c["flows"] += 1
+        c["grades"][g["grade"]] = c["grades"].get(g["grade"], 0) + 1
+        if not g["claimed_call"]:
+            c["no_call"] += 1
+        elif g["claimed_call"] == g["expected_call"]:
+            c["correct_call"] += 1
+        else:
+            c["wrong_call"] += 1
+    for row in plan:
+        cells.setdefault(row["cell"], {"flows": 0, "grades": {}, "correct_call": 0,
+                                       "wrong_call": 0, "no_call": 0})["expect"] = \
+            row.get("expect", "")
+    return cells
+
+
+def _false_provenance_block(graded: list[dict[str, Any]]) -> dict[str, Any]:
+    """The sensor claiming material of ours where the ledger says none went."""
+    no_material = [g for g in graded if not g["fragment_present"]]
+    false_prov = [g for g in no_material
+                  if g["provenance"] in (_match.PROVENANCE_ARGUMENTS, _match.PROVENANCE_CONTEXT,
+                                         _match.PROVENANCE_BOTH)]
+    return {
+        "flows_with_no_material_sent": len(no_material),
+        "false_provenance_matches": len(false_prov),
+        "false_provenance_rate": _frac(len(false_prov), len(no_material)),
+    }
+
+
+def _known_negatives_block(graded: list[dict[str, Any]]) -> dict[str, Any]:
+    """What byte-literal matching loses, as a figure rather than as a caveat."""
+    unmatched = [g for g in graded if not g["in_matched_channel"] and g["fragment_present"]]
+    return {
+        "flows_carrying_material_in_an_unread_channel": len(unmatched),
+        "of_which_the_sensor_attributed_strongly": len(
+            [g for g in unmatched if g["grade"] in _match.STRONG_ATTRIBUTION]),
+        "note": "headers and re-encoded payloads are channels byte-literal matching cannot see "
+                "(negative 3). Measured to size the loss, documented as a permanent known "
+                "negative, never as debt",
+    }
+
+
 def compute(run_dir: str | Path, truth_path: str | Path | None = None) -> dict[str, Any]:
     """Compare the bench's ledger against the sensor's flows. Returns the instrument block."""
     run_dir = Path(run_dir)
@@ -111,62 +179,10 @@ def compute(run_dir: str | Path, truth_path: str | Path | None = None) -> dict[s
                            "fragment_present": plan_of_host.get(host, {})
                            .get("fragment_present", False)})
 
-    strong = [g for g in graded if g["grade"] in _match.STRONG_ATTRIBUTION]
-    strong_claimed = [g for g in strong if g["claimed_call"]]
-    strong_correct = [g for g in strong_claimed if g["claimed_call"] == g["expected_call"]]
-    false_strong = [g for g in strong_claimed if g["claimed_call"] != g["expected_call"]]
-
-    attribution = {
-        "flows_graded": len(graded),
-        "strong_attributions": len(strong),
-        "strong_attributions_with_a_named_call": len(strong_claimed),
-        "strong_attributions_correct": len(strong_correct),
-        "false_strong_attributions": len(false_strong),
-        # The sensor-gate criterion with tolerance zero. Reported as a count, never as a rate:
-        # a rate invites "only 2%", and one false strong attribution destroys the evidentiary
-        # claim the product rests on.
-        "attribution_precision": _frac(len(strong_correct), len(strong_claimed)),
-    }
-
-    # --- Per cell, expected against observed. The mixture cell is why this is per flow.
-    cells: dict[str, dict[str, Any]] = {}
-    for g in graded:
-        c = cells.setdefault(g["cell"], {"flows": 0, "grades": {}, "correct_call": 0,
-                                         "wrong_call": 0, "no_call": 0})
-        c["flows"] += 1
-        c["grades"][g["grade"]] = c["grades"].get(g["grade"], 0) + 1
-        if not g["claimed_call"]:
-            c["no_call"] += 1
-        elif g["claimed_call"] == g["expected_call"]:
-            c["correct_call"] += 1
-        else:
-            c["wrong_call"] += 1
-    for row in plan:
-        cells.setdefault(row["cell"], {"flows": 0, "grades": {}, "correct_call": 0,
-                                       "wrong_call": 0, "no_call": 0})["expect"] = \
-            row.get("expect", "")
-
-    # --- False provenance. The sensor claiming material of ours where the ledger says none went.
-    no_material = [g for g in graded if not g["fragment_present"]]
-    false_prov = [g for g in no_material
-                  if g["provenance"] in (_match.PROVENANCE_ARGUMENTS, _match.PROVENANCE_CONTEXT,
-                                         _match.PROVENANCE_BOTH)]
-    provenance = {
-        "flows_with_no_material_sent": len(no_material),
-        "false_provenance_matches": len(false_prov),
-        "false_provenance_rate": _frac(len(false_prov), len(no_material)),
-    }
-
-    # --- Known negatives: what byte-literal matching loses, as a figure rather than a caveat.
-    unmatched_channel = [g for g in graded if not g["in_matched_channel"] and g["fragment_present"]]
-    known_negatives = {
-        "flows_carrying_material_in_an_unread_channel": len(unmatched_channel),
-        "of_which_the_sensor_attributed_strongly": len(
-            [g for g in unmatched_channel if g["grade"] in _match.STRONG_ATTRIBUTION]),
-        "note": "headers and re-encoded payloads are channels byte-literal matching cannot see "
-                "(negative 3). Measured to size the loss, documented as a permanent known "
-                "negative, never as debt",
-    }
+    attribution = _attribution_block(graded)
+    cells = _per_cell_block(graded, plan)
+    provenance = _false_provenance_block(graded)
+    known_negatives = _known_negatives_block(graded)
 
     return {"name": "instrument_block", "ok": True,
             "capture": recall, "attribution": attribution, "provenance": provenance,

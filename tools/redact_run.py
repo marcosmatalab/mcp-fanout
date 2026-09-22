@@ -60,7 +60,11 @@ import struct
 import sys
 from pathlib import Path
 
+# Both the package under src/ and this directory, so the module works when it is imported
+# as well as when it is run. The pcap rewriter reads the link-layer table from pcap_syns,
+# and an import that only resolves under __main__ is a function that only works from make.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mcpfanout import record as _record
 from mcpfanout.classify import PACKAGE_INFRASTRUCTURE_PATH, ExclusionList
@@ -178,10 +182,19 @@ class Redactor:
         return call_id
 
 
+SCRUBBED_MARKER = "message redacted"
+
+
 def _scrub_error(text: str) -> str:
-    """Keep what the error says about the run, drop what it says about the vendor."""
-    if not text:
-        return ""
+    """Keep what the error says about the run, drop what it says about the vendor.
+
+    Idempotent, on purpose: running the redactor over an already-redacted run has to be a fixed
+    point, or nobody can verify a published run by re-deriving it. Without this guard a second
+    pass dropped the JSON-RPC code, because the code only appears in the vendor's message that
+    the first pass removed.
+    """
+    if not text or SCRUBBED_MARKER in text:
+        return text
     kind = text.split(":", 1)[0].strip()
     code = JSONRPC_CODE.search(text)
     if code:
@@ -369,6 +382,17 @@ def main() -> int:
     run_dir = Path(args.run)
     out_dir = Path(args.out)
     manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("redaction"):
+        # Refused rather than allowed to produce something plausible. A second pass over an
+        # already-redacted run cannot reproduce it: the host classification is derived from
+        # hostnames, and this input has none, so `package-registry-a` would come back classified
+        # as a third party and numbers 1 and 5 would move. Redact from the capture, which is what
+        # the manifest's `source_run_id` names.
+        raise SystemExit(
+            f"{run_dir} is already a redacted run (derived from "
+            f"{manifest['redaction'].get('source_run_id', 'unknown')}). Redacting it again would "
+            f"classify its class labels as third parties and change numbers 1 and 5. Redact from "
+            f"the capture instead.")
     flows = _read_jsonl(run_dir / "flows.jsonl")
     calls = _read_jsonl(run_dir / "calls.jsonl")
     waves = _read_jsonl(run_dir / "waves.jsonl")
@@ -401,5 +425,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
     raise SystemExit(main())

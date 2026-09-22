@@ -362,46 +362,25 @@ def grade_attribution(*, traceparent_present: bool, argument_match: bool,
                       candidate_token_count: int = 0) -> tuple[str, str]:
     """Claim three: how strongly this flow can be tied to a tool call. Returns (grade, reason).
 
-    ``call_caused_possible`` is False when the flow was seen in a lifecycle phase where no call of
-    ours existed yet (record.PHASES_NOT_CALL_CAUSED). It is checked FIRST, before trace and content
-    evidence, which is the opposite of how eligibility is treated and deliberately so: eligibility
-    withholds a temporal guess about a flow that could have been caused by a call, while this says
-    the flow predates every call there was. Nothing can outvote that, not even a content match,
-    because a content match against a call that had not been made yet would be a collision.
+    The ladder below is the whole decision and it is deliberately one function: each rung is only
+    meaningful in the order it is checked, and a split would let a reader reason about one rung
+    without the ones above it. The ARGUMENT for the order is in docs/DOCTRINE.md, "The evidence
+    model", and is not repeated here; what follows is the part a reader of this code needs.
 
-    THE TAUTOLOGY THIS FUNCTION EXISTS TO AVOID. The corpus is driven sequentially, so in every
-    window there is exactly ONE active call. Under that regime, "the fragment matched and there
-    was no competing candidate" is true of every match by construction, and implementing
-    CONTENT_UNIQUE that way would publish 100% strong attribution while having discriminated
-    nothing. It would be a restatement of the experimental setup wearing a measurement's
-    clothes. So:
-
-      CONTENT_UNIQUE               requires active_calls_in_window > 1 AND the fragment present
-                                   in exactly one of them. That is discrimination: candidates
-                                   existed and the content told them apart.
-      CONTENT_AMBIGUOUS            more than one active call and the fragment in several of
-                                   them. Content matched and did NOT discriminate. A real
-                                   outcome, and the one that bounds precision.
-      CONTENT_MATCH_UNCONTESTED    a match with only one call active. Honest and weaker: there
-                                   was nothing to tell apart. This is what sequential driving
-                                   can yield, and it is NOT strong attribution.
-
-    The same reasoning applies to the temporal grade, symmetrically. TEMPORAL_ONLY requires
-    exactly one call in flight, because a window covering several identifies a set rather than a
-    call. With more than one in flight and no content evidence the grade is UNATTRIBUTED, with
-    the count in the reason. Anything else would let the weakest evidence claim what the
-    strongest is not allowed to.
-
-    So today, with sequential driving, this function emits no CONTENT_UNIQUE at all, and a test
-    asserts that. The question the project exists to answer, whether content matching recovers
-    attribution when time cannot, is answerable only in phase C with concurrent calls
-    (docs/PROTOCOL.md). The code says so instead of pretending otherwise.
-
-    ELIGIBILITY ONLY DOWNGRADES THE WEAKEST GRADE. It is checked after trace and content
-    evidence, never before. A package-registry flow that did carry our traceparent, or a literal
-    fragment of a call's arguments, is attributed on that evidence and stays visible: the
-    exclusion list withholds a temporal guess, it never suppresses direct evidence. Same
-    principle as number 1 never filtering its raw count.
+    - ``call_caused_possible`` is False when the flow was seen in a lifecycle phase where no call
+      of ours existed yet (record.PHASES_NOT_CALL_CAUSED). It is checked FIRST, before trace and
+      content evidence, because nothing can outvote a flow predating every call there was: a
+      content match against a call not yet made would be a collision.
+    - CONTENT_UNIQUE requires ``active_calls_in_window > 1``. Under sequential driving "the
+      fragment matched and nothing competed" is true of every match by construction, so
+      implementing it any other way would publish 100% strong attribution having discriminated
+      nothing. A match with one call in flight is CONTENT_MATCH_UNCONTESTED, which is honest and
+      is NOT strong attribution.
+    - TEMPORAL_ONLY is symmetric: it requires exactly one call in flight, because a window
+      covering several identifies a set rather than a call.
+    - ELIGIBILITY ONLY DOWNGRADES THE WEAKEST GRADE. It is checked after trace and content
+      evidence, never before: the exclusion list withholds a temporal guess, it never suppresses
+      direct evidence.
     """
     if not call_caused_possible:
         return UNATTRIBUTED, REASON_PRE_LAUNCH

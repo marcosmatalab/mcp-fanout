@@ -39,6 +39,46 @@ from mcpfanout.record import Flow
 from mcpfanout.redact import Redactor
 
 
+def _our_traceparent_present(tp: str, header_tp: str, body: bytes) -> bool:
+    """Did OUR traceparent appear in this outbound request, in the header or in the body?
+
+    Each clause is forced to bool separately, and the short form is rejected on evidence. Written
+    as `bool(tp) and (tp == header_tp or (body and tp.encode() in body))` this silently produced
+    b"" instead of False: with an active call, an empty body and no traceparent header,
+    `body and ...` short-circuits to b"", `or` propagates it and `and` returns it. A bytes value
+    in a bool field then made json.dumps raise inside done(), which discarded every buffered flow
+    in the run: the whole capture, lost to a GET with no body.
+    tests/test_capture_addon_hooks.py pins this exact case.
+    """
+    in_header = bool(tp) and tp == header_tp
+    in_body = bool(tp) and bool(body) and tp.encode() in body
+    return in_header or in_body
+
+
+def _attributed_call(active: list[dict[str, Any]], matching: list[dict[str, Any]],
+                     cand: Any) -> dict[str, Any]:
+    """Which in-flight call this request is recorded against, or {} for none.
+
+    Structural evidence first, because it is the instrument number 5 is published from; the
+    k-gram result stays in the record for number 4 and never attributes. Then the single active
+    call if there is only one. Never "whichever ran last", and NEVER a call the discrimination
+    rule just rejected: a flow whose only contained call was excluded for owning no
+    distinguishing token goes out unattributed and is not handed back to that call by a fallback.
+    That reassignment is the tempting bug, it would undo exactly what the rule bought, and
+    tests/test_structural_attribution.py pins it.
+    """
+    if len(cand.discriminating) == 1:
+        chosen: dict[str, Any] = active[cand.discriminating[0]]
+        return chosen
+    if cand.contained and not cand.discriminating:
+        return {}
+    if len(matching) == 1:
+        return matching[0]
+    if len(active) == 1 and not cand.contained:
+        return active[0]
+    return {}
+
+
 class FanoutRecorder:
     def __init__(self) -> None:
         self.run_dir = Path(os.environ.get("MCPFANOUT_RUNDIR", "runs/live"))
@@ -84,6 +124,25 @@ class FanoutRecorder:
             # A torn read is treated as "no active calls": attribute nothing rather than guess.
             return {}
 
+    def _calls_whose_own_arguments_matched(self, active: list[dict[str, Any]], result: Any,
+                                           target: bytes, body: bytes) -> list[dict[str, Any]]:
+        """Of the in-flight calls, which ones individually contain the matched fragment.
+
+        The union answers "was any of our argument material in this request"; this per-call count
+        is what tells CONTENT_UNIQUE (one candidate of several) from CONTENT_AMBIGUOUS (several)
+        and from CONTENT_MATCH_UNCONTESTED (only one candidate existed). Without the second number
+        the strongest grade would be unearnable and unfalsifiable at once.
+        """
+        if not result.causal:
+            return []
+        matching = []
+        for call in active:
+            per_call = frozenset(call.get("args_digests", []))
+            if per_call and _match.match_request(target, body, {}, per_call,
+                                                 self.redactor).causal:
+                matching.append(call)
+        return matching
+
     # mitmproxy hook. Named exactly as mitmproxy expects.
     def request(self, flow) -> None:  # type: ignore[no-untyped-def]
         req = flow.request
@@ -108,13 +167,7 @@ class FanoutRecorder:
         result = _match.match_request(target, body, self.context_index, union_digests,
                                       self.redactor)
 
-        matching = []
-        if result.causal:
-            for call in active:
-                per_call = frozenset(call.get("args_digests", []))
-                if per_call and _match.match_request(target, body, {}, per_call,
-                                                     self.redactor).causal:
-                    matching.append(call)
+        matching = self._calls_whose_own_arguments_matched(active, result, target, body)
 
         # NUMBER 5'S MATCHER, run beside the k-gram one and never merged into it. The wire is
         # decomposed by the same rule the driver decomposed the arguments with, each token is
@@ -127,37 +180,10 @@ class FanoutRecorder:
         call_token_sets = [frozenset(c.get("token_digests", [])) for c in active]
         cand = _match.discriminating_candidates(call_token_sets, wire_digests)
 
-        # The attributed call. Structural evidence first, because it is the instrument number 5 is
-        # published from; the k-gram result stays in the record for number 4 and never attributes.
-        # Then the single active call if there is only one. Never "whichever ran last", and NEVER
-        # a call the discrimination rule just rejected: a flow whose only contained call was
-        # excluded for owning no distinguishing token goes out unattributed and is not handed back
-        # to that call by a fallback. That reassignment is the tempting bug, it would undo exactly
-        # what the rule bought, and tests/test_structural_attribution.py pins it.
-        if len(cand.discriminating) == 1:
-            attributed = active[cand.discriminating[0]]
-        elif cand.contained and not cand.discriminating:
-            attributed = {}
-        elif len(matching) == 1:
-            attributed = matching[0]
-        elif len(active) == 1 and not cand.contained:
-            attributed = active[0]
-        else:
-            attributed = {}
+        attributed = _attributed_call(active, matching, cand)
 
-        tp = attributed.get("traceparent", "")
-        header_tp = req.headers.get("traceparent", "")
-        # Each clause is forced to bool separately. Written as
-        #   bool(tp) and (tp == header_tp or (body and tp.encode() in body))
-        # this silently produced b"" instead of False: with an active call, an empty body and no
-        # traceparent header, `body and ...` short-circuits to b"", `or` propagates it, and `and`
-        # returns it. A bytes value in a bool field then made json.dumps raise inside done(),
-        # which discarded every buffered flow in the run -- the whole capture, lost to a GET with
-        # no body. Rejected the shorter form for that reason; tests/test_capture_addon_hooks.py
-        # pins this exact case.
-        in_header = bool(tp) and tp == header_tp
-        in_body = bool(tp) and bool(body) and tp.encode() in body
-        our_tp_present = in_header or in_body
+        our_tp_present = _our_traceparent_present(
+            attributed.get("traceparent", ""), req.headers.get("traceparent", ""), body)
 
         occurrence = _match.decide_occurrence(request_observed=True)
         provenance = _match.decide_provenance(

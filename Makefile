@@ -243,8 +243,9 @@ reproduce:
 # Everything CI runs, in the order CI runs it. One command, so "it passes locally" means the same
 # thing as "it passes on the push".
 gates:
-> $(MAKE) verify claims-check figures-check corpus-check reproduce lint types
+> $(MAKE) verify claims-check figures-check corpus-check reproduce lint types cov
 > $(MAKE) f2 > /dev/null && $(MAKE) f2-reserved > /dev/null
+> @echo "every gate green. The same list runs in .github/workflows/ci.yml."
 
 clean:
 > rm -rf build dist src/*.egg-info .pytest_cache
