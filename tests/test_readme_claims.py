@@ -292,3 +292,28 @@ def test_finding_one_is_what_the_committed_blind_run_prints():
         assert int(conns[1]) in data["unobserved_destinations"].values(), (
             f"{name}: {conns[1]} connections the proxy never saw is not in {BLIND_RUN}: "
             f"{data['unobserved_destinations']}")
+
+
+HEADLINE = {"README.md": r"Your proxy saw only (\d+) of the (\d+) components",
+            "README.es.md": r"Tu proxy solo vio (\d+) de los (\d+) componentes"}
+
+
+def _observability(run_id: str) -> dict:
+    figure = json.loads((FIGURES / f"{run_id}.json").read_text(encoding="utf-8"))
+    return _entry(figure, 3)["observability"]
+
+
+def test_the_finding_one_headline_states_the_measured_fraction():
+    """The headline said "Your proxy does not see your agent's traffic" while the proxy saw two of
+    the three components that reached a third party. It now states the fraction, and the fraction is
+    read from the two committed figures: what the blind proxy observed, and how many components the
+    corrected capture, which sees Node's fetch, found reaching a third party."""
+    seen = _observability("20260919T193121Z-concurrent")["proxy_observed"]
+    reached = _observability("20260919T194649Z-concurrent")["proxy_observed"]
+    for name, pattern in HEADLINE.items():
+        text = " ".join(re.sub(r"^>\s?", "", (REPO / name).read_text(encoding="utf-8"),
+                               flags=re.M).split())
+        found = re.search(pattern, text)
+        assert found, f"{name}'s finding 1 headline does not state what the proxy saw"
+        assert (int(found[1]), int(found[2])) == (seen, reached), (
+            f"{name} says {found[1]} of {found[2]}; the figures say {seen} of {reached}")
