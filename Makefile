@@ -218,8 +218,11 @@ figures:
 # read from the pass that may not publish it. This is what caught numbers 1 and 2 being published
 # from the concurrent pass, where the maximum is a statement about our own wave size: the README
 # said max 1 and the sequential figure, which is the one allowed to answer, says 84.
+# The second line measures the test count both READMEs publish by running the suite with an empty
+# HOME, the environment CI and a reader have, and fails if either README states another number.
 claims-check:
 > python3 -m pytest tests/test_readme_claims.py tests/test_docstring_figures.py -q
+> python3 tools/test_count.py --check README.md README.es.md > /dev/null
 
 # Gate 3: every calibration artifact, regenerated from the corpus it describes, must come back
 # byte for byte. A test that inspects the SHAPE of a committed figure passes just as happily when
