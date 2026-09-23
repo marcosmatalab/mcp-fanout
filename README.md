@@ -10,7 +10,7 @@ caused it, without storing a single byte of content.**
 
 [![ci](https://github.com/marcosmatalab/mcp-fanout/actions/workflows/ci.yml/badge.svg)](https://github.com/marcosmatalab/mcp-fanout/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/marcosmatalab/mcp-fanout?include_prereleases)](https://github.com/marcosmatalab/mcp-fanout/releases)
-[![tests](https://img.shields.io/badge/tests-704%20passing-2ea44f)](tests/)
+[![tests](https://img.shields.io/badge/tests-707%20passing-2ea44f)](tests/)
 [![coverage](https://img.shields.io/badge/coverage-93%25%20core-2ea44f)](Makefile)
 [![python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![mypy](https://img.shields.io/badge/mypy-strict-1f5082)](pyproject.toml)
@@ -64,7 +64,7 @@ builds a product on the assumption that they can.
 
 <div align="center">
 
-| 🧪 **704 passing** | 🛰️ **10** | 🧰 **87** | 📞 **156** | 🎯 **1.0** | 🔐 **0** |
+| 🧪 **707 passing** | 🛰️ **10** | 🧰 **87** | 📞 **156** | 🎯 **1.0** | 🔐 **0** |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | tests, in a clean clone | pinned MCP servers measured | real tool schemas probed | tool calls driven and traced | sensor recall on the controlled bench | bytes of content ever stored |
 
@@ -92,8 +92,8 @@ builds a product on the assumption that they can.
 > [servers#4830](https://github.com/modelcontextprotocol/servers/issues/4830)).
 
 > **3. Attribution depends on the shape of a tool's arguments.** 🧬
-> Across all 87 probed schemas: **38%** of tools are attributable from the schema alone, **22%**
-> never can be by content, **40%** depend on the value passed. A design rule for any tracing
+> Across all 87 probed schemas: **38%** of tools are attributable from the schema alone, **10%**
+> never can be by content, **52%** depend on the value passed. A design rule for any tracing
 > product, measured with `make argument-shapes`.
 
 ![The observation chain: a tool call enters a server process, which can reach a third party through a proxy-honouring client, through Node's global fetch, or through a pinned client. The environment-variable proxy observes the first. The packet capture underneath observes all of them](docs/figures/observation-chain.svg)
@@ -159,7 +159,7 @@ Every decision is written down with its reason and its measured cost, in the cod
 | | |
 | --- | --- |
 | 🚦 **One-command CI** | `make gates` runs the whole pipeline locally, in CI's order: tests, claims, figures, corpus, pre-registration, reproduction, lint, types, coverage |
-| 🧪 **704 passing tests** | Unit, integration and regression tests. Each instrument has a test that fails when the instrument is *absent*, not only when it is wrong |
+| 🧪 **707 passing tests** | Unit, integration and regression tests. Each instrument has a test that fails when the instrument is *absent*, not only when it is wrong |
 | 📏 **Every claim is gated** | `make claims-check` compares every number in the six-number table with the committed artifact it comes from |
 | 🔁 **Regenerated, not inspected** | `make figures-check` rebuilds every calibration figure and both SVGs and fails on a non-empty diff |
 | 🧾 **Pre-registered science** | Predictions frozen by digest before measuring ([`docs/PREREG-F2.md`](docs/PREREG-F2.md)); a matcher tuned on one half of the data and published on the other |
@@ -192,7 +192,7 @@ registry/        pinned servers, probed tool schemas, classification lists
 tools/           figure renderers, redaction, release notes, documentation budget
 runs/            two redacted example runs, so every number reproduces offline
 docs/            method, protocol, calibration, threats, pre-registration, disclosure log
-tests/           704 passing tests plus a mock MCP server
+tests/           707 passing tests plus a mock MCP server
 ```
 
 ## 📚 Documentation
