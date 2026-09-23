@@ -13,7 +13,7 @@ authors:
 # Nothing is published until it passes `make gates`, which is the part of this method that is
 # worth citing.
 repository-code: "https://github.com/marcosmatalab/mcp-fanout"
-version: "1.0.0"
+version: "1.0.0rc3"
 # doi: filled in from the Zenodo VERSION DOI after the release is published, in a follow-up
 # commit. The version DOI and not the concept one: a citation must resolve to the object the
 # reader actually read, and a concept DOI drifts to whatever is newest. The concept DOI lives in

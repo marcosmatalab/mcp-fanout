@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-fanout"
-version = "1.0.0"
+version = "1.0.0rc3"
 description = "A reproducible measurement harness for MCP tool-call fan-out and causal-union rate."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,7 +24,8 @@ dependencies = []
 
 [project.optional-dependencies]
 # Capture layer. Only needed to RUN a live capture, never to compute numbers from records.
-# Split out so `pip install mcp-fanout` stays stdlib-only and CI never pulls mitmproxy.
+# Split out so installing the package without extras stays stdlib-only and CI never pulls
+# mitmproxy. It is installed from a release tag of the repository, not from a package index.
 capture = [
     "mitmproxy>=11,<13",   # HTTP(S) interception with a local CA. See docs/METHOD.md for why proxy, not eBPF, for the measurement.
     "PyYAML>=6",           # registry/*.yaml parsing only.
