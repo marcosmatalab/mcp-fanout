@@ -10,7 +10,7 @@ provocó, sin almacenar un solo byte de contenido.**
 
 [![ci](https://github.com/marcosmatalab/mcp-fanout/actions/workflows/ci.yml/badge.svg)](https://github.com/marcosmatalab/mcp-fanout/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/marcosmatalab/mcp-fanout?include_prereleases)](https://github.com/marcosmatalab/mcp-fanout/releases)
-[![tests](https://img.shields.io/badge/tests-696%20passing-2ea44f)](tests/)
+[![tests](https://img.shields.io/badge/tests-703%20passing-2ea44f)](tests/)
 [![coverage](https://img.shields.io/badge/coverage-93%25%20core-2ea44f)](Makefile)
 [![python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![mypy](https://img.shields.io/badge/mypy-strict-1f5082)](pyproject.toml)
@@ -64,7 +64,7 @@ antes de que nadie construya un producto dándolo por hecho.
 
 <div align="center">
 
-| 🧪 **696 tests** | 🛰️ **10** | 🧰 **87** | 📞 **156** | 🎯 **1.0** | 🔐 **0** |
+| 🧪 **703 tests** | 🛰️ **10** | 🧰 **87** | 📞 **156** | 🎯 **1.0** | 🔐 **0** |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | que pasan en un clon limpio | servidores MCP medidos, con versión fijada | esquemas reales de herramientas sondeados | llamadas ejecutadas y trazadas | recall del sensor en el banco controlado | bytes de contenido almacenados |
 
@@ -80,8 +80,9 @@ antes de que nadie construya un producto dándolo por hecho.
 > **1. Tu proxy no ve el tráfico de tu agente.** 🕳️
 > Un proxy configurado con `HTTP_PROXY` solo ve a los clientes que deciden respetarlo. El `fetch`
 > global de Node no lo hace por defecto: uno de los tres componentes que llegaron a un tercero
-> completó 16 de 17 llamadas y dejó **cero flujos** en el proxy. La captura de paquetes lo detectó:
-> diez conexiones pasando por fuera. ([amenaza 19](docs/THREATS.md))
+> completó 16 de 17 llamadas y dejó **0 flujos** en el proxy mientras corrían. La captura de
+> paquetes lo detectó: **10 conexiones** pasando por fuera. Se reproduce offline desde la ejecución
+> commiteada con `make backstop RUN=example-blind-proxy`. ([amenaza 19](docs/THREATS.md))
 
 > **2. Un servidor fijado no es código fijado.** 📦
 > `mcp-server-fetch`, fijado a una versión exacta, ejecuta `npm install` **dentro de la llamada a la
@@ -159,7 +160,7 @@ Cada decisión está escrita con su motivo y su coste medido, en el código y en
 | | |
 | --- | --- |
 | 🚦 **CI en un comando** | `make gates` ejecuta el pipeline completo en local, en el orden de la CI: tests, cifras, figuras, corpus, pre-registro, reproducción, lint, tipos y cobertura |
-| 🧪 **696 tests que pasan** | Tests unitarios, de integración y de regresión. Cada instrumento tiene un test que falla si el instrumento *no está*, no solo si se equivoca |
+| 🧪 **703 tests que pasan** | Tests unitarios, de integración y de regresión. Cada instrumento tiene un test que falla si el instrumento *no está*, no solo si se equivoca |
 | 📏 **Cada cifra tiene gate** | `make claims-check` compara cada número de la tabla de los seis números con el artefacto commiteado del que sale |
 | 🔁 **Se regenera, no se inspecciona** | `make figures-check` reconstruye cada figura de calibración y ambos SVG, y falla ante cualquier diff |
 | 🧾 **Ciencia pre-registrada** | Predicciones congeladas por digest antes de medir ([`docs/PREREG-F2.md`](docs/PREREG-F2.md)); el matcher se ajusta con una mitad de los datos y se publica con la otra |
@@ -176,7 +177,7 @@ make install                            # instalación editable con los extras d
 make honesty-curve                      # la cifra principal, en 0.05 s
 make reproduce                          # la cifra principal de punta a punta desde las ejecuciones commiteadas
 make numbers RUN=example-sequential     # los seis números (o n1 .. n6)
-make backstop RUN=example-concurrent    # SYN salientes por destino: lo que un proxy no ve
+make backstop RUN=example-blind-proxy   # hallazgo 1: SYN que el proxy no vio, llamadas que perdió
 make gates                              # todo lo que ejecuta la CI, en su orden
 make run                                # una captura NUEVA en vivo (Docker + red)
 ```
@@ -192,7 +193,7 @@ registry/        servidores fijados, esquemas sondeados, listas de clasificació
 tools/           generadores de figuras, redacción, notas de release, presupuesto de documentación
 runs/            dos ejecuciones de ejemplo redactadas, para reproducir cada número offline
 docs/            método, protocolo, calibración, amenazas, pre-registro, registro de divulgación
-tests/           696 tests que pasan y un servidor MCP simulado
+tests/           703 tests que pasan y un servidor MCP simulado
 ```
 
 ## 📚 Documentación

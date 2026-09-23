@@ -151,6 +151,25 @@ def test_the_backstop_counts_syns_per_destination():
     assert data["by_destination"], "a SYN count with no destinations is not a count"
 
 
+def test_the_backstop_prints_what_the_proxy_and_the_driver_recorded(tmp_path):
+    """Planted: one server completes calls with only a handshake flow, one destination is seen by
+    SYN and by no flow, one is seen by both, and loopback is the proxy. Each must land where the
+    finding needs it, or `make backstop` prints counts that cannot show threat 19."""
+    module = _load("pcap_syns")
+    calls = [{"server_id": "s-quiet", "ok": True}, {"server_id": "s-quiet", "ok": False},
+             {"server_id": "s-seen", "ok": True}]
+    flows = [{"server_id": "s-quiet", "phase": "handshake", "dest_ip": "192.0.2.10"},
+             {"server_id": "s-seen", "phase": "driving", "dest_ip": "192.0.2.11"}]
+    (tmp_path / "calls.jsonl").write_text("\n".join(json.dumps(c) for c in calls))
+    (tmp_path / "flows.jsonl").write_text("\n".join(json.dumps(f) for f in flows))
+    view = module.run_view(tmp_path, {"127.0.0.1:8080": 5, "192.0.2.11:443": 3,
+                                      "192.0.2.99:443": 10})
+    assert view["unobserved_destinations"] == {"192.0.2.99:443": 10}
+    assert view["servers"]["s-quiet"] == {"calls": 2, "completed": 1, "proxy_flows": 1,
+                                          "proxy_flows_during_calls": 0}
+    assert view["servers"]["s-seen"]["proxy_flows_during_calls"] == 1
+
+
 def test_the_backstop_refuses_a_run_with_no_pcap(tmp_path):
     module = _load("pcap_syns")
     with mock.patch.object(sys, "argv", ["pcap_syns.py", "--run", str(tmp_path)]), \

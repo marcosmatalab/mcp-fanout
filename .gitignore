@@ -16,6 +16,7 @@
 !/runs/README.md
 !/runs/example-sequential/
 !/runs/example-concurrent/
+!/runs/example-blind-proxy/
 /runs/example-*/disclosure.json
 /runs/example-*/numbers.json
 /runs/example-*/control/

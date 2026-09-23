@@ -58,8 +58,10 @@ gate rule 6. Each names the threat and what it does to the numbers.
    requests and urllib do, npm and npx do, Chromium does; Node's own `fetch` (undici) does not.
    On the first ten-server capture, 53 outbound SYNs, 26 to the proxy on loopback and one straight
    to an API on port 443. On run `20260919T193121Z-concurrent`, credentialed: **140 SYNs, 66 to
-   the proxy, and 10 straight to `140.82.121.5:443`**, while that server completed 16 of 17 calls,
-   returned the API's own answers, and left **zero flows** in `flows.jsonl`.
+   loopback of which 64 to the proxy, and 10 straight to `140.82.121.5:443`**, while that server
+   completed 16 of 17 calls, returned the API's own answers, and left **no flow in `flows.jsonl`
+   while its calls ran**: its one flow is the package download in the handshake, before any call
+   existed. Reproduced from the committed redacted run by `make backstop RUN=example-blind-proxy`.
 
    The credential makes it worse rather than better, which is the part worth keeping. Without a
    token the calls failed, so there was little traffic to miss. With one the server really does
@@ -538,9 +540,13 @@ gate rule 6. Each names the threat and what it does to the numbers.
 
     **The evidence, from the pcap rather than from reasoning.** Run
     `20260919T193121Z-concurrent`, driven with a working GitHub credential, `make backstop`:
-    140 outbound SYNs, 66 to the proxy on loopback, and **10 straight to `140.82.121.5:443`,
-    which is `api.github.com`**. That server made 17 driven calls, 16 succeeded and returned
-    GitHub's own answers, and `flows.jsonl` holds **zero flows for it**.
+    140 outbound SYNs, 66 to loopback of which 64 to the proxy, and **10 straight to
+    `140.82.121.5:443`, which is `api.github.com`**. That server made 17 driven calls, 16 succeeded
+    and returned GitHub's own answers, and `flows.jsonl` holds **no flow for it while its calls
+    ran**; its only flow is the package download during the handshake, before the first call. The
+    committed redacted copy, `runs/example-blind-proxy`, prints the same counts under documentation
+    addresses (`make backstop RUN=example-blind-proxy`: `server-8` at 16 of 17 with 0 flows during
+    calls, and 10 SYNs to `192.0.2.201:443`, which no flow names).
 
     **Why this is worse than a missing measurement.** The failure is not merely silent, it is
     ACTIVELY MISLEADING, and it corrupted two published figures:
