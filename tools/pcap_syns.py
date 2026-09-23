@@ -10,6 +10,23 @@ What it is NOT: reconciliation. It counts connections, it cannot say what was in
 count is not comparable with a flow count (one flow is a request, one SYN is a connection that may
 carry many or none). It answers exactly one question: did bytes leave for that host at all.
 
+WHAT IT PRINTS BESIDE THE COUNTS, AND WHY. A SYN count alone does not show the finding: threat 19
+is that a server completed its calls while the proxy recorded nothing for it, and the other half of
+that sentence lives in calls.jsonl and flows.jsonl, which no command printed. So the output also
+carries, from the same run directory:
+
+  unobserved_destinations  SYN destinations whose address appears in no flow, i.e. connections
+                           the proxy never saw. Loopback is excluded: that is the proxy itself.
+  servers                  per server: calls sent, calls completed, proxy flows, and proxy flows
+                           seen while calls were being driven (phase `driving`). Flows from the
+                           launcher and handshake phases are counted separately because no call
+                           existed yet, so they say nothing about whether the calls were seen.
+
+Deliberately NOT done: pairing a server with a destination. The pcap carries no process identity,
+and joining the two by timing would be inference, which this project does not do in its own
+diagnostics any more than in the matcher. Both halves are printed and the pairing is left to the
+reader, with the evidence for it in docs/THREATS.md threat 19.
+
     make backstop RUN=runs/<id>
 """
 
@@ -68,6 +85,35 @@ def syn_counts(path: Path) -> dict:
             "command": "make backstop"}
 
 
+def _read_jsonl(path: Path) -> list[dict]:
+    if not path.is_file():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()]
+
+
+def run_view(run_dir: Path, by_destination: dict[str, int]) -> dict:
+    """What the proxy and the driver recorded in the same run, beside the SYN counts."""
+    calls = _read_jsonl(run_dir / "calls.jsonl")
+    flows = _read_jsonl(run_dir / "flows.jsonl")
+    seen = {row.get("dest_ip", "") for row in flows if row.get("dest_ip")}
+    unobserved = {dest: n for dest, n in by_destination.items()
+                  if not dest.startswith("127.") and dest.rsplit(":", 1)[0] not in seen}
+    servers: dict[str, dict[str, int]] = {}
+    for call in calls:
+        row = servers.setdefault(call.get("server_id", ""), {
+            "calls": 0, "completed": 0, "proxy_flows": 0, "proxy_flows_during_calls": 0})
+        row["calls"] += 1
+        row["completed"] += 1 if call.get("ok") else 0
+    for flow in flows:
+        row = servers.get(flow.get("server_id", ""))
+        if row is None:
+            continue
+        row["proxy_flows"] += 1
+        row["proxy_flows_during_calls"] += 1 if flow.get("phase") == "driving" else 0
+    return {"unobserved_destinations": unobserved, "servers": servers}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -82,6 +128,7 @@ def main() -> int:
         raise SystemExit(f"no backstop.pcap in {' or '.join(str(c.parent) for c in candidates)}: "
                          f"the run was driven without the pcap backstop")
     out = syn_counts(pcap)
+    out.update(run_view(pcap.parent, out["by_destination"]))
     # A destination is an IP, never a hostname: gate rule 3 governs aggregate output, and this is
     # a diagnostic, but resolving here would put a hostname in something easy to paste anyway.
     print(json.dumps(out, indent=2))

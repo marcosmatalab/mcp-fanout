@@ -1,6 +1,6 @@
-# The two example runs
+# The example runs
 
-`runs/` is not tracked. These two directories are, and they are not captured runs.
+`runs/` is not tracked. These three directories are, and they are not captured runs.
 
 `example-sequential` and `example-concurrent` are **redacted** copies of the two runs this
 repository publishes, produced by [`tools/redact_run.py`](../tools/redact_run.py) from
@@ -8,6 +8,14 @@ repository publishes, produced by [`tools/redact_run.py`](../tools/redact_run.py
 them `make n1` fails in a clean clone with `error: no runs/ directory yet`, and five of the ten
 Quickstart commands do not run. A repository whose argument is reproducibility cannot ask a reader
 to take the six numbers on trust.
+
+`example-blind-proxy` is the third, redacted from `20260919T193121Z-concurrent`, the concurrent
+capture taken while the proxy was still blind to Node's global `fetch`. None of the six numbers is
+read from it. It is committed because finding 1 in the README (threat 19) is read from it: without
+it the figures of the headline finding, 16 of 17 calls completed with no flow while they ran and 10
+connections the proxy never saw, could not be re-run by anyone, and `make backstop` on the other
+concurrent run printed a different run whose one count of 10 matched by coincidence.
+`make backstop RUN=example-blind-proxy` prints both halves.
 
 ## What was replaced, and what was kept
 
@@ -75,6 +83,7 @@ Only possible where the captures still are, which is the machine that ran them:
 ```bash
 python3 tools/redact_run.py --run runs/20260919T115452Z-sequential --out runs/example-sequential
 python3 tools/redact_run.py --run runs/20260919T194649Z-concurrent --out runs/example-concurrent
+python3 tools/redact_run.py --run runs/20260919T193121Z-concurrent --out runs/example-blind-proxy
 ```
 
 The output is deterministic: the same capture produces the same redacted run byte for byte.

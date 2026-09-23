@@ -242,3 +242,53 @@ def test_the_headline_attribution_figure_matches_the_concurrent_figure():
     assert headline in README.read_text(encoding="utf-8"), (
         f"the concurrent figure's content_attributable_fraction is {headline} and the README "
         "does not contain it")
+
+
+# --- finding 1, the headline finding, against the committed run it is read from ---------------
+
+BLIND_RUN = "example-blind-proxy"
+FINDING_ONE = {
+    "README.md": (r"completed (\d+) of (\d+) calls", r"\*\*(\d+) flows\*\*",
+                  r"\*\*(\d+) connections\*\*"),
+    "README.es.md": (r"completó (\d+) de (\d+) llamadas", r"\*\*(\d+) flujos\*\*",
+                     r"\*\*(\d+) conexiones\*\*"),
+}
+
+
+def _backstop(run: str) -> dict:
+    import importlib.util
+    import sys
+    spec = importlib.util.spec_from_file_location("tool_pcap_syns",
+                                                  REPO / "tools" / "pcap_syns.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    pcap = REPO / "runs" / run / "backstop.pcap"
+    out = module.syn_counts(pcap)
+    out.update(module.run_view(pcap.parent, out["by_destination"]))
+    return out
+
+
+def test_finding_one_is_what_the_committed_blind_run_prints():
+    """The finding quoted figures from a run nobody could re-run, and `make backstop` on the run
+    the README named printed a different run whose 10 matched by coincidence. Every figure in the
+    finding is now read back from the redacted run it comes from, and the command is named."""
+    data = _backstop(BLIND_RUN)
+    for name, (calls_re, flows_re, conns_re) in FINDING_ONE.items():
+        raw = (REPO / name).read_text(encoding="utf-8")
+        # The finding is a blockquote; its line markers would split "completed > 16" otherwise.
+        text = " ".join(re.sub(r"^>\s?", "", raw, flags=re.M).split())
+        assert f"make backstop RUN={BLIND_RUN}" in text, (
+            f"{name} does not name the command that reproduces finding 1")
+        calls, flows, conns = (re.search(p, text) for p in (calls_re, flows_re, conns_re))
+        assert calls and flows and conns, f"{name} no longer states finding 1 in checkable form"
+        completed, sent, silent = int(calls[1]), int(calls[2]), int(flows[1])
+        assert any(row["completed"] == completed and row["calls"] == sent
+                   and row["proxy_flows_during_calls"] == silent
+                   for row in data["servers"].values()), (
+            f"{name}: no server in {BLIND_RUN} completed {completed} of {sent} calls with "
+            f"{silent} proxy flows while they ran: {data['servers']}")
+        assert int(conns[1]) in data["unobserved_destinations"].values(), (
+            f"{name}: {conns[1]} connections the proxy never saw is not in {BLIND_RUN}: "
+            f"{data['unobserved_destinations']}")

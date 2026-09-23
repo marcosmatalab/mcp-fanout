@@ -41,6 +41,7 @@ FIGURES = REPO / "docs" / "figures"
 PAIRS = {
     "example-sequential": "20260919T115452Z-sequential.json",
     "example-concurrent": "20260919T194649Z-concurrent.json",
+    "example-blind-proxy": "20260919T193121Z-concurrent.json",
 }
 
 # Fields a redacted run adds, and nothing else may differ. Each one exists because the run has no
@@ -162,20 +163,36 @@ def test_the_carried_classification_still_matches_the_list_it_was_computed_again
         "match when they do not")
 
 
-def test_the_backstop_survives_redaction_with_its_counts_intact():
-    """Threat 19's evidence is a SYN count per destination. A redaction that changed it would
-    destroy the one measurement the proxy could not make."""
-    pytest.importorskip("json")
+def _backstop(run: str) -> dict:
     import subprocess
     import sys
-    out = subprocess.run([sys.executable, str(REPO / "tools" / "pcap_syns.py"),
-                          "--run", "example-concurrent"],
+    out = subprocess.run([sys.executable, str(REPO / "tools" / "pcap_syns.py"), "--run", run],
                          cwd=REPO, capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
     data = json.loads(out.stdout)
-    assert data["outbound_syns"] == 150, data["outbound_syns"]
-    # The ten connections that went straight past the proxy: the finding itself. A flow-level
-    # count cannot see them, which is why the pcap is the judge.
-    assert 10 in data["by_destination"].values(), data["by_destination"]
     assert all(host.startswith(("192.0.2.", "127.0.0.1")) for host in data["by_destination"]), (
         "the backstop carries an address outside the documentation range")
+    return data
+
+
+def test_the_backstop_survives_redaction_with_its_counts_intact():
+    """Threat 19's evidence is a SYN count per destination. A redaction that changed it would
+    destroy the one measurement the proxy could not make. It is asserted on the run the finding is
+    read from: this test once asserted a count of 10 on example-concurrent, where that 10 is a
+    proxied destination that matched the finding's figure by coincidence."""
+    data = _backstop("example-blind-proxy")
+    assert data["outbound_syns"] == 140, data["outbound_syns"]
+    # The ten connections that went straight past the proxy: an address no flow names.
+    assert data["unobserved_destinations"].get("192.0.2.201:443") == 10, data
+    silent = [row for row in data["servers"].values()
+              if row["completed"] == 16 and row["calls"] == 17
+              and row["proxy_flows_during_calls"] == 0]
+    assert len(silent) == 1, data["servers"]
+
+
+def test_the_corrected_run_has_no_unobserved_https_destination():
+    """The other half of threat 19: with NODE_USE_ENV_PROXY on, the proxy sees the API. What is
+    left unobserved is plain HTTP on port 80, not the connections the finding is about."""
+    data = _backstop("example-concurrent")
+    assert data["outbound_syns"] == 150, data["outbound_syns"]
+    assert not [d for d in data["unobserved_destinations"] if d.endswith(":443")], data
