@@ -7,7 +7,7 @@ exactly as the phase B predictions are.
 
 Written 2026-09-19, after an external review of the matcher, before any line of `structure.py`.
 
-`make verify` was green at 493 tests when this was written. The figure is kept as written rather than refreshed, because this document is dated and a pre-registration that updates itself is not one; the current count is in `README.md`, which is not dated and is gated by `tests/test_stated_test_count.py`.
+`make verify` was green at 493 tests when this was written. The figure is kept as written rather than refreshed, because this document is dated and a pre-registration that updates itself is not one; the current count is in `README.md`, which is not dated and is measured by `tools/test_count.py` inside `make claims-check`.
 
 ## 0. The finding that outranks this work, recorded first
 
