@@ -30,7 +30,7 @@ artifact rather than inspecting it. Individually:
 | Gate | Command | What it checks, and what it caught |
 | --- | --- | --- |
 | tests | `make verify` | the suite. Regressions of logic |
-| claims-check | `make claims-check` | every figure in the README's six-number table against the committed aggregate of the pass that may publish it, and the k curve in `shingle.py`'s docstring against the artifact. **It caught the README publishing number 1 as `p95 1` from the concurrent pass, where the pass that may answer says `84`** |
+| claims-check | `make claims-check` | every figure in the README's six-number table against the committed aggregate of the pass that may publish it, the test count both READMEs publish against a run of the suite in a clean environment (`tools/test_count.py`: tests that PASS with no lab credential, which is what CI and a reader get, rather than tests collected), and the k curve in `shingle.py`'s docstring against the artifact. **It caught the README publishing number 1 as `p95 1` from the concurrent pass, where the pass that may answer says `84`** |
 | figures-check | `make figures-check` | regenerates every calibration artifact and both SVGs and fails on a non-empty `git diff`, or on an untracked figure. **It caught four figures that had stopped reproducing eight commits earlier**, 654 lines of difference, while a test that checked their SHAPE stayed green |
 | corpus-check | `make corpus-check` | that the generated halves of the negative corpus were not hand-edited |
 | prereg | `make f2 && make f2-reserved` | that the pre-registered F2 predictions still reproduce |
