@@ -413,7 +413,9 @@ gate rule 6. Each names the threat and what it does to the numbers.
         "jsdom": ">=12.2.0",
         "minimist": "^1.2.3"
 
-    Reproduce with: `docker run --rm --entrypoint bash mcp-fanout-harness:0.1.0 -lc
+    Reproduce with the image the repository builds (tag from `harness/docker-compose.yml`, checked
+    by `tests/test_image_references.py`): `docker compose -f harness/docker-compose.yml build
+    harness`, then `docker run --rm --entrypoint bash mcp-fanout-harness:1.0.0rc3 -lc
     'uv pip install --system -q mcp-server-fetch==2026.8.18 && sed -n "39,70p"
     $(python -c "import readabilipy,os;print(os.path.dirname(readabilipy.__file__))")/utils.py'`.
 
