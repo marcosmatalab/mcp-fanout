@@ -69,15 +69,53 @@ def _stdout_json(name: str, *args: str) -> dict:
 # --- the figures the README quotes ---------------------------------------------------------------
 
 def test_argument_shapes_measures_every_committed_probe():
-    """38% / 22% / 40% is a README claim, and this is the command behind it."""
+    """38% / 10% / 52% is a README claim, and this is the command behind it."""
     data = _stdout_json("argument_shapes")
     assert data["tools"] == 87
     assert data["attributable_by_schema_alone"]["fraction"] == 0.3793
-    assert data["never_attributable_by_content"]["fraction"] == 0.2184
+    assert data["never_attributable_by_content"]["fraction"] == 0.1034
     total = (data["attributable_by_schema_alone"]["count"]
              + data["never_attributable_by_content"]["count"]
              + data["undecided_until_a_value_is_seen"]["count"])
     assert total == data["tools"], "the three buckets must partition the tool surface"
+
+
+def _shape(schema: dict) -> str:
+    return _load("argument_shapes").classify({"name": "planted", "inputSchema": schema})["shape"]
+
+
+def test_a_structured_schema_can_be_one_the_matcher_cannot_attribute():
+    """Constructed direction one: the rule counts it attributable and it is not. Two required
+    strings, both enums of two-byte values, commit no structural token at all (MIN_TOKEN_BYTES is
+    3), so no call of this tool can be attributed by content. The 38% therefore contains tools that
+    are not attributable: it is a CEILING on attribution by schema, and it cannot be a lower
+    bound."""
+    from mcpfanout.structure import contains, tokens_of_arguments
+    schema = {"type": "object", "required": ["unit", "lang"], "properties": {
+        "unit": {"type": "string", "enum": ["C", "F"]},
+        "lang": {"type": "string", "enum": ["en", "es"]}}}
+    assert _shape(schema) == "structured"
+    tokens = tokens_of_arguments({"unit": "C", "lang": "en"})
+    assert tokens == frozenset() and not contains(tokens, frozenset({"C", "en"}))
+    out = _stdout_json("argument_shapes")
+    assert "this_is_a_CEILING_not_a_floor" in out["attributable_by_schema_alone"]
+    assert "lower bound" not in out["what_this_is_not"], (
+        "the tool calls the attributable share a lower bound, and the schema above is a tool the "
+        "rule counts as attributable that the matcher can never attribute")
+
+
+def test_a_schema_the_rule_calls_never_attributable_cannot_carry_a_token():
+    """Constructed direction two: a required ARRAY of strings has no required string property, and
+    the rule filed it under never attributable. The matcher walks every string leaf, arrays
+    included, so a call to it commits tokens. `never` has to mean no string anywhere in the schema,
+    which is the one case the matcher cannot produce a token from."""
+    from mcpfanout.structure import tokens_of_arguments
+    schema = {"type": "object", "required": ["paths"], "properties": {
+        "paths": {"type": "array", "items": {"type": "string"}}}}
+    assert tokens_of_arguments({"paths": ["/srv/reports/q3.txt"]}), "the matcher sees tokens"
+    assert _shape(schema) != "no_string", "a schema that carries string leaves is not `never`"
+    numbers_only = {"type": "object", "required": ["a"], "properties": {"a": {"type": "number"}}}
+    assert _shape(numbers_only) == "no_string" and not tokens_of_arguments({"a": 2})
 
 
 def test_the_honesty_curve_falls_at_every_step():
