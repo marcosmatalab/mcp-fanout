@@ -10,7 +10,7 @@ caused it, without storing a single byte of content.**
 
 [![ci](https://github.com/marcosmatalab/mcp-fanout/actions/workflows/ci.yml/badge.svg)](https://github.com/marcosmatalab/mcp-fanout/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/marcosmatalab/mcp-fanout?include_prereleases)](https://github.com/marcosmatalab/mcp-fanout/releases)
-[![tests](https://img.shields.io/badge/tests-696%20passing-2ea44f)](tests/)
+[![tests](https://img.shields.io/badge/tests-703%20passing-2ea44f)](tests/)
 [![coverage](https://img.shields.io/badge/coverage-93%25%20core-2ea44f)](Makefile)
 [![python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![mypy](https://img.shields.io/badge/mypy-strict-1f5082)](pyproject.toml)
@@ -64,7 +64,7 @@ builds a product on the assumption that they can.
 
 <div align="center">
 
-| 🧪 **696 passing** | 🛰️ **10** | 🧰 **87** | 📞 **156** | 🎯 **1.0** | 🔐 **0** |
+| 🧪 **703 passing** | 🛰️ **10** | 🧰 **87** | 📞 **156** | 🎯 **1.0** | 🔐 **0** |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | tests, in a clean clone | pinned MCP servers measured | real tool schemas probed | tool calls driven and traced | sensor recall on the controlled bench | bytes of content ever stored |
 
@@ -80,8 +80,9 @@ builds a product on the assumption that they can.
 > **1. Your proxy does not see your agent's traffic.** 🕳️
 > A proxy set through `HTTP_PROXY` sees only the clients that choose to honour it. Node's global
 > `fetch` does not by default, so one of the three components that reached a third party completed
-> 16 of 17 calls and left **zero flows** in the proxy. The packet-level backstop caught it: ten
-> connections going straight past. ([threat 19](docs/THREATS.md))
+> 16 of 17 calls and left **0 flows** in the proxy while they ran. The packet-level backstop caught
+> it: **10 connections** going straight past. Reproduced offline from the committed run with
+> `make backstop RUN=example-blind-proxy`. ([threat 19](docs/THREATS.md))
 
 > **2. A pinned server is not pinned code.** 📦
 > `mcp-server-fetch`, pinned to an exact version, runs `npm install` **inside the tool call**:
@@ -158,7 +159,7 @@ Every decision is written down with its reason and its measured cost, in the cod
 | | |
 | --- | --- |
 | 🚦 **One-command CI** | `make gates` runs the whole pipeline locally, in CI's order: tests, claims, figures, corpus, pre-registration, reproduction, lint, types, coverage |
-| 🧪 **696 passing tests** | Unit, integration and regression tests. Each instrument has a test that fails when the instrument is *absent*, not only when it is wrong |
+| 🧪 **703 passing tests** | Unit, integration and regression tests. Each instrument has a test that fails when the instrument is *absent*, not only when it is wrong |
 | 📏 **Every claim is gated** | `make claims-check` compares every number in the six-number table with the committed artifact it comes from |
 | 🔁 **Regenerated, not inspected** | `make figures-check` rebuilds every calibration figure and both SVGs and fails on a non-empty diff |
 | 🧾 **Pre-registered science** | Predictions frozen by digest before measuring ([`docs/PREREG-F2.md`](docs/PREREG-F2.md)); a matcher tuned on one half of the data and published on the other |
@@ -175,7 +176,7 @@ make install                            # editable install with dev extras
 make honesty-curve                      # the headline figure, in 0.05 s
 make reproduce                          # the headline number end to end from the committed runs
 make numbers RUN=example-sequential     # the six numbers (or n1 .. n6)
-make backstop RUN=example-concurrent    # outbound SYNs per destination: what a proxy misses
+make backstop RUN=example-blind-proxy   # finding 1: SYNs the proxy never saw, calls it missed
 make gates                              # everything CI runs, in CI's order
 make run                                # a NEW live capture (Docker + network)
 ```
@@ -191,7 +192,7 @@ registry/        pinned servers, probed tool schemas, classification lists
 tools/           figure renderers, redaction, release notes, documentation budget
 runs/            two redacted example runs, so every number reproduces offline
 docs/            method, protocol, calibration, threats, pre-registration, disclosure log
-tests/           696 passing tests plus a mock MCP server
+tests/           703 passing tests plus a mock MCP server
 ```
 
 ## 📚 Documentation

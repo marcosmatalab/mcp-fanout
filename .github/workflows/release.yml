@@ -59,7 +59,7 @@ jobs:
       - name: Build the assets
         run: |
           tar -czf figures.tar.gz -C docs figures
-          tar -czf example-runs.tar.gz runs/README.md runs/example-sequential runs/example-concurrent
+          tar -czf example-runs.tar.gz runs/README.md runs/example-sequential runs/example-concurrent runs/example-blind-proxy
           sha256sum figures.tar.gz example-runs.tar.gz > SHA256SUMS
 
       # The notes, derived explicitly from the tag object rather than left to a flag's fallback.
