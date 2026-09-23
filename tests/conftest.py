@@ -1,7 +1,9 @@
 """Shared fixtures and the collected-test-count hook.
 
-The hook exists because a published test count is a figure like any other, and a figure a
-human has to remember to update is a figure that goes stale; rule 6 says put a command behind it.
+The hook exists because the README states the test count as a published figure, and that figure
+went stale three times in a row while the rule that says to keep it right was being
+written. A figure a human has to remember to update is a figure that goes stale; rule 6 says put
+a command behind it.
 """
 
 _COLLECTED: dict[str, object] = {"count": 0, "modules": set()}
