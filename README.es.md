@@ -8,13 +8,11 @@
 conexión saliente y mide qué parte de ese tráfico se puede atribuir a la llamada exacta que lo
 provocó, sin almacenar un solo byte de contenido.**
 
+![La cadena de observación: una llamada entra en el proceso del servidor, que puede llegar a un tercero por un cliente que respeta el proxy, por el fetch global de Node o por un cliente con certificado fijado. El proxy por variable de entorno observa el primero. La captura de paquetes observa todos](docs/figures/observation-chain.svg)
+
 [![ci](https://github.com/marcosmatalab/mcp-fanout/actions/workflows/ci.yml/badge.svg)](https://github.com/marcosmatalab/mcp-fanout/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/marcosmatalab/mcp-fanout?include_prereleases)](https://github.com/marcosmatalab/mcp-fanout/releases)
-[![tests](https://img.shields.io/badge/tests-715%20passing-2ea44f)](tests/)
-[![coverage](https://img.shields.io/badge/coverage-93%25%20core-2ea44f)](Makefile)
 [![python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
-[![mypy](https://img.shields.io/badge/mypy-strict-1f5082)](pyproject.toml)
-[![core deps](https://img.shields.io/badge/core%20dependencies-0-8A2BE2)](tests/test_core_has_no_dependencies.py)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 [English](README.md) · **Español**
@@ -95,8 +93,6 @@ antes de que nadie construya un producto dándolo por hecho.
 > Sobre los 87 esquemas sondeados: el **38%** de las herramientas es atribuible solo con el esquema,
 > el **10%** no lo es nunca por contenido y el **52%** depende del valor concreto. Una regla de
 > diseño para cualquier producto de trazado, medida con `make argument-shapes`.
-
-![La cadena de observación: una llamada entra en el proceso del servidor, que puede llegar a un tercero por un cliente que respeta el proxy, por el fetch global de Node o por un cliente con certificado fijado. El proxy por variable de entorno observa el primero. La captura de paquetes observa todos](docs/figures/observation-chain.svg)
 
 ## 🏗️ Cómo funciona
 

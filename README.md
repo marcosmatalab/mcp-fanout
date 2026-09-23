@@ -8,13 +8,11 @@
 connection and measures how much of that traffic can be traced back to the exact tool call that
 caused it, without storing a single byte of content.**
 
+![The observation chain: a tool call enters a server process, which can reach a third party through a proxy-honouring client, through Node's global fetch, or through a pinned client. The environment-variable proxy observes the first. The packet capture underneath observes all of them](docs/figures/observation-chain.svg)
+
 [![ci](https://github.com/marcosmatalab/mcp-fanout/actions/workflows/ci.yml/badge.svg)](https://github.com/marcosmatalab/mcp-fanout/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/marcosmatalab/mcp-fanout?include_prereleases)](https://github.com/marcosmatalab/mcp-fanout/releases)
-[![tests](https://img.shields.io/badge/tests-715%20passing-2ea44f)](tests/)
-[![coverage](https://img.shields.io/badge/coverage-93%25%20core-2ea44f)](Makefile)
 [![python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
-[![mypy](https://img.shields.io/badge/mypy-strict-1f5082)](pyproject.toml)
-[![core deps](https://img.shields.io/badge/core%20dependencies-0-8A2BE2)](tests/test_core_has_no_dependencies.py)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 **English** · [Español](README.es.md)
@@ -95,8 +93,6 @@ builds a product on the assumption that they can.
 > Across all 87 probed schemas: **38%** of tools are attributable from the schema alone, **10%**
 > never can be by content, **52%** depend on the value passed. A design rule for any tracing
 > product, measured with `make argument-shapes`.
-
-![The observation chain: a tool call enters a server process, which can reach a third party through a proxy-honouring client, through Node's global fetch, or through a pinned client. The environment-variable proxy observes the first. The packet capture underneath observes all of them](docs/figures/observation-chain.svg)
 
 ## 🏗️ How it works
 
