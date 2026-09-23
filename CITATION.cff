@@ -31,7 +31,7 @@ abstract: >-
   its own bar, and every repair to its observability lowered the headline. No fragment of any
   planted context file ever appeared in a request toward a third party. Attribution is shown to
   depend on how many structural tokens a call's arguments commit: over 87 probed tool schemas, 38%
-  are attributable from the schema alone, 22% never can be, and 40% are undecided until a value is
+  are attributable from the schema alone, 10% never can be, and 52% are undecided until a value is
   seen.
 keywords:
   - autonomous agents

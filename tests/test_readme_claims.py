@@ -317,3 +317,31 @@ def test_the_finding_one_headline_states_the_measured_fraction():
         assert found, f"{name}'s finding 1 headline does not state what the proxy saw"
         assert (int(found[1]), int(found[2])) == (seen, reached), (
             f"{name} says {found[1]} of {found[2]}; the figures say {seen} of {reached}")
+
+
+SHAPES = {"README.md": r"\*\*(\d+)%\*\* of tools are attributable from the schema alone, "
+                       r"\*\*(\d+)%\*\* never can be by content, \*\*(\d+)%\*\* depend",
+          "README.es.md": r"el \*\*(\d+)%\*\* de las herramientas es atribuible solo con el "
+                          r"esquema, el \*\*(\d+)%\*\* no lo es nunca por contenido y el "
+                          r"\*\*(\d+)%\*\* depende"}
+
+
+def test_the_argument_shape_percentages_are_what_the_tool_prints():
+    """Finding 3 quoted 38 / 22 / 40 and nothing compared the prose with `make argument-shapes`.
+    The 22 was wrong: eight tools with required arrays of strings were filed as never
+    attributable."""
+    import subprocess
+    import sys
+    out = subprocess.run([sys.executable, str(REPO / "tools" / "argument_shapes.py")],
+                         cwd=REPO, capture_output=True, text=True, check=True)
+    data = json.loads(out.stdout)
+    expected = tuple(round(100 * data[k]["fraction"]) for k in (
+        "attributable_by_schema_alone", "never_attributable_by_content",
+        "undecided_until_a_value_is_seen"))
+    for name, pattern in SHAPES.items():
+        text = " ".join(re.sub(r"^>\s?", "", (REPO / name).read_text(encoding="utf-8"),
+                               flags=re.M).split())
+        found = re.search(pattern, text)
+        assert found, f"{name} no longer states finding 3 in checkable form"
+        assert tuple(int(g) for g in found.groups()) == expected, (
+            f"{name} says {found.groups()}, make argument-shapes says {expected}")
