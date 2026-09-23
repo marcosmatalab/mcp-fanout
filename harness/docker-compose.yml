@@ -11,7 +11,7 @@ services:
     build:
       context: ..
       dockerfile: harness/Dockerfile
-    image: mcp-fanout-harness:1.0.0
+    image: mcp-fanout-harness:1.0.0rc3
     working_dir: /app
     volumes:
       - ../runs:/app/runs           # results out

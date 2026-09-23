@@ -15,13 +15,13 @@ a one-line field is a dependency bought for nothing.
 """
 
 import re
+import subprocess
+from datetime import date
 from pathlib import Path
 
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-
-SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 
 
 def _pyproject() -> str:
@@ -75,15 +75,68 @@ def test_every_artifact_states_the_same_version():
         + "\nThis is gate rule 10: each file is well-formed and they contradict each other.")
 
 
-@pytest.mark.parametrize("name", sorted(SOURCES))
-def test_each_version_is_a_plain_semver(name):
-    """No pre-release suffixes. Editorial status belongs on a release title, not in a version.
+# PEP 440, because pyproject.toml is read by pip: MAJOR.MINOR.PATCH, optionally rcN.
+PEP440 = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:rc(\d+))?$")
+TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)(?:-rc(\d+))?$")
+# The final release is a written commitment with a date (CONTRIBUTING.md: the disclosure window
+# closes on 19 October 2026). Before it, the version may not claim the final.
+FINAL_NOT_BEFORE = date(2026, 10, 19)
 
-    A suffix announces something provisional on its way to a version that does not exist. Semver
-    alone already makes a later correction visible as `x.y.z+1`.
-    """
+
+@pytest.mark.parametrize("name", sorted(SOURCES))
+def test_each_version_is_a_final_or_a_release_candidate(name):
+    """What replaced the plain-semver rule. That rule forbade a pre-release suffix on the grounds
+    that editorial status belongs on a release title, and its consequence was a package declaring
+    1.0.0 while the latest release was v1.0.0-rc2 and the final was weeks away: every artifact
+    agreed with every other and all of them were ahead of what had been released. A candidate
+    number is not editorial status, it is the name of the thing a reader installs."""
     value = SOURCES[name]()
-    assert SEMVER.match(value), f"{name} states {value!r}, which is not a bare MAJOR.MINOR.PATCH"
+    assert PEP440.match(value), f"{name} states {value!r}, not MAJOR.MINOR.PATCH[rcN] (PEP 440)"
+
+
+def _tags() -> list[tuple[int, int, int, float]]:
+    out = subprocess.run(["git", "tag", "--list", "v*"], cwd=REPO, capture_output=True, text=True)
+    if out.returncode != 0:
+        pytest.skip("not a git checkout: there are no tags to compare the version with")
+    found = [TAG.match(line.strip()) for line in out.stdout.splitlines()]
+    # A final sorts after all of its candidates, so its rc slot is infinity.
+    return sorted((int(m[1]), int(m[2]), int(m[3]), float(m[4]) if m[4] else float("inf"))
+                  for m in found if m)
+
+
+def allowed_versions(latest: tuple[int, int, int, float], today: date) -> set[str]:
+    """The latest release itself, the next candidate after it, and the final of that candidate's
+    line once its date has come. Anything else is a version nobody released or will release next."""
+    major, minor, patch, rc = latest
+    base = f"{major}.{minor}.{patch}"
+    if rc == float("inf"):
+        return {base, f"{major}.{minor}.{patch + 1}rc1"}
+    allowed = {f"{base}rc{int(rc)}", f"{base}rc{int(rc) + 1}"}
+    if today >= FINAL_NOT_BEFORE:
+        allowed.add(base)
+    return allowed
+
+
+def test_the_version_is_the_latest_release_or_the_next_candidate():
+    """The defect this was written for: 1.0.0 declared while the latest tag was v1.0.0-rc2."""
+    tags = _tags()
+    if not tags:
+        pytest.skip("no release tags in this checkout (CI fetches them with fetch-depth 0)")
+    latest = tags[-1]
+    allowed = allowed_versions(latest, date.today())
+    found = {name: fn() for name, fn in SOURCES.items()}
+    wrong = {name: v for name, v in found.items() if v not in allowed}
+    assert not wrong, (f"the latest tag is {latest}; the version may only be one of "
+                       f"{sorted(allowed)}, and these are not: {wrong}")
+
+
+def test_the_rule_refuses_the_version_that_was_published_ahead_of_its_release():
+    """Planted, so the rule is checked independently of whatever the tags happen to be today."""
+    rc2 = (1, 0, 0, 2.0)
+    assert "1.0.0" not in allowed_versions(rc2, date(2026, 9, 23))
+    assert "1.0.0rc3" in allowed_versions(rc2, date(2026, 9, 23))
+    assert "1.0.0rc4" not in allowed_versions(rc2, date(2026, 9, 23))
+    assert "1.0.0" in allowed_versions((1, 0, 0, 3.0), FINAL_NOT_BEFORE)
 
 
 def test_the_importable_package_agrees_with_the_files():
