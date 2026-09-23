@@ -9,8 +9,8 @@ answered. Nothing here is advice. Every item is a condition, and most of them ha
 ## Part 1: the gate
 
 Ten conditions a run must pass before any number from it is reported. **This part is their single
-source.** [`../CLAUDE.md`](../CLAUDE.md) names rules 6 and 10 as the two that bind every task and
-links here rather than restating them, and the README does the same; the four negatives the rules
+source.** [`../CONTRIBUTING.md`](../CONTRIBUTING.md) names rules 6 and 10 as the two that bind every
+task and links here rather than restating them, and the README does the same; the four negatives the rules
 serve are in [`DOCTRINE.md`](DOCTRINE.md).
 
 1. **Reproducible, at two levels.** The levels differ because the things being reproduced differ,
@@ -190,7 +190,7 @@ serve are in [`DOCTRINE.md`](DOCTRINE.md).
       guarantee and a version the measurements contradicted. Nothing in the suite could tell that a
       sentence of prose had stopped being true. Guarded by `make claims-check`.
     - Three documents stated where the GPG signing of this history begins, and one of them was off
-      by one commit: it named `e5c1892`, which carries no signature, and `e5c1892` is the commit
+      by one commit: it named `79c8f5e`, which carries no signature, and `79c8f5e` is the commit
       the pre-registration's timeline cites as external evidence. `CITATION.cff` says the argument
       depends on the signed history, so this is a load-bearing claim about an artifact nobody could
       check, because every other figure here has a command behind it and this class did not.
@@ -207,7 +207,7 @@ serve are in [`DOCTRINE.md`](DOCTRINE.md).
         - `2026-09-22T12:59:47Z`, `created_at`: the tag object is created.
         - `2026-09-22T13:01:19Z`, `published_at` with `author.login` = `github-actions[bot]`: the
           workflow publishes `v1.0.0-rc1`, the first release it ever made, and its body is the
-          message of commit `fb71b16`, "State
+          message of commit `3036db6`, "State
           the trailer claim as a boundary, and check it against the history too". Not the tag's
           subject. Nothing failed: the run is green and the release page looks finished.
         - `2026-09-22T13:04:51Z`, `updated_at`: the notes are replaced by hand with

@@ -4,8 +4,8 @@ The standing rules this repository operates under. Every design decision in the 
 them: when a comment says "negative 3" or "rule 6", this is the referent.
 
 **This file is the single source of the four negatives**, and of the evidence model they produce.
-[`../CLAUDE.md`](../CLAUDE.md) and [`../README.md`](../README.md) name them and link here; neither
-restates them, because the same rule written in three files is a rule that stays right in two of
+[`../README.md`](../README.md) and [`../CONTRIBUTING.md`](../CONTRIBUTING.md) name them and link here;
+neither restates them, because the same rule written in three files is a rule that stays right in two of
 them and wrong in the one somebody reads. The conditions a run must satisfy before a number from it
 is reported are the ten gate rules, and their single source is [`PROTOCOL.md`](PROTOCOL.md) part 1.
 

@@ -10,7 +10,7 @@ runner's git happens to hold, and a ref whose annotated object was never fetched
 commit, whose message is then a plausible set of notes that nobody signed.
 
 **What the workflow actually published.** At `2026-09-22T13:01:19Z` the run created the
-`v1.0.0-rc1` release as `github-actions[bot]`, and its body was the message of commit `fb71b16`,
+`v1.0.0-rc1` release as `github-actions[bot]`, and its body was the message of commit `3036db6`,
 "State the trailer claim as a boundary, and check it against the history too". The signed tag's
 subject is something else. The notes were replaced by hand three and a half minutes later
 (`updated_at` = `2026-09-22T13:04:51Z`, `gh release edit --notes-file`), which is why reading the

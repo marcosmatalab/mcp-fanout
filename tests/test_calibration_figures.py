@@ -7,7 +7,7 @@ that these are fully re-derivable by anyone, because the corpus they are measure
 `make fp` reproduces the file byte for byte on any machine, with no Docker and no network, and
 `make figures-check` is what proves it on every push: it regenerates every calibration artifact and
 fails on a non-empty `git diff`. That gate exists because this sentence was false for eight commits,
-between `dd5207a` and `68889d8`, while the suite stayed green. The tests below check that a figure
+between `3f9c918` and `c9000d7`, while the suite stayed green. The tests below check that a figure
 says what it was measured at and that the prose quotes it verbatim; neither can tell that the figure
 itself stopped being what the code produces, and that is the gap the gate closes.
 

@@ -26,8 +26,8 @@ in the wrong order.
 
 ## The word budget, declared rather than chased
 
-Across every tracked markdown file in this repository, **29,770 words** of findings and
-**12,630 words** of operation, plus 30 words of corpus material that is
+Across every tracked markdown file in this repository, **29,780 words** of findings and
+**11,350 words** of operation, plus 30 words of corpus material that is
 measurement input rather than prose about it. `make words` prints both figures and
 `tools/word_budget.py` decides, file by file and by section for the one document that is both,
 which side of the line each belongs on.
@@ -36,7 +36,7 @@ which side of the line each belongs on.
 corpora the numbers are read through: `METHOD`, `THREATS`, `PREREG-F2`, `CALIBRATION`,
 `DISCLOSURE-LOG`, parts 2 and 3 of `PROTOCOL`, the disclosure texts, `runs/README.md` and the
 corpus notes. **Operation** is how to work here and how the work presents itself: the front page,
-`CLAUDE.md`, `CONTRIBUTING.md`, `SECURITY.md`, this index, `DOCTRINE.md`, and part 1 of `PROTOCOL`.
+`README.es.md`, `CONTRIBUTING.md`, `SECURITY.md`, this index, `DOCTRINE.md`, and part 1 of `PROTOCOL`.
 
 **Why a declared split and not a target total.** A word count is trivially reachable by deleting
 the longest documents, and the longest documents here are the evidence: the threats, the sealed

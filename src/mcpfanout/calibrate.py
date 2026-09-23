@@ -32,9 +32,9 @@ guard is removable.
 Standard library only, like the rest of the measurement core.
 
 ON THE CONFIDENCE INTERVAL, because this repository forbids dressing a deterministic quantity in
-statistics (CLAUDE.md). The false-positive COUNT is exact: a k-gram either is or is not present,
-and re-running the command gives the same integer. The interval is not about that count, it is
-about generalising from these pairs to realistic pairs in general, which is a genuinely
+statistics (docs/DOCTRINE.md). The false-positive COUNT is exact: a k-gram either is or is not
+present, and re-running the command gives the same integer. The interval is not about that count,
+it is about generalising from these pairs to realistic pairs in general, which is a genuinely
 inferential step, so a binomial interval is the honest way to report it. Its limit is stated with
 it: the pairs are hand-authored, not drawn at random from any population, so the interval covers
 sampling variance ONLY and says nothing about how representative the corpus is. That part is

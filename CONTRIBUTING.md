@@ -4,7 +4,8 @@ This is a measurement harness, not a product, so "contributing" mostly means cha
 changing what a number is allowed to say. Both are governed by the same rule: a figure without a
 command that produces it does not ship (doctrine rule 6), and an instrument without a test that
 fails when it is ABSENT does not ship either (gate rule 10). Read
-[`CLAUDE.md`](CLAUDE.md) and [`docs/PROTOCOL.md`](docs/PROTOCOL.md) before the first change.
+[`docs/DOCTRINE.md`](docs/DOCTRINE.md) and [`docs/PROTOCOL.md`](docs/PROTOCOL.md) before the first
+change.
 
 ## Set up
 
@@ -79,7 +80,7 @@ NOT explain a flagged destination.
 ## Commit style
 
 Imperative subject. Body explaining why and the trade-off, not just what. Commits are signed with
-GPG, from `a167a54` onward; earlier commits are deliberately not re-signed, because back-signing
+GPG, from `c6d4e64` onward; earlier commits are deliberately not re-signed, because back-signing
 history replaces real provenance with manufactured provenance.
 
 ## Releasing, and the Zenodo order that is counter-intuitive

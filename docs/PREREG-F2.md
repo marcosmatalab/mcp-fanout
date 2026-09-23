@@ -7,7 +7,7 @@ exactly as the phase B predictions are.
 
 Written 2026-09-19, after an external review of the matcher, before any line of `structure.py`.
 
-`make verify` was green at 493 tests when this was written. The figure is kept as written rather than refreshed, because this document is dated and a pre-registration that updates itself is not one; the current count is in `CLAUDE.md`, which is not dated.
+`make verify` was green at 493 tests when this was written. The figure is kept as written rather than refreshed, because this document is dated and a pre-registration that updates itself is not one; the current count is in `README.md`, which is not dated and is gated by `tests/test_stated_test_count.py`.
 
 ## 0. The finding that outranks this work, recorded first
 
@@ -315,7 +315,7 @@ measured after the fact. It may not be swapped into the block, whatever it shows
 
 Commands: `make f2` (calibration material), `make f2-reserved` (the reserve, run once), and
 `python -m mcpfanout.cli aggregate --number 5`. Nothing below was measured before the block above
-was committed in `68889d8`.
+was committed in `c9000d7`.
 
 | prediction | predicted | measured | holds |
 |---|---|---|---|
@@ -368,12 +368,12 @@ behind it, and the external record is set out here in full, including where it r
 
 | GitHub server time (UTC) | event | what it fixes |
 |---|---|---|
-| 2026-09-19T13:16:41Z | push of `e9d7ea9` to `main` | the repository contained **no F2 material at all** at this instant |
+| 2026-09-19T13:16:41Z | push of `48c300e` to `main` | the repository contained **no F2 material at all** at this instant |
 | 2026-09-19T17:56:24Z | issue `ReadabiliPy#122` created | the threat 17 causal chain existed, in writing, by now |
 | 2026-09-19T17:56:40Z | issue `modelcontextprotocol/servers#4830` created | it links #122, so GitHub fixes their order too |
-| 2026-09-19T18:23:55Z | push of `e5c1892`, carrying `68889d8` and three more | the four commits existed by now |
+| 2026-09-19T18:23:55Z | push of `79c8f5e`, carrying `c9000d7` and three more | the four commits existed by now |
 
-The sealed block lives in `68889d8`, whose author date is 2026-09-19T17:54:12Z, two minutes
+The sealed block lives in `c9000d7`, whose author date is 2026-09-19T17:54:12Z, two minutes
 before the first issue. The issue text quotes the same causal chain that section 0 and threat 17
 carry, so the CONTENT of that work is externally timestamped by a party with no interest in it.
 
@@ -393,8 +393,8 @@ prevent.
 
 **So the rule, for every pre-registration after this one: seal, commit, PUSH, and only then
 measure.** A seal that has not left the machine is a draft with a hash on it. Signing begins at
-`a167a54`, the commit AFTER `e5c1892`, which this paragraph misnamed until it was checked against
-the history rather than remembered: `e5c1892` itself carries no signature, and it is the commit the
+`c6d4e64`, the commit AFTER `79c8f5e`, which this paragraph misnamed until it was checked against
+the history rather than remembered: `79c8f5e` itself carries no signature, and it is the commit the
 table above cites. A signature binds authorship and not time in any case; it is the push that binds
 time, and only a push that happens before the measurement binds the right thing.
 

@@ -14,8 +14,8 @@ THE TWO BUCKETS, and the line between them.
              allowed to grow.
   operation  how to work in this repository and how it presents itself: the four negatives, the
              ten gate rules, the contributor and security notes, the index, and the front page.
-             Cutting here costs nothing but repetition, which is why the overlap between CLAUDE.md,
-             DOCTRINE.md and PROTOCOL.md was removed rather than trimmed evenly.
+             Cutting here costs nothing but repetition, which is why the overlap between the
+             operating notes, DOCTRINE.md and PROTOCOL.md was removed rather than trimmed evenly.
 
 Two documents are mixed and are split by section rather than being filed whole, because filing
 either one whole would move about two thousand words to the wrong side of the line:
@@ -46,7 +46,7 @@ REPO = Path(__file__).resolve().parent.parent
 # somebody decided which side of the line each document is on. An unlisted file is an error.
 OPERATION = {
     "README.md",                  # the front page
-    "CLAUDE.md",                  # the operating manual for an agent working here
+    "README.es.md",               # the front page, in Spanish
     "CONTRIBUTING.md",            # how to run the gates
     "SECURITY.md",                # how a finding about someone else's project is handled
     "docs/README.md",             # the index, and this budget's declaration

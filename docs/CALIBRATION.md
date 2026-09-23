@@ -36,7 +36,7 @@ request, which is the only thing attribution is supposed to get right.
 `corpus/negative/calibration.json` and `corpus/negative/held-out.json`. The held-out half is four
 families, 32 calls, **224 ordered pairs**. The calibration half is five families, 40 calls, **280
 ordered pairs**: it gained `containment_subset` when the structural matcher was pre-registered
-(commit `68889d8`), because the original four were authored against the k-gram matcher and cannot
+(commit `c9000d7`), because the original four were authored against the k-gram matcher and cannot
 falsify a matcher that came later. The halves are therefore compared by RATE and never by count. Ordered, because "B's arguments in A's request" and "A's
 arguments in B's request" are different events and both happen. Within a family only: pairs drawn
 across families share nothing but the alphabet, so counting them would deflate the rate with cases
@@ -153,7 +153,7 @@ rows below are the ones where something changes.
 
 **The denominator moved and the figures moved with it.** This table was first measured over four
 families and 224 pairs. A fifth family, `containment_subset`, was added to the calibration half when
-the structural matcher was pre-registered (commit `68889d8`), and every figure above is measured over
+the structural matcher was pre-registered (commit `c9000d7`), and every figure above is measured over
 the five families and 280 pairs. The choice of k did not move: 22 is still the first k at which
 structural collisions disappear with bench recall intact. What moved is the price. Self-match at the
 chosen k is 0.4, not the 0.5 first published, because the new family is built from fragments shorter

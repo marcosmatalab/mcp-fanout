@@ -31,7 +31,7 @@ def _files_to_scan() -> list[Path]:
                 if "__pycache__" in path.parts or ".egg-info" in str(path):
                     continue
                 out.append(path)
-    for name in ("README.md", "CLAUDE.md", "Makefile", "pyproject.toml"):
+    for name in ("README.md", "README.es.md", "Makefile", "pyproject.toml"):
         if (REPO / name).is_file():
             out.append(REPO / name)
     return out

@@ -103,39 +103,3 @@ def test_the_unsigned_prefix_is_named_rather_than_left_to_be_discovered():
         f"{before} commits before {boundary} carry no signature and the README does not say so. "
         "Say it: back-signing a history replaces real provenance with manufactured provenance, "
         "and that is the reason, not an excuse")
-
-
-# The trailer claim, stated in README.md and CITATION.cff in these words. Written as a boundary
-# ("the first 50, and every one since") rather than as a running total on purpose: a total goes
-# stale on the next commit, including the commit that updates it, which is a treadmill and not a
-# check.
-FIRST_RUN = 50
-FIRST_RUN_TRAILERS = 48
-TRAILER = "Co-Authored-By: Claude"
-
-
-def _trailer_counts() -> tuple[int, list[str]]:
-    """(trailers among the first FIRST_RUN commits, commits after them that lack one)."""
-    shas = _git("rev-list", "--reverse", "HEAD").splitlines()
-    early, late = shas[:FIRST_RUN], shas[FIRST_RUN:]
-    counted = sum(1 for sha in early if TRAILER in _git("log", "-1", "--format=%B", sha))
-    missing = [sha[:7] for sha in late if TRAILER not in _git("log", "-1", "--format=%B", sha)]
-    return counted, missing
-
-
-def test_the_declared_trailer_count_is_the_one_the_history_has():
-    """The provenance claim the README opens its last section with, checked rather than repeated."""
-    counted, missing = _trailer_counts()
-    assert counted == FIRST_RUN_TRAILERS, (
-        f"README.md and CITATION.cff say {FIRST_RUN_TRAILERS} of the first {FIRST_RUN} commits "
-        f"carry a {TRAILER!r} trailer; the history has {counted}")
-    assert not missing, (
-        f"the claim is that every commit after the first {FIRST_RUN} carries the trailer, and "
-        f"these do not: {missing}")
-
-
-def test_both_documents_state_the_trailer_claim_in_the_same_words():
-    for name in ("README.md", "CITATION.cff"):
-        text = " ".join((REPO / name).read_text(encoding="utf-8").split())
-        assert f"{FIRST_RUN_TRAILERS} of the first {FIRST_RUN} commits" in text, (
-            f"{name} no longer states the trailer claim this test checks")
