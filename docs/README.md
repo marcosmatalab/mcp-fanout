@@ -27,7 +27,7 @@ in the wrong order.
 ## The word budget, declared rather than chased
 
 Across every tracked markdown file in this repository, **29,970 words** of findings and
-**11,440 words** of operation, plus 30 words of corpus material that is
+**11,610 words** of operation, plus 30 words of corpus material that is
 measurement input rather than prose about it. `make words` prints both figures and
 `tools/word_budget.py` decides, file by file and by section for the one document that is both,
 which side of the line each belongs on.

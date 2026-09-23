@@ -114,5 +114,16 @@ The current tag is whichever one
 that link is the answer rather than a tag name written here, which would be right until the next
 tag and wrong afterwards with nothing to notice.
 `tests/test_no_stale_release_pointer.py` fails if a document names a pre-release as the current
-one. `v1.0.0` is reserved for 19 October 2026, when the disclosure window closes, because minting
-a DOI before that date would break a commitment made in writing.
+one. `v1.0.0` is reserved for 19 October 2026, when the disclosure window closes.
+
+**Release candidates and Zenodo.** The webhook archives pre-releases as well as finals. The first
+two candidates, rc1 and rc2, were archived automatically when they were published, with DOIs
+`10.5281/zenodo.22898049` and `10.5281/zenodo.22901070`. From rc3 on, a candidate is published with
+the webhook paused, so the next DOI is the one for `v1.0.0`:
+
+1. Pause it: `gh api -X PATCH repos/marcosmatalab/mcp-fanout/hooks/682045835 -F active=false`, and
+   read back `active: false`.
+2. Push the signed candidate tag and wait for `.github/workflows/release.yml` to finish.
+3. Restore it: `gh api -X PATCH repos/marcosmatalab/mcp-fanout/hooks/682045835 -F active=true`, and
+   read back `active: true`. If anything fails between pausing and restoring, restoring comes first.
+4. Check the public Zenodo API shows no record for the candidate.
