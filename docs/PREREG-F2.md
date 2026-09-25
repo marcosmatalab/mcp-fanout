@@ -373,6 +373,8 @@ behind it, and the external record is set out here in full, including where it r
 | 2026-09-19T17:56:40Z | issue `modelcontextprotocol/servers#4830` created | it links #122, so GitHub fixes their order too |
 | 2026-09-19T18:23:55Z | push of `0461298`, carrying `162d71f` and three more | the four commits existed by now |
 
+These GitHub records belonged to the repository as it was before 2026-09-26 and can no longer be queried; the timestamps are preserved in docs/evidence/github-records-pre-2026-09-26.json.
+
 The sealed block lives in `162d71f`, whose author date is 2026-09-19T17:54:12Z, two minutes
 before the first issue. The issue text quotes the same causal chain that section 0 and threat 17
 carry, so the CONTENT of that work is externally timestamped by a party with no interest in it.

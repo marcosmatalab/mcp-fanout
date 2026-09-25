@@ -214,6 +214,8 @@ serve are in [`DOCTRINE.md`](DOCTRINE.md).
           `gh release edit --notes-file`, which is the only reason the published body matches the
           signed message today.
 
+      These GitHub records belonged to the repository as it was before 2026-09-26 and can no longer be queried; the timestamps are preserved in docs/evidence/github-records-pre-2026-09-26.json.
+
       Three and a half minutes separate a false claim from a true one, and **the first version of
       this entry got it wrong in exactly that gap**: it was written from a measurement taken after
       the hand edit and said the claim "was true and unverified". A repaired artifact cannot
