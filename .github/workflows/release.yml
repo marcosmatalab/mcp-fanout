@@ -34,7 +34,8 @@ jobs:
       # already exists nothing replaces it, so `fetch-depth: 0` and `fetch-tags` do not help.
       # Every command that reads a message from that ref then reads a commit's. Measured, in
       # public: run 35747403738, the first tag pushed with the notes check in place, stopped here
-      # rather than publishing (docs/PROTOCOL.md, gate rule 10, ninth instance).
+      # rather than publishing (docs/PROTOCOL.md, gate rule 10, ninth instance; the run's record is
+      # kept in docs/evidence/github-records-pre-2026-09-26.json).
       #
       # So the object is force-fetched over the ref, and then CHECKED to be what the fetch was
       # supposed to bring. `git fetch` succeeding is not evidence that the ref is now a tag

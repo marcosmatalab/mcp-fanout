@@ -62,7 +62,7 @@ builds a product on the assumption that they can.
 
 <div align="center">
 
-| 🧪 **715 passing** | 🛰️ **10** | 🧰 **87** | 📞 **156** | 🎯 **1.0** | 🔐 **0** |
+| 🧪 **716 passing** | 🛰️ **10** | 🧰 **87** | 📞 **156** | 🎯 **1.0** | 🔐 **0** |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | tests, in a clean clone | pinned MCP servers measured | real tool schemas probed | tool calls driven and traced | sensor recall on the controlled bench | bytes of content ever stored |
 
@@ -155,7 +155,7 @@ Every decision is written down with its reason and its measured cost, in the cod
 | | |
 | --- | --- |
 | 🚦 **One-command CI** | `make gates` runs the whole pipeline locally, in CI's order: tests, claims, figures, corpus, pre-registration, reproduction, lint, types, coverage |
-| 🧪 **715 passing tests** | Unit, integration and regression tests. Each instrument has a test that fails when the instrument is *absent*, not only when it is wrong |
+| 🧪 **716 passing tests** | Unit, integration and regression tests. Each instrument has a test that fails when the instrument is *absent*, not only when it is wrong |
 | 📏 **Every claim is gated** | `make claims-check` compares every number in the six-number table with the committed artifact it comes from |
 | 🔁 **Regenerated, not inspected** | `make figures-check` rebuilds every calibration figure and both SVGs and fails on a non-empty diff |
 | 🧾 **Pre-registered science** | Predictions frozen by digest before measuring ([`docs/PREREG-F2.md`](docs/PREREG-F2.md)); a matcher tuned on one half of the data and published on the other |
@@ -188,7 +188,7 @@ registry/        pinned servers, probed tool schemas, classification lists
 tools/           figure renderers, redaction, release notes, documentation budget
 runs/            two redacted example runs, so every number reproduces offline
 docs/            method, protocol, calibration, threats, pre-registration, disclosure log
-tests/           715 passing tests plus a mock MCP server
+tests/           716 passing tests plus a mock MCP server
 ```
 
 ## 📚 Documentation
