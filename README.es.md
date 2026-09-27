@@ -62,7 +62,7 @@ antes de que nadie construya un producto dándolo por hecho.
 
 <div align="center">
 
-| 🧪 **715 tests** | 🛰️ **10** | 🧰 **87** | 📞 **156** | 🎯 **1.0** | 🔐 **0** |
+| 🧪 **716 tests** | 🛰️ **10** | 🧰 **87** | 📞 **156** | 🎯 **1.0** | 🔐 **0** |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | que pasan en un clon limpio | servidores MCP medidos, con versión fijada | esquemas reales de herramientas sondeados | llamadas ejecutadas y trazadas | recall del sensor en el banco controlado | bytes de contenido almacenados |
 
@@ -156,7 +156,7 @@ Cada decisión está escrita con su motivo y su coste medido, en el código y en
 | | |
 | --- | --- |
 | 🚦 **CI en un comando** | `make gates` ejecuta el pipeline completo en local, en el orden de la CI: tests, cifras, figuras, corpus, pre-registro, reproducción, lint, tipos y cobertura |
-| 🧪 **715 tests que pasan** | Tests unitarios, de integración y de regresión. Cada instrumento tiene un test que falla si el instrumento *no está*, no solo si se equivoca |
+| 🧪 **716 tests que pasan** | Tests unitarios, de integración y de regresión. Cada instrumento tiene un test que falla si el instrumento *no está*, no solo si se equivoca |
 | 📏 **Cada cifra tiene gate** | `make claims-check` compara cada número de la tabla de los seis números con el artefacto commiteado del que sale |
 | 🔁 **Se regenera, no se inspecciona** | `make figures-check` reconstruye cada figura de calibración y ambos SVG, y falla ante cualquier diff |
 | 🧾 **Ciencia pre-registrada** | Predicciones congeladas por digest antes de medir ([`docs/PREREG-F2.md`](docs/PREREG-F2.md)); el matcher se ajusta con una mitad de los datos y se publica con la otra |
@@ -189,7 +189,7 @@ registry/        servidores fijados, esquemas sondeados, listas de clasificació
 tools/           generadores de figuras, redacción, notas de release, presupuesto de documentación
 runs/            dos ejecuciones de ejemplo redactadas, para reproducir cada número offline
 docs/            método, protocolo, calibración, amenazas, pre-registro, registro de divulgación
-tests/           715 tests que pasan y un servidor MCP simulado
+tests/           716 tests que pasan y un servidor MCP simulado
 ```
 
 ## 📚 Documentación

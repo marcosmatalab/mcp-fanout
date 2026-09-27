@@ -121,9 +121,11 @@ two candidates, rc1 and rc2, were archived automatically when they were publishe
 `10.5281/zenodo.22898049` and `10.5281/zenodo.22901070`. From rc3 on, a candidate is published with
 the webhook paused, so the next DOI is the one for `v1.0.0`:
 
-1. Pause it: `gh api -X PATCH repos/marcosmatalab/mcp-fanout/hooks/682045835 -F active=false`, and
-   read back `active: false`.
+1. Find the hook by its target, because its id changes whenever the integration is reconnected:
+   `HOOK=$(gh api repos/marcosmatalab/mcp-fanout/hooks --jq '.[] | select(.config.url | contains("zenodo")) | .id')`.
+   Pause it: `gh api -X PATCH repos/marcosmatalab/mcp-fanout/hooks/$HOOK -F active=false`, and read
+   back `active: false`.
 2. Push the signed candidate tag and wait for `.github/workflows/release.yml` to finish.
-3. Restore it: `gh api -X PATCH repos/marcosmatalab/mcp-fanout/hooks/682045835 -F active=true`, and
+3. Restore it: `gh api -X PATCH repos/marcosmatalab/mcp-fanout/hooks/$HOOK -F active=true`, and
    read back `active: true`. If anything fails between pausing and restoring, restoring comes first.
 4. Check the public Zenodo API shows no record for the candidate.

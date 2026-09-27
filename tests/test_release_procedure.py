@@ -36,3 +36,12 @@ def test_the_release_procedure_pauses_the_webhook_for_a_candidate_and_restores_i
     assert re.search(r"hooks/\S+ -F active=false", text), "no step pauses the Zenodo webhook"
     assert re.search(r"hooks/\S+ -F active=true", text), "no step reactivates the Zenodo webhook"
     assert text.index("active=false") < text.index("active=true")
+
+
+def test_the_procedure_looks_the_webhook_up_rather_than_naming_its_id():
+    """A hook id belongs to one installation of the integration. The procedure named 682045835, and
+    reconnecting Zenodo gives the hook a new id, so the written command would have paused nothing
+    and reported success. The id is looked up by the hook's target at the moment it is needed."""
+    text = _flat("CONTRIBUTING.md")
+    assert not re.search(r"hooks/\d+", text), "the release procedure names a webhook by a fixed id"
+    assert 'contains("zenodo")' in text, "the procedure no longer says how to find the Zenodo hook"
