@@ -80,8 +80,9 @@ NOT explain a flagged destination.
 ## Commit style
 
 Imperative subject. Body explaining why and the trade-off, not just what. Commits are signed with
-GPG, from `c4f28cb` onward; earlier commits are deliberately not re-signed, because back-signing
-history replaces real provenance with manufactured provenance.
+GPG, from `c4f28cb` onward. Before it only the first commit is signed, and the 34 between them are
+deliberately not re-signed, because back-signing history replaces real provenance with
+manufactured provenance.
 
 ## Releasing, and the Zenodo order that is counter-intuitive
 
