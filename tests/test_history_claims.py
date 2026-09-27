@@ -103,3 +103,30 @@ def test_the_unsigned_prefix_is_named_rather_than_left_to_be_discovered():
         f"{before} commits before {boundary} carry no signature and the README does not say so. "
         "Say it: back-signing a history replaces real provenance with manufactured provenance, "
         "and that is the reason, not an excuse")
+
+
+# How each document states the part of the history before the boundary. The first commit carries a
+# signature and the commits between it and the boundary do not, so "earlier commits are not signed"
+# was an overclaim by one commit, the same off-by-one this file exists for, at the other end.
+PREFIX_CLAIM = {
+    "CONTRIBUTING.md": ("first commit", "the {n} between"),
+    "README.md": ("first commit", "the {n} in between"),
+    "README.es.md": ("primer commit", "los {n} intermedios"),
+}
+
+
+def test_the_signed_first_commit_and_the_unsigned_run_are_stated_as_they_are():
+    boundary = _declared_boundary()
+    roots = _git("rev-list", "--max-parents=0", "HEAD").splitlines()
+    assert len(roots) == 1, f"expected one root commit, found {roots}"
+    before = [s for s in _git("rev-list", f"{boundary}^").splitlines() if s != roots[0]]
+    unsigned = [s for s in before if not _has_signature(s)]
+    assert len(unsigned) == len(before), (
+        f"{len(before) - len(unsigned)} commits between the first one and {boundary} are signed; "
+        "the documents describe that run as unsigned")
+    for name, (first, run) in PREFIX_CLAIM.items():
+        text = " ".join((REPO / name).read_text(encoding="utf-8").split())
+        if _has_signature(roots[0]):
+            assert first in text, f"{name} does not say that the first commit is signed, and it is"
+        assert run.format(n=len(unsigned)) in text, (
+            f"{name} does not state the {len(unsigned)} unsigned commits before {boundary}")

@@ -394,8 +394,8 @@ fact, and repairing it by rewriting dates is precisely the fraud the whole appar
 prevent.
 
 **So the rule, for every pre-registration after this one: seal, commit, PUSH, and only then
-measure.** A seal that has not left the machine is a draft with a hash on it. Signing begins at
-`c4f28cb`, the commit AFTER `0461298`, which this paragraph misnamed until it was checked against
+measure.** A seal that has not left the machine is a draft with a hash on it. Continuous signing
+begins at `c4f28cb`, the commit AFTER `0461298`, which this paragraph misnamed until it was checked against
 the history rather than remembered: `0461298` itself carries no signature, and it is the commit the
 table above cites. A signature binds authorship and not time in any case; it is the push that binds
 time, and only a push that happens before the measurement binds the right thing.
